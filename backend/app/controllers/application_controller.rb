@@ -10,8 +10,4 @@ class ApplicationController < ActionController::API
 
     render json: { error: "Unauthorized" }, status: :unauthorized unless @current_user
   end
-
-  def serialize_user(user)
-    { id: user.id, email: user.email, verified: user.verified? }
-  end
 end
