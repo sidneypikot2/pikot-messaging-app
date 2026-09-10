@@ -13,12 +13,13 @@ gem "bcrypt", "~> 3.1.7"
 # Issue/verify JWTs for API session tokens (KAN-5)
 gem "jwt"
 
-# OAuth login via Facebook (also covers Instagram, which now authenticates through Facebook Login)
-# and LinkedIn (KAN-7)
+# OAuth login via Facebook (also covers Instagram, which now authenticates through Facebook Login),
+# LinkedIn, and Apple (KAN-7)
 gem "omniauth"
 gem "omniauth-rails_csrf_protection"
 gem "omniauth-facebook"
 gem "omniauth-linkedin-oauth2"
+gem "omniauth-apple"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
