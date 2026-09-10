@@ -1,24 +1,36 @@
-document.getElementById("api-url").textContent = window.API_BASE_URL;
+const token = Session.token();
 
-const statusEl = document.getElementById("api-status");
+if (!token) {
+  window.location.href = "login.html";
+} else {
+  init(token);
+}
 
-Api.healthCheck()
-  .then(() => {
-    statusEl.textContent = "API connected";
-    statusEl.className = "status status--ok";
-  })
-  .catch(() => {
-    statusEl.textContent = "API unreachable";
-    statusEl.className = "status status--error";
-  });
+function init(token) {
+  document.getElementById("api-url").textContent = window.API_BASE_URL;
 
-const sessionStatusEl = document.getElementById("session-status");
+  const statusEl = document.getElementById("api-status");
 
-function renderLoggedOut() {
-  sessionStatusEl.innerHTML = 'Not logged in. <a href="login.html">Log in</a>.';
+  Api.healthCheck()
+    .then(() => {
+      statusEl.textContent = "API connected";
+      statusEl.className = "status status--ok";
+    })
+    .catch(() => {
+      statusEl.textContent = "API unreachable";
+      statusEl.className = "status status--error";
+    });
+
+  Api.me(token)
+    .then(({ user }) => renderLoggedIn(user))
+    .catch(() => {
+      Session.clear();
+      window.location.href = "login.html";
+    });
 }
 
 function renderLoggedIn(user) {
+  const sessionStatusEl = document.getElementById("session-status");
   sessionStatusEl.textContent = "Logged in as ";
 
   const emailEl = document.createElement("strong");
@@ -32,20 +44,7 @@ function renderLoggedIn(user) {
   logoutLink.addEventListener("click", (event) => {
     event.preventDefault();
     Session.clear();
-    renderLoggedOut();
+    window.location.href = "login.html";
   });
   sessionStatusEl.appendChild(logoutLink);
-}
-
-const token = Session.token();
-
-if (token) {
-  Api.me(token)
-    .then(({ user }) => renderLoggedIn(user))
-    .catch(() => {
-      Session.clear();
-      renderLoggedOut();
-    });
-} else {
-  renderLoggedOut();
 }
