@@ -25,6 +25,11 @@ services:
       - bundle_cache:/usr/local/bundle
     ports:
       - "3000:3000"
+    # Social login (KAN-7) credentials — see backend/.env.example. Optional: the app
+    # runs fine without a backend/.env file, social login just won't work yet.
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
       DATABASE_HOST: db
       DATABASE_PORT: 5432

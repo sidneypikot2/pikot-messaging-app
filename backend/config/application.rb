@@ -40,5 +40,13 @@ module App
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # OmniAuth (KAN-7) needs a session: omniauth-oauth2 stores its CSRF `state` param
+    # there between the request and callback phases, and CsrfTokensController hands out
+    # a Rails CSRF token (also session-backed) for the frontend's oauth request form.
+    # JSON API actions never touch `session`, so this doesn't add cookies to their
+    # responses.
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore, key: "_pikotchat_session"
   end
 end

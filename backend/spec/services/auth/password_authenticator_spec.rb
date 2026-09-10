@@ -24,4 +24,10 @@ RSpec.describe Auth::PasswordAuthenticator do
 
     expect(described_class.call(email: "user@example.com", password: "password123")).to eq(:unverified)
   end
+
+  it "returns :invalid_credentials for an oauth-only user (no password set), without raising" do
+    create(:user, :oauth, email: "oauth-user@example.com")
+
+    expect(described_class.call(email: "oauth-user@example.com", password: "anything")).to eq(:invalid_credentials)
+  end
 end
