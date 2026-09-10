@@ -4,4 +4,30 @@ const Api = {
     if (!res.ok) throw new Error(`API health check failed: ${res.status}`);
     return res;
   },
+
+  async login(email, password) {
+    const res = await fetch(`${window.API_BASE_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || `Login failed (${res.status})`);
+    }
+
+    return data; // { token, user: { id, email, verified } }
+  },
+
+  async me(token) {
+    const res = await fetch(`${window.API_BASE_URL}/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Session check failed (${res.status})`);
+
+    return res.json(); // { user }
+  },
 };

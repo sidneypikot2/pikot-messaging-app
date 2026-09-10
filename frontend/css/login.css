@@ -1,0 +1,237 @@
+:root {
+  color-scheme: light;
+  --navy: #1b2559;
+  --orange: #f2994a;
+  --orange-dark: #e07f2b;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --border: #d8dce3;
+  --bg: #f4f5f8;
+  --error: #d64545;
+  --error-bg: #fdecec;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.login-page {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  border-top: 6px solid var(--orange);
+  border-bottom: 6px solid var(--orange);
+  min-height: 100vh;
+}
+
+.login-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 3rem 1.25rem;
+  display: grid;
+  grid-template-columns: minmax(280px, 460px) 1fr;
+  align-items: center;
+  gap: 2.5rem;
+  min-height: calc(100vh - 12rem);
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px -20px rgba(27, 37, 89, 0.25);
+  padding: 2.5rem 2.25rem;
+}
+
+.login-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  color: var(--navy);
+}
+
+.login-subtitle {
+  margin: 0 0 1.75rem;
+  color: var(--muted);
+}
+
+.login-subtitle a {
+  color: var(--orange);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.login-card label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.field-row label {
+  margin-bottom: 0.4rem;
+}
+
+.forgot-link {
+  color: var(--orange);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.login-card input[type="email"],
+.login-card input[type="password"] {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+  color: var(--text);
+  background: #fff;
+}
+
+.login-card input[type="email"]:focus,
+.login-card input[type="password"]:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
+}
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+}
+
+.remember-row input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.form-error {
+  background: var(--error-bg);
+  color: var(--error);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.login-button:hover:not(:disabled) {
+  background: var(--orange-dark);
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 1.5rem 0 1.25rem;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.divider span {
+  padding: 0 0.75rem;
+}
+
+.social-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.social-button--google {
+  border: 1px solid #e8b4ab;
+  color: #333;
+}
+
+.social-button--facebook {
+  border: 1px solid #b9c8f5;
+  color: #1877f2;
+}
+
+.login-illustration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-illustration svg {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+}
+
+@media (max-width: 860px) {
+  .login-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .login-illustration {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .login-layout {
+    padding: 2rem 1rem;
+  }
+}
