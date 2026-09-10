@@ -6,7 +6,7 @@ RSpec.describe UserMailer, type: :mailer do
     let(:mail) { UserMailer.email_verification(user) }
 
     it "renders the headers" do
-      expect(mail.subject).to eq("Verify your email for Pikot")
+      expect(mail.subject).to eq("Verify your email for PikotChat")
       expect(mail.to).to eq([ user.email ])
       expect(mail.from).to eq([ "from@example.com" ])
     end
