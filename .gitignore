@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# --- Rails backend ---
+/backend/.bundle
+/backend/.env*
+/backend/log/*
+/backend/tmp/*
+!/backend/log/.keep
+!/backend/tmp/.keep
+/backend/tmp/pids/*
+!/backend/tmp/pids/
+!/backend/tmp/pids/.keep
+/backend/storage/*
+!/backend/storage/.keep
+/backend/tmp/storage/*
+!/backend/tmp/storage/
+!/backend/tmp/storage/.keep
+/backend/config/*.key
+/backend/config/master.key
+/backend/public/assets
+/backend/.kamal/secrets
+
+# --- Node / frontend (if a build step is added later) ---
+/frontend/node_modules
+/frontend/dist
