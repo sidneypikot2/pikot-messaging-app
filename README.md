@@ -4,7 +4,7 @@ A messaging app built as a portfolio project.
 
 - **Backend**: Ruby on Rails (API-only), Ruby 4.0.6, Rails 8.1.3.1, PostgreSQL 18, RSpec
 - **Frontend**: HTML / CSS / vanilla JavaScript (web app now, mobile app planned later)
-- **Infra**: Docker Compose (db, backend, frontend)
+- **Infra**: Docker Compose (db, redis, backend, frontend) — Redis backs Action Cable
 
 ## Project structure
 
@@ -54,7 +54,7 @@ docker compose build backend
 ## Roadmap
 
 Tracked in Jira ([KAN project](https://sidneypikot2.atlassian.net/jira/software/projects/KAN)).
-Auth (manual + social login) is done. Planned: conversations, real-time messaging (Action Cable), group chats, then a mobile client.
+Auth (manual + social login) is done. Planned: conversations, real-time messaging (Action Cable + Redis), group chats, then a mobile client.
 
 ## Workflow conventions
 
