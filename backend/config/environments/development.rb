@@ -32,6 +32,10 @@ Rails.application.configure do
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 
+  # Preview sent emails at /letter_opener instead of silently failing against a
+  # nonexistent SMTP server (KAN-10).
+  config.action_mailer.delivery_method = :letter_opener
+
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 

@@ -5,6 +5,9 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Preview sent emails in the browser (KAN-10) — dev-only.
+  mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+
   # Manual email/password auth (KAN-5)
   post "signup", to: "registrations#create"
   post "login", to: "sessions#create"

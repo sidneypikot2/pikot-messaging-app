@@ -70,3 +70,8 @@ group :development, :test do
   # Fixtures replacement for tests
   gem "factory_bot_rails"
 end
+
+group :development do
+  # Preview sent emails in the browser instead of a real SMTP server (KAN-10)
+  gem "letter_opener_web"
+end
