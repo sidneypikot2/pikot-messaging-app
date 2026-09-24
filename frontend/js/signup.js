@@ -1,0 +1,43 @@
+if (Session.token()) {
+  window.location.href = "index.html";
+}
+
+const form = document.getElementById("signup-form");
+const errorEl = document.getElementById("form-error");
+const submitButton = document.getElementById("signup-submit");
+const successEl = document.getElementById("signup-success");
+const successEmailEl = document.getElementById("signup-success-email");
+
+function showError(message) {
+  errorEl.textContent = message;
+  errorEl.hidden = false;
+}
+
+function clearError() {
+  errorEl.hidden = true;
+  errorEl.textContent = "";
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearError();
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const passwordConfirmation = document.getElementById("password_confirmation").value;
+
+  submitButton.disabled = true;
+  submitButton.textContent = "Signing up…";
+
+  try {
+    const { user } = await Api.signup(email, password, passwordConfirmation);
+    successEmailEl.textContent = user.email;
+    form.hidden = true;
+    successEl.hidden = false;
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Sign Up";
+  }
+});

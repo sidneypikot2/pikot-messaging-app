@@ -30,4 +30,36 @@ const Api = {
 
     return res.json(); // { user }
   },
+
+  async signup(email, password, passwordConfirmation) {
+    const res = await fetch(`${window.API_BASE_URL}/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, password_confirmation: passwordConfirmation }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error((data.errors && data.errors.join(", ")) || `Signup failed (${res.status})`);
+    }
+
+    return data; // { user: { id, email, verified } }
+  },
+
+  async verifyEmail(token) {
+    const res = await fetch(`${window.API_BASE_URL}/email_verification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || `Verification failed (${res.status})`);
+    }
+
+    return data; // { message }
+  },
 };
