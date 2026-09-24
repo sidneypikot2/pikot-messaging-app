@@ -10,9 +10,9 @@ PikotChat is a messaging app portfolio project. Auth is implemented on the backe
 
 - **Backend**: Ruby on Rails 8.1 (API-only), Ruby 4.0.6, PostgreSQL 18, RSpec + FactoryBot — `backend/`
 - **Frontend**: static HTML / CSS / vanilla JavaScript, no build step, no framework — `frontend/`
-- **Infra**: Docker Compose runs all three services (db, backend, frontend)
+- **Infra**: Docker Compose runs all four services (db, redis, backend, frontend) — Redis backs Action Cable
 
-Roadmap (tracked in Jira, not in this repo): conversations, real-time messaging via Action Cable, group chats, then a mobile client.
+Roadmap (tracked in Jira, not in this repo): conversations, real-time messaging via Action Cable + Redis, group chats, then a mobile client.
 
 ## Running the app
 
@@ -69,7 +69,7 @@ Rubocop uses the `rubocop-rails-omakase` house style (`backend/.rubocop.yml`); d
 
 **Frontend talks to the backend only through `frontend/js/api.js`**, a plain object (`Api`) wrapping `fetch` calls against `window.API_BASE_URL`. That base URL is set in `frontend/js/config.js` and can be overridden by defining `window.API_BASE_URL` before `config.js` loads. When adding new API calls, add methods to `Api` rather than calling `fetch` directly from `app.js` or other frontend scripts.
 
-**Background jobs / cache / cable** use Rails' Solid stack (`solid_queue`, `solid_cache`, `solid_cable`) — each has its own schema file in `backend/db/` (`queue_schema.rb`, `cache_schema.rb`, `cable_schema.rb`) and, in production, its own database (see `backend/config/database.yml`). In development/test these run against the primary database.
+**Background jobs / cache** use Rails' Solid stack (`solid_queue`, `solid_cache`) — each has its own schema file in `backend/db/` (`queue_schema.rb`, `cache_schema.rb`) and, in production, its own database (see `backend/config/database.yml`). In development/test these run against the primary database. **Action Cable** deliberately does not use Solid Cable (KAN-9) — it's on the `redis` gem instead (`backend/config/cable.yml`, `REDIS_URL`, `redis` service in `docker-compose.yml`), so Redis is in the stack purely as the Action Cable adapter.
 
 **Deployment** is set up for Kamal (`backend/config/deploy.yml`, `backend/.kamal/`) but not yet exercised — no production infra exists.
 
