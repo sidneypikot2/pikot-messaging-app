@@ -36,6 +36,10 @@ Rails.application.configure do
   # ActionMailer::Base.deliveries array.
   config.action_mailer.delivery_method = :test
 
+  # Run Active Jobs (e.g. deliver_later mailers) inline/deterministically instead of
+  # the default :async adapter, so specs can assert on jobs without race conditions.
+  config.active_job.queue_adapter = :test
+
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: "example.com" }
 

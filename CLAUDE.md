@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Pikot is a messaging app portfolio project, currently a fresh scaffold with no domain models yet.
+PikotChat is a messaging app portfolio project. Email/password auth is implemented (KAN-5); conversations/messaging are not built yet.
 
 - **Backend**: Ruby on Rails 8.1 (API-only), Ruby 4.0.6, PostgreSQL 18, RSpec + FactoryBot — `backend/`
 - **Frontend**: static HTML / CSS / vanilla JavaScript, no build step, no framework — `frontend/`
@@ -73,7 +73,13 @@ Rubocop uses the `rubocop-rails-omakase` house style (`backend/.rubocop.yml`); d
 
 **Database naming**: development/test databases are `pikot_messaging_app_development` / `_test` (see `backend/config/database.yml`); connection params come from `DATABASE_HOST`/`PORT`/`USERNAME`/`PASSWORD` env vars, set in `docker-compose.yml` for local dev.
 
-There are no models, controllers, or migrations beyond Rails defaults yet — when adding the first domain models (users, conversations, messages), this is a good time to also decide on the auth strategy (the `bcrypt` gem is already in the Gemfile, unused so far).
+**Auth** (KAN-5/KAN-7): `User` has `has_secure_password` plus a required `password_confirmation` on create, and uses Rails' `generates_token_for(:email_verification)` for expiring, purpose-scoped verification tokens tied to the user's email. Sessions are stateless JWTs (`app/lib/json_web_token.rb`), read from `Authorization: Bearer <token>` via `ApplicationController#authenticate_request!`. Social login (Facebook/Instagram via Facebook Login, LinkedIn, Apple) is planned for KAN-7 via `omniauth-*` gems already in the Gemfile, not yet wired up.
+
+**Service objects** live under `app/services/`, one level below controllers: controllers translate a service's return value into an HTTP response and do nothing else — no validation or business logic in controllers. Convention: subclass `ApplicationService` and implement `#initialize`/`#call`; callers use the class method (`Auth::SessionIssuer.call(user)`), which just does `new(...).call`. Auth-specific services are namespaced under `Auth::` (`Auth::UserRegistrar`, `Auth::PasswordAuthenticator`, `Auth::SessionIssuer`); `UserSerializer` is shared/unnamespaced since it's not auth-specific. Don't reach for a service for trivial one-liner controller actions (see `EmailVerificationsController`, deliberately left as plain Active Record calls) — only extract when there's real logic or reuse across controllers.
+
+**Gotchas discovered while building the above** (both already fixed, but worth knowing if something similar resurfaces):
+- `docker-compose.yml`'s `backend` service must NOT set `RAILS_ENV` in its shared `environment:` block — that block is inherited by every `docker compose run backend ...`, including `bundle exec rspec`, which needs to fall back to Rails' own `test` default. `RAILS_ENV=development` for the server process is set inline in `command:` instead.
+- The `json` gem is pinned to `< 3` in the Gemfile — `json` 3.0 made `JSON.parse`'s 2nd positional arg keyword-only, which breaks `ActiveSupport::JSON.decode` (and therefore anything that round-trips through it, e.g. `generates_token_for`/`find_by_token_for`) on this Rails version.
 
 ## Task/branch/PR naming convention
 

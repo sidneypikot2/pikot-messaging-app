@@ -69,4 +69,13 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
+
+  config.include FactoryBot::Syntax::Methods
+
+  # Perform enqueued jobs (e.g. deliver_later mailers) inline, so specs can assert
+  # on their side effects (ActionMailer::Base.deliveries, etc.) synchronously.
+  config.before do
+    ActiveJob::Base.queue_adapter.perform_enqueued_jobs = true
+    ActiveJob::Base.queue_adapter.perform_enqueued_at_jobs = true
+  end
 end
