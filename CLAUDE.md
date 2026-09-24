@@ -1,16 +1,18 @@
 # CLAUDE.md
 
+We are building the app described at @SPEC.md. Read that file for general architectural tasks or to double-check the exact database structure, tech stack or application structure.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project overview
 
-PikotChat is a messaging app portfolio project. Email/password auth is implemented (KAN-5); conversations/messaging are not built yet.
+PikotChat is a messaging app portfolio project. Auth is implemented on the backend — both email/password (KAN-5) and social login via Facebook/LinkedIn/Apple (KAN-7); the frontend is still an unstyled scaffold with no login/signup UI wired up yet, and conversations/messaging are not built at all.
 
 - **Backend**: Ruby on Rails 8.1 (API-only), Ruby 4.0.6, PostgreSQL 18, RSpec + FactoryBot — `backend/`
 - **Frontend**: static HTML / CSS / vanilla JavaScript, no build step, no framework — `frontend/`
 - **Infra**: Docker Compose runs all three services (db, backend, frontend)
 
-Roadmap (tracked in Jira, not in this repo): user auth, conversations, real-time messaging via Action Cable, then a mobile client.
+Roadmap (tracked in Jira, not in this repo): conversations, real-time messaging via Action Cable, group chats, then a mobile client.
 
 ## Running the app
 
@@ -61,7 +63,7 @@ Rubocop uses the `rubocop-rails-omakase` house style (`backend/.rubocop.yml`); d
 
 ## Architecture
 
-**Backend is API-only** (`ApplicationController < ActionController::API`, `backend/app/controllers/application_controller.rb`) — no view layer, no sessions/cookies by default. Routes are defined in `backend/config/routes.rb`, currently just the Rails health check at `/up`.
+**Backend is API-only** (`ApplicationController < ActionController::API`, `backend/app/controllers/application_controller.rb`) — no view layer, no sessions/cookies by default. Routes are defined in `backend/config/routes.rb`: the Rails health check at `/up`, manual auth (`signup`, `login`, `me`, `email_verification[/resend]`), and social login (`csrf_token`, `auth/:provider/callback`, `auth/failure`) — the `auth/:provider` request-phase route itself isn't a Rails route, it's handled by the `OmniAuth::Builder` middleware.
 
 **CORS** is configured in a Rails initializer (`backend/config/initializers/cors.rb`, gem `rack-cors`) to allow the frontend origin, read from `ENV["FRONTEND_ORIGIN"]` (defaults to `http://localhost:8080`, set to that value in `docker-compose.yml` for the backend service).
 
@@ -73,9 +75,15 @@ Rubocop uses the `rubocop-rails-omakase` house style (`backend/.rubocop.yml`); d
 
 **Database naming**: development/test databases are `pikot_messaging_app_development` / `_test` (see `backend/config/database.yml`); connection params come from `DATABASE_HOST`/`PORT`/`USERNAME`/`PASSWORD` env vars, set in `docker-compose.yml` for local dev.
 
-**Auth** (KAN-5/KAN-7): `User` has `has_secure_password` plus a required `password_confirmation` on create, and uses Rails' `generates_token_for(:email_verification)` for expiring, purpose-scoped verification tokens tied to the user's email. Sessions are stateless JWTs (`app/lib/json_web_token.rb`), read from `Authorization: Bearer <token>` via `ApplicationController#authenticate_request!`. Social login (Facebook/Instagram via Facebook Login, LinkedIn, Apple) is planned for KAN-7 via `omniauth-*` gems already in the Gemfile, not yet wired up.
+**Auth** (KAN-5/KAN-7): `User` has `has_secure_password validations: false`, with password presence/confirmation only required `on: :create, if: -> { !oauth_user? }` (`oauth_user?` is `provider.present?`) so social-login users don't need a password. It also uses Rails' `generates_token_for(:email_verification)` for expiring, purpose-scoped verification tokens tied to the user's email. Sessions are stateless JWTs (`app/lib/json_web_token.rb`), read from `Authorization: Bearer <token>` via `ApplicationController#authenticate_request!`.
+
+Social login (Facebook/Instagram via Facebook Login, LinkedIn, Apple) is implemented via `omniauth-*` gems (KAN-7): `OmniauthCallbacksController#create` → `Auth::OmniauthAuthenticator`, matching on `[provider, uid]`, then redirects to `<FRONTEND_ORIGIN>/oauth-callback.html?token=...` (that page doesn't exist in `frontend/` yet — see project overview). Provider credentials come from `ENV` (`backend/.env`, gitignored — see `backend/.env.example`); the app boots and the routes/controllers work with them blank, only initiating a real provider flow needs them. Two things are easy to forget when touching this flow:
+- The OAuth **request phase** (`GET /auth/:provider`) must be a real `<form>` POST, not `fetch`/XHR (a plain request can't navigate the browser to the provider's consent screen) — `omniauth-rails_csrf_protection` enforces this (`OmniAuth.config.allowed_request_methods = [:post]` in `backend/config/initializers/omniauth.rb`), so the frontend must first `GET /csrf_token` (`CsrfTokensController`) and submit that token as a hidden form field.
+- Apple requires `response_mode: "form_post"` when requesting `name`/`email` scopes, so unlike Facebook/LinkedIn its callback arrives as a POST, not a GET (routes.rb's `auth/:provider/callback` match accepts both).
 
 **Service objects** live under `app/services/`, one level below controllers: controllers translate a service's return value into an HTTP response and do nothing else — no validation or business logic in controllers. Convention: subclass `ApplicationService` and implement `#initialize`/`#call`; callers use the class method (`Auth::SessionIssuer.call(user)`), which just does `new(...).call`. Auth-specific services are namespaced under `Auth::` (`Auth::UserRegistrar`, `Auth::PasswordAuthenticator`, `Auth::SessionIssuer`); `UserSerializer` is shared/unnamespaced since it's not auth-specific. Don't reach for a service for trivial one-liner controller actions (see `EmailVerificationsController`, deliberately left as plain Active Record calls) — only extract when there's real logic or reuse across controllers.
+
+**Testing OmniAuth**: `OmniAuth.config.test_mode = true` is set globally in `backend/spec/rails_helper.rb`, so provider specs build an `OmniAuth::AuthHash` directly (see `backend/spec/services/auth/omniauth_authenticator_spec.rb`) rather than hitting a real provider or using `OmniAuth.config.mock_auth`.
 
 **Gotchas discovered while building the above** (both already fixed, but worth knowing if something similar resurfaces):
 - `docker-compose.yml`'s `backend` service must NOT set `RAILS_ENV` in its shared `environment:` block — that block is inherited by every `docker compose run backend ...`, including `bundle exec rspec`, which needs to fall back to Rails' own `test` default. `RAILS_ENV=development` for the server process is set inline in `command:` instead.

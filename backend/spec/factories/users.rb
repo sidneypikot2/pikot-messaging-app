@@ -7,5 +7,13 @@ FactoryBot.define do
     trait :verified do
       verified_at { Time.current }
     end
+
+    trait :oauth do
+      password { nil }
+      password_confirmation { nil }
+      provider { "facebook" }
+      sequence(:uid) { |n| "facebook-uid-#{n}" }
+      verified_at { Time.current }
+    end
   end
 end

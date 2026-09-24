@@ -12,6 +12,12 @@ Rails.application.routes.draw do
   post "email_verification", to: "email_verifications#create"
   post "email_verification/resend", to: "email_verifications#resend"
 
+  # Social login (KAN-7). /auth/:provider itself (the request phase) is handled by the
+  # OmniAuth::Builder middleware, not a Rails route.
+  get "csrf_token", to: "csrf_tokens#show"
+  match "auth/:provider/callback", to: "omniauth_callbacks#create", via: [ :get, :post ]
+  match "auth/failure", to: "omniauth_callbacks#failure", via: [ :get, :post ]
+
   # Defines the root path route ("/")
   # root "posts#index"
 end

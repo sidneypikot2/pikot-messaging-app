@@ -4,6 +4,7 @@
 # --- Rails backend ---
 /backend/.bundle
 /backend/.env*
+!/backend/.env.example
 /backend/log/*
 /backend/tmp/*
 !/backend/log/.keep

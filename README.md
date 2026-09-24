@@ -54,7 +54,7 @@ docker compose build backend
 ## Roadmap
 
 Tracked in Jira ([KAN project](https://sidneypikot2.atlassian.net/jira/software/projects/KAN)).
-Planned: user auth, conversations, real-time messaging (Action Cable), then a mobile client.
+Auth (manual + social login) is done. Planned: conversations, real-time messaging (Action Cable), group chats, then a mobile client.
 
 ## Workflow conventions
 

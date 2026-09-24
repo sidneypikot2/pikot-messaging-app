@@ -79,3 +79,6 @@ RSpec.configure do |config|
     ActiveJob::Base.queue_adapter.perform_enqueued_at_jobs = true
   end
 end
+
+OmniAuth.config.test_mode = true
+OmniAuth.config.logger = Logger.new(File::NULL)
