@@ -1,4 +1,9 @@
 class ApplicationController < ActionController::API
+  # Sets ActiveStorage::Current.url_options from the current request — included manually
+  # since it's only auto-wired for ActionController::Base, not ActionController::API.
+  # Needed for rails_blob_url (avatar_url in UserSerializer) to know the host/port/protocol.
+  include ActiveStorage::SetCurrent
+
   private
 
   attr_reader :current_user
