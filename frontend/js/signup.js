@@ -23,6 +23,9 @@ form.addEventListener("submit", async (event) => {
   clearError();
 
   const email = document.getElementById("email").value.trim();
+  const firstName = document.getElementById("first_name").value.trim();
+  const lastName = document.getElementById("last_name").value.trim();
+  const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
   const passwordConfirmation = document.getElementById("password_confirmation").value;
 
@@ -30,7 +33,7 @@ form.addEventListener("submit", async (event) => {
   submitButton.textContent = "Signing up…";
 
   try {
-    const { user } = await Api.signup(email, password, passwordConfirmation);
+    const { user } = await Api.signup({ email, password, passwordConfirmation, firstName, lastName, username });
     successEmailEl.textContent = user.email;
     form.hidden = true;
     successEl.hidden = false;

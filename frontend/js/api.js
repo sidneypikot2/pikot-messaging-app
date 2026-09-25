@@ -31,11 +31,18 @@ const Api = {
     return res.json(); // { user }
   },
 
-  async signup(email, password, passwordConfirmation) {
+  async signup({ email, password, passwordConfirmation, firstName, lastName, username }) {
     const res = await fetch(`${window.API_BASE_URL}/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, password_confirmation: passwordConfirmation }),
+      body: JSON.stringify({
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+        first_name: firstName,
+        last_name: lastName,
+        username,
+      }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -44,7 +51,7 @@ const Api = {
       throw new Error((data.errors && data.errors.join(", ")) || `Signup failed (${res.status})`);
     }
 
-    return data; // { user: { id, email, verified } }
+    return data; // { user: { id, email, username, first_name, last_name, verified } }
   },
 
   async verifyEmail(token) {

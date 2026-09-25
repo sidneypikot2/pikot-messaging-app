@@ -33,6 +33,47 @@ RSpec.describe User, type: :model do
     expect(dup).not_to be_valid
   end
 
+  describe "profile fields" do
+    it "requires first_name" do
+      user = build(:user, first_name: nil)
+      expect(user).not_to be_valid
+      expect(user.errors[:first_name]).to be_present
+    end
+
+    it "requires last_name" do
+      user = build(:user, last_name: nil)
+      expect(user).not_to be_valid
+      expect(user.errors[:last_name]).to be_present
+    end
+
+    it "requires a username" do
+      user = build(:user, username: nil)
+      expect(user).not_to be_valid
+      expect(user.errors[:username]).to be_present
+    end
+
+    it "rejects a username with characters other than letters, numbers, and underscores" do
+      user = build(:user, username: "bad name!")
+      expect(user).not_to be_valid
+    end
+
+    it "requires a unique username, case-insensitively" do
+      create(:user, username: "dupuser")
+      dup = build(:user, username: "DupUser")
+      expect(dup).not_to be_valid
+    end
+
+    it "preserves the username's casing as entered" do
+      user = create(:user, username: "CamelCase")
+      expect(user.username).to eq("CamelCase")
+    end
+
+    it "does not require first_name, last_name, or username for oauth users" do
+      user = build(:user, :oauth)
+      expect(user).to be_valid
+    end
+  end
+
   describe "#verified?" do
     it "is false without verified_at" do
       expect(build(:user, verified_at: nil).verified?).to be false

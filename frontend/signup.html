@@ -27,6 +27,38 @@
           required
         />
 
+        <label for="first_name">First Name</label>
+        <input
+          type="text"
+          id="first_name"
+          name="first_name"
+          placeholder="Jane"
+          autocomplete="given-name"
+          required
+        />
+
+        <label for="last_name">Last Name</label>
+        <input
+          type="text"
+          id="last_name"
+          name="last_name"
+          placeholder="Doe"
+          autocomplete="family-name"
+          required
+        />
+
+        <label for="username">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          placeholder="janedoe"
+          autocomplete="username"
+          pattern="[a-zA-Z0-9_]{3,30}"
+          title="3-30 characters: letters, numbers, and underscores"
+          required
+        />
+
         <label for="password">Password</label>
         <input
           type="password"

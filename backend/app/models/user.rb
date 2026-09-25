@@ -12,6 +12,15 @@ class User < ApplicationRecord
   validates :password, presence: true, confirmation: true, on: :create, if: -> { !oauth_user? }
   validates :password_confirmation, presence: true, on: :create, if: -> { !oauth_user? }
 
+  # Not collected during OAuth signup, so gated the same way password is above — OAuth
+  # users end up with blank name/username until a future profile-completion flow exists.
+  validates :first_name, presence: true, if: -> { !oauth_user? }
+  validates :last_name, presence: true, if: -> { !oauth_user? }
+  validates :username, presence: true, length: { in: 3..30 },
+                        format: { with: /\A[a-zA-Z0-9_]+\z/, message: "only letters, numbers, and underscores" },
+                        uniqueness: { case_sensitive: false },
+                        if: -> { !oauth_user? }
+
   generates_token_for :email_verification, expires_in: 24.hours do
     email
   end
