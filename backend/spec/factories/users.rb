@@ -11,6 +11,16 @@ FactoryBot.define do
       verified_at { Time.current }
     end
 
+    trait :with_avatar do
+      after(:build) do |user|
+        user.avatar.attach(
+          io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")),
+          filename: "avatar.png",
+          content_type: "image/png"
+        )
+      end
+    end
+
     trait :oauth do
       password { nil }
       password_confirmation { nil }

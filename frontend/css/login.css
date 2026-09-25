@@ -109,6 +109,13 @@ body.login-page {
   box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
 }
 
+.login-card input[type="file"] {
+  width: 100%;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  color: var(--muted);
+}
+
 .remember-row {
   display: flex;
   align-items: center;

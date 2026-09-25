@@ -31,18 +31,20 @@ const Api = {
     return res.json(); // { user }
   },
 
-  async signup({ email, password, passwordConfirmation, firstName, lastName, username }) {
+  async signup({ email, password, passwordConfirmation, firstName, lastName, username, avatarFile }) {
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("password_confirmation", passwordConfirmation);
+    formData.append("first_name", firstName);
+    formData.append("last_name", lastName);
+    formData.append("username", username);
+    if (avatarFile) formData.append("avatar", avatarFile);
+
+    // No Content-Type header here — the browser sets the multipart boundary itself.
     const res = await fetch(`${window.API_BASE_URL}/signup`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        password_confirmation: passwordConfirmation,
-        first_name: firstName,
-        last_name: lastName,
-        username,
-      }),
+      body: formData,
     });
 
     const data = await res.json().catch(() => ({}));
@@ -51,7 +53,7 @@ const Api = {
       throw new Error((data.errors && data.errors.join(", ")) || `Signup failed (${res.status})`);
     }
 
-    return data; // { user: { id, email, username, first_name, last_name, verified } }
+    return data; // { user: { id, email, username, first_name, last_name, verified, avatar_url } }
   },
 
   async verifyEmail(token) {

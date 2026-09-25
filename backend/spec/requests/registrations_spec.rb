@@ -51,4 +51,20 @@ RSpec.describe "POST /signup", type: :request do
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body["errors"].join).to match(/first name/i)
   end
+
+  it "returns avatar_url: nil when no avatar is uploaded" do
+    post "/signup", params: valid_params
+
+    expect(response.parsed_body["user"]["avatar_url"]).to be_nil
+  end
+
+  it "accepts an optional avatar upload and returns its URL" do
+    avatar = fixture_file_upload("avatar.png", "image/png")
+
+    post "/signup", params: valid_params.merge(avatar: avatar)
+
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body["user"]["avatar_url"]).to match(%r{\Ahttp://})
+    expect(User.last.avatar).to be_attached
+  end
 end

@@ -29,6 +29,11 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # rails_blob_url (avatar_url in UserSerializer) is a plain route helper called outside
+  # a controller, so it needs a default host the same way action_mailer does below.
+  Rails.application.routes.default_url_options[:host] = "localhost"
+  Rails.application.routes.default_url_options[:port] = 3000
+
   # Real SMTP delivery when backend/.env has SMTP_ADDRESS set (KAN-11, e.g. Gmail);
   # otherwise fall back to previewing at /letter_opener (KAN-10).
   if ENV["SMTP_ADDRESS"].present?

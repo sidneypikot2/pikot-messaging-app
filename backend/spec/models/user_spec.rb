@@ -74,6 +74,29 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "avatar" do
+    it "is valid without an avatar attached" do
+      user = build(:user)
+      expect(user).to be_valid
+    end
+
+    it "is valid with an allowed content type" do
+      user = build(:user)
+      user.avatar.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")), filename: "avatar.png", content_type: "image/png")
+      expect(user).to be_valid
+    end
+
+    it "rejects a disallowed content type" do
+      user = build(:user)
+      # identify: false — otherwise Active Storage sniffs the real bytes (a PNG) and
+      # overrides whatever content_type we declare here.
+      user.avatar.attach(io: File.open(Rails.root.join("spec/fixtures/files/avatar.png")), filename: "avatar.txt",
+                          content_type: "text/plain", identify: false)
+      expect(user).not_to be_valid
+      expect(user.errors[:avatar]).to be_present
+    end
+  end
+
   describe "#verified?" do
     it "is false without verified_at" do
       expect(build(:user, verified_at: nil).verified?).to be false

@@ -77,6 +77,11 @@ RSpec.configure do |config|
   config.before do
     ActiveJob::Base.queue_adapter.perform_enqueued_jobs = true
     ActiveJob::Base.queue_adapter.perform_enqueued_at_jobs = true
+
+    # Model/service specs call things like UserSerializer#avatar_url directly, with no
+    # real request to derive a host from (ApplicationController's ActiveStorage::SetCurrent
+    # before_action only runs for request specs) — set it here so rails_blob_url works.
+    ActiveStorage::Current.url_options = { host: "example.com" }
   end
 end
 
