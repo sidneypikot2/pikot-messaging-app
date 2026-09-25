@@ -255,6 +255,18 @@ function handleIncoming({ message }) {
   loadConversations(); // bump this conversation to the top / refresh previews
 }
 
+// Fires for every message event across every conversation the user is a member of, not
+// just the currently-open one — a conversation the user hasn't opened yet (including a
+// brand-new one just created by someone else's first message) has no ConversationChannel
+// subscription to receive its broadcast on otherwise (KAN-16).
+function handleNotification({ message }) {
+  if (message.conversation_id === activeConversationId) {
+    handleIncoming({ message }); // dedup-safe (existing-id check) if also delivered via ConversationChannel
+  } else {
+    loadConversations();
+  }
+}
+
 // --- Composer ---
 
 function showComposerError(message) {
@@ -382,6 +394,7 @@ async function init() {
   }
 
   cable = Cable.create(token);
+  cable.subscribeToNotifications(handleNotification);
   await loadConversations();
 }
 

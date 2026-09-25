@@ -45,8 +45,8 @@ function createCable(token) {
     }
   }
 
-  function subscribeToConversation(conversationId, onReceived) {
-    const identifier = JSON.stringify({ channel: "ConversationChannel", conversation_id: conversationId });
+  function subscribe(channel, params, onReceived) {
+    const identifier = JSON.stringify({ channel, ...params });
     subscriptions.set(identifier, onReceived);
     send({ command: "subscribe", identifier });
 
@@ -56,7 +56,17 @@ function createCable(token) {
     };
   }
 
-  return { subscribeToConversation };
+  function subscribeToConversation(conversationId, onReceived) {
+    return subscribe("ConversationChannel", { conversation_id: conversationId }, onReceived);
+  }
+
+  // Per-user, session-long stream — subscribed once at init, never torn down, unlike
+  // subscribeToConversation which swaps as the user navigates between conversations.
+  function subscribeToNotifications(onReceived) {
+    return subscribe("NotificationsChannel", {}, onReceived);
+  }
+
+  return { subscribeToConversation, subscribeToNotifications };
 }
 
 window.Cable = { create: createCable };
