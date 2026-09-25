@@ -8,6 +8,8 @@ let cable = null;
 let activeConversationId = null;
 let unsubscribeActive = null;
 let oldestLoadedMessageId = null;
+let pendingOtherUser = null; // search result selected, but no conversation created yet
+let conversationsCache = []; // last-fetched conversation list, checked before starting a new draft
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -41,6 +43,7 @@ function renderList(container, items, buildItemEl) {
 async function loadConversations() {
   try {
     const { conversations } = await Api.conversations(token);
+    conversationsCache = conversations;
     conversationsStatusEl.hidden = conversations.length > 0;
     if (conversations.length === 0) conversationsStatusEl.textContent = "No conversations yet — search for someone to start one.";
 
@@ -73,6 +76,7 @@ function buildConversationItem(conversation) {
 async function selectConversation(conversationId, otherUser) {
   if (unsubscribeActive) unsubscribeActive();
 
+  pendingOtherUser = null;
   activeConversationId = conversationId;
   oldestLoadedMessageId = null;
 
@@ -90,6 +94,26 @@ async function selectConversation(conversationId, otherUser) {
 
   await loadMessages();
   unsubscribeActive = cable.subscribeToConversation(conversationId, handleIncoming);
+}
+
+// No conversation exists yet — just show the person and an empty thread until the
+// first message is actually sent (Api.createConversation is deferred to send-time).
+function selectDraftConversation(user) {
+  if (unsubscribeActive) unsubscribeActive();
+  unsubscribeActive = null;
+  activeConversationId = null;
+  pendingOtherUser = user;
+  oldestLoadedMessageId = null;
+
+  document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
+
+  threadEmptyEl.hidden = true;
+  threadActiveEl.hidden = false;
+  threadTitleEl.textContent = displayName(user);
+  Avatar.render(threadAvatarEl, user);
+  messageListEl.innerHTML = "";
+  loadOlderBtn.hidden = true;
+  clearComposerError();
 }
 
 // --- Messages ---
@@ -252,6 +276,15 @@ composerEl.addEventListener("submit", async (event) => {
   composerSendEl.disabled = true;
 
   try {
+    if (!activeConversationId && pendingOtherUser) {
+      const { conversation } = await Api.createConversation(token, pendingOtherUser.id);
+      activeConversationId = conversation.id;
+      pendingOtherUser = null;
+      // Subscribe before sending, not after — otherwise this first message's broadcast
+      // could arrive before the subscription handshake completes and get missed.
+      unsubscribeActive = cable.subscribeToConversation(activeConversationId, handleIncoming);
+    }
+
     await Api.sendMessage(token, activeConversationId, body);
     composerInputEl.value = "";
   } catch (err) {
@@ -310,12 +343,16 @@ function renderSearchResults(users) {
 
     li.appendChild(avatar);
     li.appendChild(name);
-    li.addEventListener("click", async () => {
+    li.addEventListener("click", () => {
       searchInput.value = "";
       searchResultsEl.hidden = true;
-      const { conversation } = await Api.createConversation(token, user.id);
-      await loadConversations();
-      selectConversation(conversation.id, conversation.other_user);
+
+      const existing = conversationsCache.find((c) => c.other_user && c.other_user.id === user.id);
+      if (existing) {
+        selectConversation(existing.id, existing.other_user);
+      } else {
+        selectDraftConversation(user);
+      }
     });
     return li;
   });
