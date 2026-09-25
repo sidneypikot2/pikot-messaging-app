@@ -34,6 +34,10 @@ Rails.application.configure do
   Rails.application.routes.default_url_options[:host] = "localhost"
   Rails.application.routes.default_url_options[:port] = 3000
 
+  # Without this, Action Cable's same-origin check (on by default outside test) rejects
+  # every WebSocket connection from the frontend's origin (KAN-14).
+  config.action_cable.allowed_request_origins = [ ENV.fetch("FRONTEND_ORIGIN", "http://localhost:8080") ]
+
   # Real SMTP delivery when backend/.env has SMTP_ADDRESS set (KAN-11, e.g. Gmail);
   # otherwise fall back to previewing at /letter_opener (KAN-10).
   if ENV["SMTP_ADDRESS"].present?

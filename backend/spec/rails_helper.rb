@@ -71,6 +71,7 @@ RSpec.configure do |config|
   # config.filter_gems_from_backtrace("gem name")
 
   config.include FactoryBot::Syntax::Methods
+  config.include ActionCable::TestHelper
 
   # Perform enqueued jobs (e.g. deliver_later mailers) inline, so specs can assert
   # on their side effects (ActionMailer::Base.deliveries, etc.) synchronously.

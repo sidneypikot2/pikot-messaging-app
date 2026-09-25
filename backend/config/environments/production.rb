@@ -23,6 +23,10 @@ Rails.application.configure do
   # TODO: revisit with a real domain once production infra exists.
   Rails.application.routes.default_url_options[:host] = "example.com"
 
+  # Without this, Action Cable's same-origin check rejects every WebSocket connection
+  # from the frontend's origin (KAN-14).
+  config.action_cable.allowed_request_origins = [ ENV.fetch("FRONTEND_ORIGIN", "http://localhost:8080") ]
+
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   # config.assume_ssl = true
 

@@ -2,6 +2,10 @@ class User < ApplicationRecord
   has_secure_password validations: false
   has_one_attached :avatar
 
+  has_many :conversation_memberships, dependent: :destroy
+  has_many :conversations, through: :conversation_memberships
+  has_many :sent_messages, class_name: "Message", foreign_key: :sender_id, inverse_of: :sender, dependent: :destroy
+
   normalizes :email, with: ->(email) { email.strip.downcase }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },
