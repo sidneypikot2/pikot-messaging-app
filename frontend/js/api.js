@@ -71,4 +71,85 @@ const Api = {
 
     return data; // { message }
   },
+
+  async conversations(token) {
+    const res = await fetch(`${window.API_BASE_URL}/conversations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Failed to load conversations (${res.status})`);
+
+    return res.json(); // { conversations: [{ id, other_user, created_at }] }
+  },
+
+  async createConversation(token, otherUserId) {
+    const res = await fetch(`${window.API_BASE_URL}/conversations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ user_id: otherUserId }),
+    });
+
+    if (!res.ok) throw new Error(`Failed to start conversation (${res.status})`);
+
+    return res.json(); // { conversation }
+  },
+
+  async messages(token, conversationId, beforeCursor) {
+    const url = new URL(`${window.API_BASE_URL}/conversations/${conversationId}/messages`);
+    if (beforeCursor) url.searchParams.set("before", beforeCursor);
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Failed to load messages (${res.status})`);
+
+    return res.json(); // { messages: [...], has_more }
+  },
+
+  async sendMessage(token, conversationId, body) {
+    const res = await fetch(`${window.API_BASE_URL}/conversations/${conversationId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ body }),
+    });
+
+    if (!res.ok) throw new Error(`Failed to send message (${res.status})`);
+
+    return res.json(); // { message }
+  },
+
+  async updateMessage(token, messageId, body) {
+    const res = await fetch(`${window.API_BASE_URL}/messages/${messageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ body }),
+    });
+
+    if (!res.ok) throw new Error(`Failed to edit message (${res.status})`);
+
+    return res.json(); // { message }
+  },
+
+  async deleteMessage(token, messageId) {
+    const res = await fetch(`${window.API_BASE_URL}/messages/${messageId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Failed to delete message (${res.status})`);
+  },
+
+  async searchUsers(token, query) {
+    const url = new URL(`${window.API_BASE_URL}/users/search`);
+    url.searchParams.set("q", query);
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Search failed (${res.status})`);
+
+    return res.json(); // { users: [...] }
+  },
 };

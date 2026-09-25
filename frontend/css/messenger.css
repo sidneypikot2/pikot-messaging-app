@@ -1,0 +1,434 @@
+/* Reuses login.css's color scheme (same values, kept self-contained here — each page
+   family in this app has its own standalone stylesheet, matching style.css/login.css). */
+:root {
+  color-scheme: light;
+  --navy: #1b2559;
+  --orange: #f2994a;
+  --orange-dark: #e07f2b;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --border: #d8dce3;
+  --bg: #f4f5f8;
+  --error: #d64545;
+  --error-bg: #fdecec;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Several elements below set display:flex on their class, which otherwise beats the
+   browser's default [hidden]{display:none} rule (author styles win over UA styles
+   regardless of selector specificity/order) — this keeps hiding actually work. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.messenger {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  height: 100vh;
+}
+
+/* Sidebar */
+
+.sidebar {
+  background: #fff;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0.75rem;
+}
+
+.sidebar-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--navy);
+}
+
+.logout-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+
+.search-box {
+  position: relative;
+  padding: 0 1.25rem 0.75rem;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
+}
+
+.search-results {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  top: 100%;
+  z-index: 10;
+  margin: 0.25rem 0 0;
+  padding: 0.4rem;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px -12px rgba(27, 37, 89, 0.25);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.search-results li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.search-results li:hover {
+  background: var(--bg);
+}
+
+.search-results .search-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  cursor: default;
+}
+
+.sidebar-status {
+  padding: 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.conversation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.conversation-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.conversation-list li:hover {
+  background: var(--bg);
+}
+
+.conversation-list li.active {
+  background: rgba(242, 153, 74, 0.15);
+}
+
+.conversation-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Avatars */
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Thread */
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.thread-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-align: center;
+  padding: 2rem;
+}
+
+.thread-active {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.thread-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+.thread-header span {
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.load-older-btn {
+  align-self: center;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.load-older-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+
+.message-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 65%;
+}
+
+.message-row.own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.message-row.other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.message-bubble {
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.message-row.own .message-bubble {
+  background: var(--orange);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.message-row.other .message-bubble {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.message-edit {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem;
+}
+
+.message-edit textarea {
+  width: 100%;
+  resize: none;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.message-edit button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-right: 0.4rem;
+}
+
+.message-edit button:first-of-type {
+  background: var(--orange);
+  color: #fff;
+}
+
+.message-edit button:last-of-type {
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.message-bubble.deleted {
+  font-style: italic;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.message-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.message-actions button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.message-actions button:hover {
+  color: var(--orange-dark);
+}
+
+.composer-error {
+  margin: 0 1.5rem;
+  background: var(--error-bg);
+  color: var(--error);
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.composer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  min-height: 2.5rem;
+  max-height: 8rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.composer textarea:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
+}
+
+.composer button {
+  border: none;
+  border-radius: 10px;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  padding: 0 1.25rem;
+  cursor: pointer;
+}
+
+.composer button:hover:not(:disabled) {
+  background: var(--orange-dark);
+}
+
+.composer button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  /* Stack instead of hiding the sidebar outright — a hidden-with-no-way-back sidebar
+     would make the conversation list permanently unreachable on narrow screens. */
+  .messenger {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(160px, 35vh) 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

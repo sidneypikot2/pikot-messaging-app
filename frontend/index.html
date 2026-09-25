@@ -4,28 +4,54 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PikotChat</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/messenger.css" />
 </head>
 <body>
-  <div class="app">
-    <header class="app-header">
-      <h1>PikotChat</h1>
-      <span id="api-status" class="status status--pending">Checking API…</span>
-    </header>
+  <div class="messenger">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>PikotChat</h1>
+        <button type="button" id="logout-btn" class="logout-btn">Log out</button>
+      </div>
 
-    <main class="app-main">
-      <p>
-        Frontend scaffold is up. It talks to the Rails API at
-        <code id="api-url"></code>.
-      </p>
-      <p id="session-status">Checking session…</p>
-      <p>Build the conversation list and chat screens here.</p>
+      <div class="search-box">
+        <input type="text" id="user-search" placeholder="Search people…" autocomplete="off" />
+        <ul id="search-results" class="search-results" hidden></ul>
+      </div>
+
+      <p id="conversations-status" class="sidebar-status">Loading conversations…</p>
+      <ul id="conversation-list" class="conversation-list"></ul>
+    </aside>
+
+    <main class="thread">
+      <div id="thread-empty" class="thread-empty">
+        <p>Select a conversation, or search for someone to start chatting.</p>
+      </div>
+
+      <div id="thread-active" class="thread-active" hidden>
+        <header class="thread-header">
+          <div id="thread-avatar" class="avatar"></div>
+          <span id="thread-title"></span>
+        </header>
+
+        <div id="message-list" class="message-list">
+          <button type="button" id="load-older-btn" class="load-older-btn" hidden>Load earlier messages</button>
+        </div>
+
+        <p id="composer-error" class="composer-error" hidden></p>
+        <form id="composer" class="composer">
+          <textarea id="composer-input" placeholder="Type a message…" required></textarea>
+          <button type="submit" id="composer-send">Send</button>
+        </form>
+      </div>
     </main>
   </div>
 
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/session.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/cable.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
