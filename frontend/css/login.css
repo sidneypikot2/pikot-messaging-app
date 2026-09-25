@@ -89,7 +89,8 @@ body.login-page {
 }
 
 .login-card input[type="email"],
-.login-card input[type="password"] {
+.login-card input[type="password"],
+.login-card input[type="text"] {
   width: 100%;
   padding: 0.85rem 1rem;
   border: 1px solid var(--border);
@@ -101,7 +102,8 @@ body.login-page {
 }
 
 .login-card input[type="email"]:focus,
-.login-card input[type="password"]:focus {
+.login-card input[type="password"]:focus,
+.login-card input[type="text"]:focus {
   outline: none;
   border-color: var(--orange);
   box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
