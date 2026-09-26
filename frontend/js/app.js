@@ -277,8 +277,26 @@ function handleIncoming(data) {
     return;
   }
 
+  // Placed specifically in the "genuinely new" branch, not above the existing-id check:
+  // the active conversation can receive this same message_created twice (once via this
+  // channel, once via NotificationsChannel's delegation below), and only the first
+  // delivery ever reaches this branch — the second finds `existing` and takes the
+  // replace-in-place branch above instead, so this can't double-play for one message.
+  if (data.event === "message_created" && message.sender.id !== currentUser.id) playNotificationSound();
+
   appendMessageEl(message);
   loadConversations(); // bump this conversation to the top / refresh previews
+}
+
+// --- Notification sound ---
+
+const notificationSound = new Audio("sounds/notification.mp3");
+
+function playNotificationSound() {
+  notificationSound.currentTime = 0;
+  // Autoplay can be rejected before any user gesture on the page; ignore that case
+  // rather than surface an unhandled rejection.
+  notificationSound.play().catch(() => {});
 }
 
 // --- Typing indicator ---
@@ -311,10 +329,12 @@ composerInputEl.addEventListener("input", () => {
 // just the currently-open one — a conversation the user hasn't opened yet (including a
 // brand-new one just created by someone else's first message) has no ConversationChannel
 // subscription to receive its broadcast on otherwise (KAN-16).
-function handleNotification({ message }) {
+function handleNotification(data) {
+  const { message, event } = data;
   if (message.conversation_id === activeConversationId) {
-    handleIncoming({ message }); // dedup-safe (existing-id check) if also delivered via ConversationChannel
+    handleIncoming(data); // dedup-safe (existing-id check) if also delivered via ConversationChannel
   } else {
+    if (event === "message_created" && message.sender.id !== currentUser.id) playNotificationSound();
     loadConversations();
   }
 }
