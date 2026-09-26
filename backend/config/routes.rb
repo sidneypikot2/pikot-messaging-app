@@ -26,6 +26,7 @@ Rails.application.routes.draw do
   get "users/search", to: "users#search"
 
   resources :conversations, only: [ :index, :show, :create ] do
+    member { post :read }
     resources :messages, only: [ :index, :create ]
   end
   resources :messages, only: [ :update, :destroy ]

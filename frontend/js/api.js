@@ -140,6 +140,15 @@ const Api = {
     if (!res.ok) throw new Error(`Failed to delete message (${res.status})`);
   },
 
+  async markConversationRead(token, conversationId) {
+    const res = await fetch(`${window.API_BASE_URL}/conversations/${conversationId}/read`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Failed to mark conversation as read (${res.status})`);
+  },
+
   async searchUsers(token, query) {
     const url = new URL(`${window.API_BASE_URL}/users/search`);
     url.searchParams.set("q", query);
