@@ -1,29 +1,57 @@
 module Auth
   # Finds or creates a User from an OmniAuth auth hash (request.env["omniauth.auth"]).
-  # Matches on provider+uid, not email — Apple only sends an email on the account's
-  # first authorization, so keying on email would break returning Apple sign-ins.
+  # Matches on provider+uid first, not email — Apple only sends an email on the account's
+  # first authorization, so keying on email would break returning Apple sign-ins. Only
+  # when that lookup misses (i.e. this provider has never been linked before) do we fall
+  # back to matching by email, to link this provider onto an existing account rather than
+  # blowing up on User's email-uniqueness validation — the provider has already verified
+  # that email before handing it to us, so treating a match as proof of ownership and
+  # linking is reasonable rather than rejecting the sign-in outright.
   class OmniauthAuthenticator < ApplicationService
     def initialize(auth_hash)
       @auth_hash = auth_hash
     end
 
     def call
-      user = User.find_or_create_by!(provider: @auth_hash.provider, uid: @auth_hash.uid) do |new_user|
-        new_user.email = email_from_auth_hash
-        new_user.first_name = @auth_hash.info&.first_name
-        new_user.last_name = @auth_hash.info&.last_name
-        new_user.username = generate_username
-        new_user.verified_at = Time.current
-      end
+      user = User.find_by(provider: @auth_hash.provider, uid: @auth_hash.uid) ||
+             link_existing_account_by_email ||
+             create_user
       attach_avatar(user) unless user.avatar.attached?
       user
     end
 
     private
 
-    # find_or_create_by! only runs this block on the create path, so an existing user's
-    # email/name/username is never overwritten by a later login where the provider sent
-    # different or withheld data.
+    # Only ever runs on the very first sign-in with this provider (the provider+uid
+    # lookup in #call already covers returning sign-ins), so it never overwrites an
+    # existing user's email/name/username with what a later login happens to send.
+    def link_existing_account_by_email
+      email = @auth_hash.info&.email
+      return nil if email.blank?
+
+      existing = User.find_by("LOWER(email) = ?", email.downcase)
+      return nil unless existing
+
+      existing.update!(provider: @auth_hash.provider, uid: @auth_hash.uid)
+      existing
+    end
+
+    def create_user
+      # Facebook only exposes a combined `name`, not first_name/last_name separately —
+      # split(" ") gives [first, last] ("First Last" order).
+      name = @auth_hash.info&.name&.split(" ") || []
+
+      User.create!(
+        email: email_from_auth_hash,
+        first_name: name[0],
+        last_name: name[1],
+        username: generate_username,
+        provider: @auth_hash.provider,
+        uid: @auth_hash.uid,
+        verified_at: Time.current
+      )
+    end
+
     def email_from_auth_hash
       @auth_hash.info&.email.presence || "#{@auth_hash.provider}-#{@auth_hash.uid}@users.pikotchat.local"
     end
@@ -48,8 +76,8 @@ module Auth
     def username_base
       if @auth_hash.info&.email.present?
         @auth_hash.info.email.split("@").first
-      elsif @auth_hash.info&.first_name.present? || @auth_hash.info&.last_name.present?
-        "#{@auth_hash.info&.first_name}#{@auth_hash.info&.last_name}"
+      elsif @auth_hash.info&.name.present?
+        @auth_hash.info.name
       else
         "#{@auth_hash.provider}user"
       end

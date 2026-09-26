@@ -47,3 +47,5 @@ form.addEventListener("submit", async (event) => {
     submitButton.textContent = "Sign Up";
   }
 });
+
+document.getElementById("facebook-button").addEventListener("click", () => OAuth.start("facebook"));

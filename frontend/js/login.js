@@ -16,6 +16,18 @@ function clearError() {
   errorEl.textContent = "";
 }
 
+const OAUTH_ERROR_MESSAGES = {
+  access_denied: "Facebook sign-in was cancelled.",
+  invalid_credentials: "Facebook sign-in failed. Please try again.",
+};
+
+const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+if (oauthError) {
+  showError(OAUTH_ERROR_MESSAGES[oauthError] || `Facebook sign-in failed (${oauthError}).`);
+}
+
+document.getElementById("facebook-button").addEventListener("click", () => OAuth.start("facebook"));
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   clearError();

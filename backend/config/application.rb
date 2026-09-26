@@ -46,7 +46,30 @@ module App
     # a Rails CSRF token (also session-backed) for the frontend's oauth request form.
     # JSON API actions never touch `session`, so this doesn't add cookies to their
     # responses.
+    #
+    # same_site: :none + secure: true because the session cookie has to survive a
+    # cross-site trip: it's set from the frontend's `GET /csrf_token` fetch (localhost:8080
+    # -> localhost:3000) and read back on the hidden form's `POST /auth/:provider` submit.
+    # The default SameSite=Lax only rides along on cross-site top-level GET navigations,
+    # not POST, so that second request would arrive with no session and fail CSRF
+    # validation. assume_ssl: true because rack-session's own security_matches? check
+    # (independent of and stricter than Rails' `always_write_cookie`) refuses to write a
+    # `secure` cookie at all unless the request came in over real SSL -- which local dev
+    # over plain http never does. `Secure`/SameSite=None cookies are still honored by the
+    # browser over plain http on localhost specifically, since Chrome (and others) treat
+    # it as a secure context.
     config.middleware.use ActionDispatch::Cookies
-    config.middleware.use ActionDispatch::Session::CookieStore, key: "_pikotchat_session"
+    config.middleware.use ActionDispatch::Session::CookieStore, key: "_pikotchat_session",
+                                                                 same_site: :none, secure: true,
+                                                                 assume_ssl: true
+
+    # Rails' CSRF protection (on by default since `load_defaults`) also requires the
+    # request's Origin header to equal the receiving server's own origin -- fine for a
+    # same-origin app, but always false here since the frontend (FRONTEND_ORIGIN) and
+    # backend intentionally live on different origins. That's not a hole: the token
+    # itself is still validated against the session, and cors.rb's
+    # `Access-Control-Allow-Origin` already restricts which origin can ever retrieve a
+    # valid token from GET /csrf_token to begin with.
+    config.action_controller.forgery_protection_origin_check = false
   end
 end
