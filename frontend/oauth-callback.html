@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signing you in · PikotChat</title>
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<body class="login-page">
+  <div class="login-layout">
+    <section class="login-card">
+      <h1>Signing you in</h1>
+
+      <p id="oauth-status" class="verify-status verify-status--pending">Completing sign-in…</p>
+
+      <a href="login.html" class="login-button signup-success-link">Go to Login</a>
+    </section>
+
+    <aside class="login-illustration" aria-hidden="true">
+      <svg viewBox="0 0 480 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="240" cy="360" rx="180" ry="16" fill="#dfe3f0" />
+        <rect x="90" y="70" width="300" height="230" rx="18" fill="#232b6b" />
+        <rect x="102" y="82" width="276" height="206" rx="10" fill="#eef0fb" />
+        <circle cx="118" cy="96" r="4" fill="#f2994a" />
+        <circle cx="132" cy="96" r="4" fill="#f2c94a" />
+        <circle cx="146" cy="96" r="4" fill="#6fcf97" />
+        <circle cx="240" cy="150" r="26" fill="#c2c9ec" />
+        <path d="M215 195a25 25 0 0 1 50 0v10h-50v-10z" fill="#c2c9ec" />
+        <rect x="150" y="225" width="180" height="12" rx="6" fill="#c2c9ec" />
+        <rect x="150" y="248" width="140" height="12" rx="6" fill="#c2c9ec" />
+        <rect x="150" y="271" width="90" height="12" rx="6" fill="#e07f2b" />
+        <circle cx="70" cy="150" r="34" fill="#c2c9ec" opacity="0.6" />
+        <rect x="52" y="150" width="36" height="46" rx="6" fill="#c2c9ec" opacity="0.6" />
+        <circle cx="415" cy="120" r="30" fill="none" stroke="#c2c9ec" stroke-width="6" />
+        <path d="M403 120l8 8 16-16" stroke="#f2994a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </aside>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/oauth-callback.js"></script>
+</body>
+</html>

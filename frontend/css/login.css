@@ -199,6 +199,10 @@ body.login-page {
   background: #fff;
   font-weight: 700;
   font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.social-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }

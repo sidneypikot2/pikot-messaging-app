@@ -2,11 +2,11 @@ require "rails_helper"
 
 RSpec.describe Auth::OmniauthAuthenticator do
   def auth_hash(provider: "facebook", uid: "12345", email: "person@example.com",
-                 first_name: "Jane", last_name: "Doe", image: nil)
+                 name: "Jane Doe", image: nil)
     OmniAuth::AuthHash.new(
       provider: provider,
       uid: uid,
-      info: OmniAuth::AuthHash::InfoHash.new(email: email, first_name: first_name, last_name: last_name, image: image)
+      info: OmniAuth::AuthHash::InfoHash.new(email: email, name: name, image: image)
     )
   end
 
@@ -45,12 +45,18 @@ RSpec.describe Auth::OmniauthAuthenticator do
     expect(user.email).to eq("apple-555@users.pikotchat.local")
   end
 
-  it "sets first_name, last_name, and a derived username on create" do
-    user = described_class.call(auth_hash(email: "jane.doe@example.com", first_name: "Jane", last_name: "Doe"))
+  it "sets first_name/last_name from the combined name, and a derived username, on create" do
+    user = described_class.call(auth_hash(email: "jane.doe@example.com", name: "Jane Doe"))
 
     expect(user.first_name).to eq("Jane")
     expect(user.last_name).to eq("Doe")
     expect(user.username).to eq("janedoe")
+  end
+
+  it "does not raise when the provider sends no name at all" do
+    expect {
+      described_class.call(auth_hash(provider: "apple", uid: "777", email: nil, name: nil))
+    }.not_to raise_error
   end
 
   it "appends a numeric suffix when the derived username is already taken" do
@@ -65,12 +71,56 @@ RSpec.describe Auth::OmniauthAuthenticator do
     existing = create(:user, :oauth, provider: "facebook", uid: "12345",
                                       first_name: "Original", last_name: "Name", username: "originalname")
 
-    found = described_class.call(auth_hash(first_name: "Changed", last_name: "Person"))
+    found = described_class.call(auth_hash(name: "Changed Person"))
 
     expect(found).to eq(existing)
     expect(found.first_name).to eq("Original")
     expect(found.last_name).to eq("Name")
     expect(found.username).to eq("originalname")
+  end
+
+  describe "linking to an existing account" do
+    it "links the provider to an existing manual account with a matching email instead of raising" do
+      existing = create(:user, :verified, email: "person@example.com", first_name: "Original", last_name: "Name",
+                                           username: "originalname")
+
+      linked = described_class.call(auth_hash(email: "person@example.com"))
+
+      expect(linked).to eq(existing)
+      expect(linked.provider).to eq("facebook")
+      expect(linked.uid).to eq("12345")
+    end
+
+    it "does not overwrite the existing account's name or username when linking" do
+      create(:user, :verified, email: "person@example.com", first_name: "Original", last_name: "Name",
+                                username: "originalname")
+
+      linked = described_class.call(auth_hash(email: "person@example.com", name: "Changed Person"))
+
+      expect(linked.first_name).to eq("Original")
+      expect(linked.last_name).to eq("Name")
+      expect(linked.username).to eq("originalname")
+    end
+
+    it "finds the linked account by provider+uid on a subsequent sign-in" do
+      existing = create(:user, :verified, email: "person@example.com", first_name: "Original", last_name: "Name",
+                                           username: "originalname")
+      described_class.call(auth_hash(email: "person@example.com"))
+
+      expect {
+        described_class.call(auth_hash(email: "person@example.com"))
+      }.not_to change(User, :count)
+      expect(described_class.call(auth_hash(email: "person@example.com"))).to eq(existing)
+    end
+
+    it "matches the existing account's email case-insensitively" do
+      existing = create(:user, :verified, email: "person@example.com", first_name: "Original", last_name: "Name",
+                                           username: "originalname")
+
+      linked = described_class.call(auth_hash(email: "Person@Example.com"))
+
+      expect(linked).to eq(existing)
+    end
   end
 
   describe "avatar" do

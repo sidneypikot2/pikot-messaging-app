@@ -2,7 +2,10 @@
 # get each one. Blank in development until real apps are registered with each provider;
 # the routes/controllers work either way, but initiating a real flow will fail without them.
 Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :facebook, ENV["FACEBOOK_APP_ID"], ENV["FACEBOOK_APP_SECRET"], scope: "email"
+  # public_profile grants first_name/last_name/picture — Facebook doesn't bundle it in
+  # automatically, so without it Auth::OmniauthAuthenticator only ever sees an email and
+  # first_name/last_name/avatar stay nil (KAN-17).
+  provider :facebook, ENV["FACEBOOK_APP_ID"], ENV["FACEBOOK_APP_SECRET"], scope: "email,public_profile"
 
   provider :linkedin, ENV["LINKEDIN_CLIENT_ID"], ENV["LINKEDIN_CLIENT_SECRET"]
 
