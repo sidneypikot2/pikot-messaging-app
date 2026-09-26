@@ -75,6 +75,18 @@ function buildConversationItem(conversation) {
 
   li.appendChild(avatar);
   li.appendChild(name);
+
+  // Never for the currently-active conversation — the user can already see its content
+  // directly, so a badge there would only ever be a stale/confusing flash regardless of
+  // server timing.
+  const unreadCount = conversation.id === activeConversationId ? 0 : conversation.unread_count;
+  if (unreadCount > 0) {
+    const badge = document.createElement("span");
+    badge.className = "unread-badge";
+    badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+    li.appendChild(badge);
+  }
+
   li.addEventListener("click", () => selectConversation(conversation.id, conversation.other_user));
   return li;
 }
@@ -110,7 +122,13 @@ async function selectConversation(conversationId, otherUser) {
   resetTypingState();
 
   document.querySelectorAll("#conversation-list li").forEach((li) => {
-    li.classList.toggle("active", Number(li.dataset.conversationId) === conversationId);
+    const isActive = Number(li.dataset.conversationId) === conversationId;
+    li.classList.toggle("active", isActive);
+    // buildConversationItem's "never for the active conversation" guard only applies at
+    // build time — selectConversation never rebuilds the list, just toggles classes on
+    // the existing elements, so a badge built before this selection would otherwise
+    // never disappear until the next unrelated full refresh.
+    if (isActive) li.querySelector(".unread-badge")?.remove();
   });
 
   threadEmptyEl.hidden = true;
@@ -123,6 +141,7 @@ async function selectConversation(conversationId, otherUser) {
 
   await loadMessages();
   unsubscribeActive = cable.subscribeToConversation(conversationId, handleIncoming);
+  Api.markConversationRead(token, conversationId).catch(() => {});
 }
 
 // No conversation exists yet — just show the person and an empty thread until the
@@ -345,6 +364,10 @@ function handleIncoming(data) {
   if (data.event === "message_created" && message.sender.id !== currentUser.id) playNotificationSound();
 
   appendMessageEl(message);
+  // Keeps the persisted "read up to" marker current while this conversation is already
+  // open — without this, a message arriving mid-session would still count as unread
+  // server-side until the next time the conversation is opened.
+  if (data.event === "message_created") Api.markConversationRead(token, message.conversation_id).catch(() => {});
   loadConversations(); // bump this conversation to the top / refresh previews
 }
 

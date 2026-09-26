@@ -20,6 +20,68 @@ RSpec.describe "Conversations", type: :request do
       ids = response.parsed_body["conversations"].map { |c| c["id"] }
       expect(ids).to eq([ mine.id ])
     end
+
+    it "counts messages from the other member as unread when nothing has been read yet" do
+      other = create(:user)
+      conversation = create(:conversation)
+      create(:conversation_membership, conversation: conversation, user: current_user)
+      create(:conversation_membership, conversation: conversation, user: other)
+      create_list(:message, 3, conversation: conversation, sender: other)
+
+      get "/conversations", headers: auth_headers
+
+      expect(response.parsed_body["conversations"].first["unread_count"]).to eq(3)
+    end
+
+    it "does not count the current user's own messages as unread" do
+      other = create(:user)
+      conversation = create(:conversation)
+      create(:conversation_membership, conversation: conversation, user: current_user)
+      create(:conversation_membership, conversation: conversation, user: other)
+      create_list(:message, 2, conversation: conversation, sender: current_user)
+
+      get "/conversations", headers: auth_headers
+
+      expect(response.parsed_body["conversations"].first["unread_count"]).to eq(0)
+    end
+
+    it "only counts messages sent after the current user's last_read_message_id" do
+      other = create(:user)
+      conversation = create(:conversation)
+      membership = create(:conversation_membership, conversation: conversation, user: current_user)
+      create(:conversation_membership, conversation: conversation, user: other)
+      already_read = create(:message, conversation: conversation, sender: other)
+      membership.update!(last_read_message_id: already_read.id)
+      create_list(:message, 2, conversation: conversation, sender: other)
+
+      get "/conversations", headers: auth_headers
+
+      expect(response.parsed_body["conversations"].first["unread_count"]).to eq(2)
+    end
+  end
+
+  describe "POST /conversations/:id/read" do
+    it "marks the conversation caught up to its latest message" do
+      other = create(:user)
+      conversation = create(:conversation)
+      create(:conversation_membership, conversation: conversation, user: current_user)
+      create(:conversation_membership, conversation: conversation, user: other)
+      create_list(:message, 3, conversation: conversation, sender: other)
+
+      post "/conversations/#{conversation.id}/read", headers: auth_headers
+      expect(response).to have_http_status(:no_content)
+
+      get "/conversations", headers: auth_headers
+      expect(response.parsed_body["conversations"].first["unread_count"]).to eq(0)
+    end
+
+    it "404s for a conversation the user is not a member of" do
+      conversation = create(:conversation)
+
+      post "/conversations/#{conversation.id}/read", headers: auth_headers
+
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
   describe "GET /conversations/:id" do

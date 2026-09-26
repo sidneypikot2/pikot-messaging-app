@@ -164,11 +164,29 @@ body {
 }
 
 .conversation-name {
+  flex: 1;
+  min-width: 0; /* lets text-overflow ellipsis actually kick in inside the flex row */
   font-weight: 600;
   font-size: 0.9rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.unread-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Avatars */
