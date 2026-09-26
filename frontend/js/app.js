@@ -160,6 +160,7 @@ function showLoadingIndicator() {
 }
 
 async function loadMessages() {
+  showLoadingIndicator();
   try {
     const { messages, has_more } = await Api.messages(token, activeConversationId);
     messages.forEach((message) => appendMessageEl(message));
@@ -168,6 +169,7 @@ async function loadMessages() {
     updatePaginationStatus();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
+    paginationStatusEl.hidden = true;
     clearComposerError();
     showComposerError(err.message);
   }
