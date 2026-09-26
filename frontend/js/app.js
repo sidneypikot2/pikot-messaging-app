@@ -8,6 +8,8 @@ let cable = null;
 let activeConversationId = null;
 let unsubscribeActive = null;
 let oldestLoadedMessageId = null;
+let hasMoreOlder = true; // whether the current thread has older messages left to load
+let isLoadingOlder = false; // guards against overlapping fetches from rapid scroll events
 let pendingOtherUser = null; // search result selected, but no conversation created yet
 let conversationsCache = []; // last-fetched conversation list, checked before starting a new draft
 let typingPingActive = false; // throttles outgoing pings to ~1 per 3s of continuous typing
@@ -23,7 +25,7 @@ const threadActiveEl = document.getElementById("thread-active");
 const threadAvatarEl = document.getElementById("thread-avatar");
 const threadTitleEl = document.getElementById("thread-title");
 const messageListEl = document.getElementById("message-list");
-const loadOlderBtn = document.getElementById("load-older-btn");
+const paginationStatusEl = document.getElementById("pagination-status");
 const composerEl = document.getElementById("composer");
 const composerInputEl = document.getElementById("composer-input");
 const composerSendEl = document.getElementById("composer-send");
@@ -86,6 +88,18 @@ function resetTypingState() {
   typingIndicatorEl.hidden = true;
 }
 
+// messageListEl.innerHTML = "" (below) destroys paginationStatusEl too, since it's a
+// child of #message-list — re-attach the same element rather than losing it, or the
+// scroll-to-load-more trigger silently stops working after the first conversation
+// switch (this is exactly what happened to the old load-older button it replaced).
+function resetPaginationState() {
+  messageListEl.appendChild(paginationStatusEl);
+  paginationStatusEl.hidden = true;
+  paginationStatusEl.textContent = "";
+  hasMoreOlder = true;
+  isLoadingOlder = false;
+}
+
 async function selectConversation(conversationId, otherUser) {
   if (unsubscribeActive) unsubscribeActive();
 
@@ -103,7 +117,7 @@ async function selectConversation(conversationId, otherUser) {
   threadTitleEl.textContent = otherUser ? displayName(otherUser) : "Conversation";
   if (otherUser) Avatar.render(threadAvatarEl, otherUser);
   messageListEl.innerHTML = "";
-  loadOlderBtn.hidden = true;
+  resetPaginationState();
   clearComposerError();
 
   await loadMessages();
@@ -127,18 +141,24 @@ function selectDraftConversation(user) {
   threadTitleEl.textContent = displayName(user);
   Avatar.render(threadAvatarEl, user);
   messageListEl.innerHTML = "";
-  loadOlderBtn.hidden = true;
+  resetPaginationState();
   clearComposerError();
 }
 
 // --- Messages ---
+
+function updatePaginationStatus() {
+  paginationStatusEl.hidden = hasMoreOlder;
+  paginationStatusEl.textContent = hasMoreOlder ? "" : "No more messages to display";
+}
 
 async function loadMessages() {
   try {
     const { messages, has_more } = await Api.messages(token, activeConversationId);
     messages.forEach((message) => appendMessageEl(message));
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
-    loadOlderBtn.hidden = !has_more;
+    hasMoreOlder = has_more;
+    updatePaginationStatus();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
     clearComposerError();
@@ -147,18 +167,36 @@ async function loadMessages() {
 }
 
 async function loadOlderMessages() {
-  if (!oldestLoadedMessageId) return;
-
+  if (!oldestLoadedMessageId || isLoadingOlder) return;
+  isLoadingOlder = true;
+  const conversationAtRequestTime = activeConversationId;
   const previousHeight = messageListEl.scrollHeight;
-  const { messages, has_more } = await Api.messages(token, activeConversationId, oldestLoadedMessageId);
-  const frag = document.createDocumentFragment();
-  messages.forEach((message) => frag.appendChild(buildMessageEl(message)));
-  messageListEl.insertBefore(frag, loadOlderBtn.nextSibling);
 
-  if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
-  loadOlderBtn.hidden = !has_more;
-  messageListEl.scrollTop = messageListEl.scrollHeight - previousHeight;
+  try {
+    const { messages, has_more } = await Api.messages(token, activeConversationId, oldestLoadedMessageId);
+    if (activeConversationId !== conversationAtRequestTime) return; // switched threads mid-request
+
+    const frag = document.createDocumentFragment();
+    messages.forEach((message) => frag.appendChild(buildMessageEl(message)));
+    messageListEl.insertBefore(frag, paginationStatusEl.nextSibling);
+
+    if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
+    hasMoreOlder = has_more;
+    updatePaginationStatus();
+    messageListEl.scrollTop = messageListEl.scrollHeight - previousHeight;
+  } finally {
+    isLoadingOlder = false;
+  }
 }
+
+// Small buffer before the literal top so loading kicks in a moment before the user hits
+// a hard wall. isLoadingOlder guards against firing overlapping fetches — scroll events
+// fire far more often than a single request round-trip takes.
+messageListEl.addEventListener("scroll", () => {
+  if (isLoadingOlder || !hasMoreOlder || !oldestLoadedMessageId) return;
+  if (messageListEl.scrollTop > 50) return;
+  loadOlderMessages();
+});
 
 function buildMessageEl(message) {
   const row = document.createElement("div");
@@ -378,8 +416,6 @@ composerEl.addEventListener("submit", async (event) => {
     composerInputEl.focus();
   }
 });
-
-loadOlderBtn.addEventListener("click", loadOlderMessages);
 
 // --- Search ---
 
