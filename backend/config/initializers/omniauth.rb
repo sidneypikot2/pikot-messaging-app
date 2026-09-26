@@ -9,6 +9,10 @@ Rails.application.config.middleware.use OmniAuth::Builder do
 
   provider :linkedin, ENV["LINKEDIN_CLIENT_ID"], ENV["LINKEDIN_CLIENT_SECRET"]
 
+  # Default scope already includes email + profile (name/image come from profile), so no
+  # scope: override needed here unlike Facebook.
+  provider :google_oauth2, ENV["GOOGLE_CLIENT_ID"], ENV["GOOGLE_CLIENT_SECRET"]
+
   # Apple's Sign In requires response_mode "form_post" whenever "name"/"email" scopes are
   # requested — Apple POSTs back to the callback instead of redirecting with a GET.
   provider :apple, ENV["APPLE_CLIENT_ID"], nil, {

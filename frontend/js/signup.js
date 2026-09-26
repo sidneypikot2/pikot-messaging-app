@@ -49,3 +49,4 @@ form.addEventListener("submit", async (event) => {
 });
 
 document.getElementById("facebook-button").addEventListener("click", () => OAuth.start("facebook"));
+document.getElementById("google-button").addEventListener("click", () => OAuth.start("google_oauth2"));

@@ -17,16 +17,17 @@ function clearError() {
 }
 
 const OAUTH_ERROR_MESSAGES = {
-  access_denied: "Facebook sign-in was cancelled.",
-  invalid_credentials: "Facebook sign-in failed. Please try again.",
+  access_denied: "Sign-in was cancelled.",
+  invalid_credentials: "Sign-in failed. Please try again.",
 };
 
 const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
 if (oauthError) {
-  showError(OAUTH_ERROR_MESSAGES[oauthError] || `Facebook sign-in failed (${oauthError}).`);
+  showError(OAUTH_ERROR_MESSAGES[oauthError] || `Sign-in failed (${oauthError}).`);
 }
 
 document.getElementById("facebook-button").addEventListener("click", () => OAuth.start("facebook"));
+document.getElementById("google-button").addEventListener("click", () => OAuth.start("google_oauth2"));
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
