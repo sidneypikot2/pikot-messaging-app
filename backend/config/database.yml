@@ -64,8 +64,9 @@ production:
   primary: &primary_production
     <<: *default
     database: app_production
-    username: app
+    username: <%= ENV.fetch("DATABASE_USERNAME", "app") %>
     password: <%= ENV["APP_DATABASE_PASSWORD"] %>
+    sslmode: require
   cache:
     <<: *primary_production
     database: app_production_cache
