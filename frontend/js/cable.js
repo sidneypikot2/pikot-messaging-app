@@ -50,10 +50,17 @@ function createCable(token) {
     subscriptions.set(identifier, onReceived);
     send({ command: "subscribe", identifier });
 
-    return () => {
+    const unsubscribe = () => {
       send({ command: "unsubscribe", identifier });
       subscriptions.delete(identifier);
     };
+    // Attached to the returned function rather than changing its shape, so every
+    // existing call site (which just calls the return value directly to unsubscribe)
+    // keeps working untouched.
+    unsubscribe.perform = (action, data = {}) => {
+      send({ command: "message", identifier, data: JSON.stringify({ action, ...data }) });
+    };
+    return unsubscribe;
   }
 
   function subscribeToConversation(conversationId, onReceived) {
