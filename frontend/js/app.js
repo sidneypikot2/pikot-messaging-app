@@ -152,6 +152,13 @@ function updatePaginationStatus() {
   paginationStatusEl.textContent = hasMoreOlder ? "" : "No more messages to display";
 }
 
+// textContent above clears this spinner's markup outright once the fetch resolves, so
+// nothing further is needed to remove it.
+function showLoadingIndicator() {
+  paginationStatusEl.innerHTML = '<span class="pagination-spinner"></span>';
+  paginationStatusEl.hidden = false;
+}
+
 async function loadMessages() {
   try {
     const { messages, has_more } = await Api.messages(token, activeConversationId);
@@ -169,6 +176,7 @@ async function loadMessages() {
 async function loadOlderMessages() {
   if (!oldestLoadedMessageId || isLoadingOlder) return;
   isLoadingOlder = true;
+  showLoadingIndicator();
   const conversationAtRequestTime = activeConversationId;
   const previousHeight = messageListEl.scrollHeight;
 
