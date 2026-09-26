@@ -6,12 +6,13 @@ RSpec.describe "OmniAuth callbacks", type: :request do
   end
 
   # The request phase (POST /auth/:provider) is CSRF-protected (omniauth-rails_csrf_protection),
-  # matching what the real frontend flow has to do: fetch a token, then submit it. In test
-  # mode, hitting the request phase 302s to the callback instead of invoking it in-process,
-  # so we follow that redirect to reach OmniauthCallbacksController.
+  # matching what the real frontend flow has to do: load the same-origin start page, then
+  # submit its embedded token. In test mode, hitting the request phase 302s to the callback
+  # instead of invoking it in-process, so we follow that redirect to reach
+  # OmniauthCallbacksController.
   def start_oauth(provider)
-    get "/csrf_token"
-    token = response.parsed_body["csrf_token"]
+    get "/auth/#{provider}/start"
+    token = response.body[/name="authenticity_token" value="([^"]+)"/, 1]
 
     post "/auth/#{provider}", params: { authenticity_token: token }
     follow_redirect!
