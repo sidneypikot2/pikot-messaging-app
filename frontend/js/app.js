@@ -10,6 +10,9 @@ let unsubscribeActive = null;
 let oldestLoadedMessageId = null;
 let pendingOtherUser = null; // search result selected, but no conversation created yet
 let conversationsCache = []; // last-fetched conversation list, checked before starting a new draft
+let typingPingActive = false; // throttles outgoing pings to ~1 per 3s of continuous typing
+let typingPingResetTimer = null;
+let typingIndicatorTimer = null; // hides the received indicator if no further ping arrives
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -25,6 +28,7 @@ const composerEl = document.getElementById("composer");
 const composerInputEl = document.getElementById("composer-input");
 const composerSendEl = document.getElementById("composer-send");
 const composerErrorEl = document.getElementById("composer-error");
+const typingIndicatorEl = document.getElementById("typing-indicator");
 const logoutBtn = document.getElementById("logout-btn");
 
 function displayName(user) {
@@ -73,12 +77,22 @@ function buildConversationItem(conversation) {
   return li;
 }
 
+// Resets both the sent-ping throttle and the shown indicator so a stale "X is
+// typing…" from a previous thread can't linger after switching conversations.
+function resetTypingState() {
+  typingPingActive = false;
+  clearTimeout(typingPingResetTimer);
+  clearTimeout(typingIndicatorTimer);
+  typingIndicatorEl.hidden = true;
+}
+
 async function selectConversation(conversationId, otherUser) {
   if (unsubscribeActive) unsubscribeActive();
 
   pendingOtherUser = null;
   activeConversationId = conversationId;
   oldestLoadedMessageId = null;
+  resetTypingState();
 
   document.querySelectorAll("#conversation-list li").forEach((li) => {
     li.classList.toggle("active", Number(li.dataset.conversationId) === conversationId);
@@ -104,6 +118,7 @@ function selectDraftConversation(user) {
   activeConversationId = null;
   pendingOtherUser = user;
   oldestLoadedMessageId = null;
+  resetTypingState();
 
   document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
 
@@ -248,7 +263,13 @@ async function deleteMessage(message) {
   }
 }
 
-function handleIncoming({ message }) {
+function handleIncoming(data) {
+  if (data.event === "typing") {
+    if (data.user.id !== currentUser.id) showTypingIndicator(data.user);
+    return;
+  }
+
+  const { message } = data;
   const existing = document.getElementById(`message-${message.id}`);
 
   if (existing) {
@@ -259,6 +280,32 @@ function handleIncoming({ message }) {
   appendMessageEl(message);
   loadConversations(); // bump this conversation to the top / refresh previews
 }
+
+// --- Typing indicator ---
+// Ephemeral, no "stopped typing" round trip (SPEC.md) — the sender throttles pings to
+// ~1 per 3s of continuous typing, and the receiver just lets the shown indicator expire
+// a few seconds after the last ping it received.
+
+function showTypingIndicator(user) {
+  typingIndicatorEl.textContent = `${displayName(user)} is typing…`;
+  typingIndicatorEl.hidden = false;
+  clearTimeout(typingIndicatorTimer);
+  typingIndicatorTimer = setTimeout(() => {
+    typingIndicatorEl.hidden = true;
+  }, 4000);
+}
+
+composerInputEl.addEventListener("input", () => {
+  // No conversation created yet (draft state) — no ConversationChannel subscription to
+  // perform on.
+  if (!activeConversationId || !unsubscribeActive || typingPingActive) return;
+
+  typingPingActive = true;
+  unsubscribeActive.perform("typing");
+  typingPingResetTimer = setTimeout(() => {
+    typingPingActive = false;
+  }, 3000);
+});
 
 // Fires for every message event across every conversation the user is a member of, not
 // just the currently-open one — a conversation the user hasn't opened yet (including a

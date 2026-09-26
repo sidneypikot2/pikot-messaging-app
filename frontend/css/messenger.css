@@ -364,6 +364,12 @@ body {
   color: var(--orange-dark);
 }
 
+.typing-indicator {
+  margin: 0 1.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .composer-error {
   margin: 0 1.5rem;
   background: var(--error-bg);
