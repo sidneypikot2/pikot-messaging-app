@@ -226,6 +226,11 @@ function startEditingMessage(message) {
 
   const editWrapper = document.createElement("div");
   editWrapper.className = "message-edit";
+  // Keep the same id as `row` for the whole edit window — handleIncoming's dedup relies
+  // on getElementById finding this message's element; without an id here, a broadcast
+  // arriving before the save's HTTP response resolves falls through to appendMessageEl
+  // and creates a duplicate instead of updating this element in place.
+  editWrapper.id = `message-${message.id}`;
   editWrapper.appendChild(textarea);
   editWrapper.appendChild(saveBtn);
   editWrapper.appendChild(cancelBtn);
