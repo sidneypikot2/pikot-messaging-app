@@ -20,21 +20,21 @@ Rails.application.configure do
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
-  # TODO: revisit with a real domain once production infra exists.
-  Rails.application.routes.default_url_options[:host] = "example.com"
+  Rails.application.routes.default_url_options[:host] = ENV.fetch("APP_HOST", "localhost:3000")
 
   # Without this, Action Cable's same-origin check rejects every WebSocket connection
   # from the frontend's origin (KAN-14).
   config.action_cable.allowed_request_origins = [ ENV.fetch("FRONTEND_ORIGIN", "http://localhost:8080") ]
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  # config.assume_ssl = true
+  # Render terminates TLS at its edge and forwards X-Forwarded-Proto, so this is safe
+  # and won't cause a redirect loop.
+  config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  # config.force_ssl = true
+  config.force_ssl = true
 
   # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -61,7 +61,7 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "localhost:3000") }
 
   # Outgoing SMTP server (KAN-11) — credentials via ENV, same backend/.env convention
   # used for the KAN-7 OAuth secrets, rather than Rails encrypted credentials. Guarded
