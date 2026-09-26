@@ -94,6 +94,7 @@ function resetTypingState() {
 // switch (this is exactly what happened to the old load-older button it replaced).
 function resetPaginationState() {
   messageListEl.appendChild(paginationStatusEl);
+  paginationStatusEl.classList.remove("pagination-status--centered");
   paginationStatusEl.hidden = true;
   paginationStatusEl.textContent = "";
   hasMoreOlder = true;
@@ -148,6 +149,7 @@ function selectDraftConversation(user) {
 // --- Messages ---
 
 function updatePaginationStatus() {
+  paginationStatusEl.classList.remove("pagination-status--centered");
   paginationStatusEl.hidden = hasMoreOlder;
   paginationStatusEl.textContent = hasMoreOlder ? "" : "No more messages to display";
 }
@@ -159,8 +161,17 @@ function showLoadingIndicator() {
   paginationStatusEl.hidden = false;
 }
 
+// Bigger and vertically centered over the (otherwise still-empty) message list, so
+// opening a conversation reads clearly as "loading" rather than a subtle top-corner hint
+// — distinct from the small in-flow spinner loadOlderMessages uses further down.
+function showInitialLoadingIndicator() {
+  paginationStatusEl.classList.add("pagination-status--centered");
+  paginationStatusEl.innerHTML = '<span class="pagination-spinner pagination-spinner--large"></span>';
+  paginationStatusEl.hidden = false;
+}
+
 async function loadMessages() {
-  showLoadingIndicator();
+  showInitialLoadingIndicator();
   try {
     const { messages, has_more } = await Api.messages(token, activeConversationId);
     messages.forEach((message) => appendMessageEl(message));
@@ -169,6 +180,7 @@ async function loadMessages() {
     updatePaginationStatus();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
+    paginationStatusEl.classList.remove("pagination-status--centered");
     paginationStatusEl.hidden = true;
     clearComposerError();
     showComposerError(err.message);
