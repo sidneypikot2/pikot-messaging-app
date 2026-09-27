@@ -27,6 +27,10 @@ gem "omniauth-linkedin-oauth2"
 gem "omniauth-apple"
 gem "omniauth-google-oauth2"
 
+# Outgoing email (KAN-27) — ActionMailer delivery method that sends over HTTPS, since
+# Render blocks outbound SMTP ports on Free-tier web services
+gem "resend"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
