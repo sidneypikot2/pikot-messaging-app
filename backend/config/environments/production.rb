@@ -63,20 +63,11 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "localhost:3000") }
 
-  # Outgoing SMTP server (KAN-11) — credentials via ENV, same backend/.env convention
-  # used for the KAN-7 OAuth secrets, rather than Rails encrypted credentials. Guarded
-  # so boot doesn't hard-fail if a deploy ships before SMTP_* is configured.
-  if ENV["SMTP_ADDRESS"].present?
-    config.action_mailer.smtp_settings = {
-      address: ENV.fetch("SMTP_ADDRESS"),
-      port: ENV.fetch("SMTP_PORT", 587).to_i,
-      domain: ENV["SMTP_DOMAIN"],
-      user_name: ENV["SMTP_USERNAME"],
-      password: ENV["SMTP_PASSWORD"],
-      authentication: :plain,
-      enable_starttls_auto: true
-    }
-  end
+  # Outgoing email via Resend (KAN-27) — sends over HTTPS rather than SMTP, since Render
+  # blocks outbound traffic on SMTP ports 25/465/587 for Free-tier web services, which is
+  # what KAN-11's original SMTP setup ran into (Net::OpenTimeout on every send). API key
+  # lives in config/initializers/mailer.rb, same ENV convention as the KAN-7 OAuth secrets.
+  config.action_mailer.delivery_method = :resend
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
