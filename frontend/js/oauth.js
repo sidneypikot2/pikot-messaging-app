@@ -1,24 +1,12 @@
-// Kicks off the OAuth request phase for a provider (currently just Facebook). This has
-// to be a real <form> POST, not fetch/XHR — the browser needs to actually navigate to
-// the provider's consent screen, which a plain request can't do. omniauth-rails_csrf_protection
-// requires that POST to carry a valid Rails CSRF token, so we fetch one first.
-async function startOauth(provider) {
-  const res = await fetch(`${window.API_BASE_URL}/csrf_token`, { credentials: "include" });
-  const { csrf_token } = await res.json();
-
-  const form = document.createElement("form");
-  form.method = "post";
-  form.action = `${window.API_BASE_URL}/auth/${provider}`;
-  form.style.display = "none";
-
-  const tokenInput = document.createElement("input");
-  tokenInput.type = "hidden";
-  tokenInput.name = "authenticity_token";
-  tokenInput.value = csrf_token;
-  form.appendChild(tokenInput);
-
-  document.body.appendChild(form);
-  form.submit();
+// Kicks off the OAuth request phase for a provider by navigating (not fetching) to a
+// same-origin "start" page on the backend, which sets the session cookie as a normal
+// top-level-navigation response and then auto-submits the CSRF-protected form itself,
+// entirely within the backend's own origin. This has to be a real navigation, not
+// fetch/XHR — the browser needs to actually reach the provider's consent screen, which a
+// plain request can't do, and a cross-site fetch from this page can't reliably set the
+// session cookie the CSRF check depends on (see OauthStartsController).
+function startOauth(provider) {
+  window.location.href = `${window.API_BASE_URL}/auth/${provider}/start`;
 }
 
 window.OAuth = { start: startOauth };

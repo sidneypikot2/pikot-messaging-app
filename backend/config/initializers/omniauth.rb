@@ -25,7 +25,7 @@ Rails.application.config.middleware.use OmniAuth::Builder do
 end
 
 # Require the request phase (GET /auth/:provider) to be a CSRF-protected form POST —
-# see CsrfTokensController and omniauth-rails_csrf_protection in the Gemfile.
+# see OauthStartsController and omniauth-rails_csrf_protection in the Gemfile.
 OmniAuth.config.allowed_request_methods = [ :post ]
 
 # Route provider failures (denied consent, etc.) through our own controller instead of
