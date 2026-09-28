@@ -3,8 +3,6 @@ if (!token) {
   window.location.href = "login.html";
 }
 
-const QUICK_REACT_EMOJI = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
 let currentUser = null;
 let cable = null;
 let activeConversationId = null;
@@ -260,7 +258,7 @@ function buildMessageEl(message) {
     reactBtn.className = "react-trigger";
     reactBtn.textContent = "🙂";
     reactBtn.setAttribute("aria-label", "Add reaction");
-    reactBtn.addEventListener("click", (e) => openQuickReact(e.currentTarget, message));
+    reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
     bubbleWrap.appendChild(reactBtn);
   }
 
@@ -326,36 +324,51 @@ function sendReaction(messageId, emoji) {
   Api.toggleReaction(token, messageId, emoji).catch((err) => showComposerError(err.message));
 }
 
-let openQuickReactPopover = null;
+let openEmojiPickerPanel = null;
 
-function openQuickReact(anchorEl, message) {
-  closeQuickReact();
-  const popover = document.createElement("div");
-  popover.className = "quick-react-popover";
-  QUICK_REACT_EMOJI.forEach((emoji) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = emoji;
-    btn.addEventListener("click", () => {
-      sendReaction(message.id, emoji);
-      closeQuickReact();
-    });
-    popover.appendChild(btn);
-  });
-  anchorEl.parentElement.appendChild(popover); // positioned via CSS relative to .message-bubble-wrap
-  openQuickReactPopover = popover;
+// Appended to document.body (not the anchor's own parent) and positioned with
+// getBoundingClientRect, since the picker is too big to trust simple CSS anchoring —
+// a message near the right/bottom edge of the viewport would otherwise clip off-screen.
+function positionPopover(popover, anchorEl) {
+  document.body.appendChild(popover);
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const popRect = popover.getBoundingClientRect();
+  const margin = 8;
+
+  let top = anchorRect.top - popRect.height - margin;
+  if (top < margin) top = anchorRect.bottom + margin; // flip below if no room above
+
+  let left = anchorRect.right - popRect.width;
+  if (left < margin) left = anchorRect.left;
+  if (left + popRect.width > window.innerWidth - margin) left = window.innerWidth - popRect.width - margin;
+
+  popover.style.position = "fixed";
+  popover.style.top = `${top}px`;
+  popover.style.left = `${left}px`;
 }
 
-function closeQuickReact() {
-  if (openQuickReactPopover) {
-    openQuickReactPopover.remove();
-    openQuickReactPopover = null;
+// Shared by the per-message react-trigger and the composer's emoji button — both just
+// supply an anchor element and an onSelect callback.
+function openEmojiPickerFor(anchorEl, onSelect) {
+  closeEmojiPicker();
+  const panel = EmojiPicker.create((emoji) => {
+    onSelect(emoji);
+    closeEmojiPicker();
+  });
+  positionPopover(panel, anchorEl);
+  openEmojiPickerPanel = panel;
+}
+
+function closeEmojiPicker() {
+  if (openEmojiPickerPanel) {
+    openEmojiPickerPanel.remove();
+    openEmojiPickerPanel = null;
   }
 }
 
 document.addEventListener("click", (event) => {
-  if (!event.target.closest(".quick-react-popover") && !event.target.closest(".react-trigger") && !event.target.closest("#emoji-picker-btn")) {
-    closeQuickReact();
+  if (!event.target.closest(".emoji-picker") && !event.target.closest(".react-trigger") && !event.target.closest("#emoji-picker-btn")) {
+    closeEmojiPicker();
   }
 });
 
@@ -558,25 +571,11 @@ const emojiPickerBtnEl = document.getElementById("emoji-picker-btn");
 
 emojiPickerBtnEl.addEventListener("click", (event) => {
   event.stopPropagation();
-  if (openQuickReactPopover) {
-    closeQuickReact();
+  if (openEmojiPickerPanel) {
+    closeEmojiPicker();
     return;
   }
-
-  const popover = document.createElement("div");
-  popover.className = "quick-react-popover composer-emoji-popover";
-  QUICK_REACT_EMOJI.forEach((emoji) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = emoji;
-    btn.addEventListener("click", () => {
-      insertAtCursor(composerInputEl, emoji);
-      closeQuickReact();
-    });
-    popover.appendChild(btn);
-  });
-  emojiPickerBtnEl.parentElement.appendChild(popover);
-  openQuickReactPopover = popover;
+  openEmojiPickerFor(emojiPickerBtnEl, (emoji) => insertAtCursor(composerInputEl, emoji));
 });
 
 function insertAtCursor(textarea, text) {

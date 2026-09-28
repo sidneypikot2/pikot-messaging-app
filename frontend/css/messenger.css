@@ -460,34 +460,78 @@ body {
   color: var(--orange-dark);
 }
 
-/* Shared popover pattern (quick-react + composer emoji picker) */
+/* Emoji picker panel — shared by the per-message react-trigger and the composer's emoji
+   button (see EmojiPicker.create in emoji-picker.js). Positioned via JS (getBoundingClientRect
+   + position: fixed, see positionPopover in app.js), not CSS anchoring, since it's too big to
+   trust a simple bottom/left offset near the edges of the viewport. */
 
-.quick-react-popover {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 0.4rem;
-  display: flex;
-  gap: 0.2rem;
+.emoji-picker {
+  width: 300px;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.3rem 0.4rem;
+  border-radius: 12px;
+  padding: 0.5rem;
   box-shadow: 0 12px 30px -12px rgba(27, 37, 89, 0.25);
   z-index: 20;
+  box-sizing: border-box;
 }
 
-.quick-react-popover button {
+.emoji-picker-search {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.emoji-picker-tabs {
+  display: flex;
+  gap: 0.15rem;
+  overflow-x: auto;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.emoji-picker-tabs button {
   border: none;
   background: none;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0.15rem;
+  padding: 0.25rem;
   border-radius: 6px;
+  flex: none;
 }
 
-.quick-react-popover button:hover {
+.emoji-picker-tabs button.active,
+.emoji-picker-tabs button:hover {
+  background: var(--bg);
+}
+
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.1rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.emoji-picker-item {
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  aspect-ratio: 1;
+}
+
+.emoji-picker-item:hover {
   background: var(--bg);
 }
 
@@ -521,7 +565,6 @@ body {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
   background: #fff;
-  position: relative; /* anchors .composer-emoji-popover */
 }
 
 .composer textarea {
