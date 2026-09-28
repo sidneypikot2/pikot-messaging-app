@@ -103,4 +103,34 @@ RSpec.describe "Messages", type: :request do
       expect(response).to have_http_status(:forbidden)
     end
   end
+
+  describe "POST /messages/:id/reactions" do
+    it "adds a reaction" do
+      message = create(:message, conversation: conversation)
+
+      post "/messages/#{message.id}/reactions", params: { emoji: "👍" }, headers: auth_headers
+
+      expect(response).to have_http_status(:ok)
+      expect(MessageReaction.where(message: message, user: current_user, emoji: "👍")).to exist
+    end
+
+    it "toggles the reaction off on a second identical request" do
+      message = create(:message, conversation: conversation)
+      post "/messages/#{message.id}/reactions", params: { emoji: "👍" }, headers: auth_headers
+
+      post "/messages/#{message.id}/reactions", params: { emoji: "👍" }, headers: auth_headers
+
+      expect(response).to have_http_status(:ok)
+      expect(MessageReaction.where(message: message, user: current_user, emoji: "👍")).not_to exist
+    end
+
+    it "forbids reacting to a message in a conversation the user is not a member of" do
+      other_conversation = create(:conversation)
+      message = create(:message, conversation: other_conversation)
+
+      post "/messages/#{message.id}/reactions", params: { emoji: "👍" }, headers: auth_headers
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
 end

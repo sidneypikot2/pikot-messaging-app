@@ -30,7 +30,9 @@ Rails.application.routes.draw do
     member { post :read }
     resources :messages, only: [ :index, :create ]
   end
-  resources :messages, only: [ :update, :destroy ]
+  resources :messages, only: [ :update, :destroy ] do
+    member { post :reactions, action: :toggle_reaction }
+  end
 
   mount ActionCable.server => "/cable"
 

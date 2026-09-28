@@ -406,6 +406,100 @@ body {
   color: var(--orange-dark);
 }
 
+/* Reactions */
+
+.message-bubble-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.react-trigger {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.message-row:hover .react-trigger {
+  opacity: 1;
+}
+
+.reactions-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.reaction-pill {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.reaction-pill:hover {
+  border-color: var(--orange);
+}
+
+.reaction-pill.mine {
+  background: rgba(242, 153, 74, 0.15);
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+
+/* Shared popover pattern (quick-react + composer emoji picker) */
+
+.quick-react-popover {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 0.4rem;
+  display: flex;
+  gap: 0.2rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.4rem;
+  box-shadow: 0 12px 30px -12px rgba(27, 37, 89, 0.25);
+  z-index: 20;
+}
+
+.quick-react-popover button {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 6px;
+}
+
+.quick-react-popover button:hover {
+  background: var(--bg);
+}
+
+.emoji-picker-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  padding: 0 0.6rem;
+  cursor: pointer;
+}
+
 .typing-indicator {
   margin: 0 1.5rem;
   font-size: 0.8rem;
@@ -427,6 +521,7 @@ body {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
   background: #fff;
+  position: relative; /* anchors .composer-emoji-popover */
 }
 
 .composer textarea {

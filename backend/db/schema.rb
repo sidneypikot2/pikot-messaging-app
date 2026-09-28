@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_26_200658) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_170154) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -59,6 +59,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_200658) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "message_reactions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "emoji", null: false
+    t.bigint "message_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["message_id", "user_id", "emoji"], name: "index_message_reactions_on_message_user_emoji", unique: true
+    t.index ["message_id"], name: "index_message_reactions_on_message_id"
+    t.index ["user_id"], name: "index_message_reactions_on_user_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.text "body", null: false
     t.bigint "conversation_id", null: false
@@ -93,6 +104,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_200658) do
   add_foreign_key "conversation_memberships", "conversations"
   add_foreign_key "conversation_memberships", "messages", column: "last_read_message_id"
   add_foreign_key "conversation_memberships", "users"
+  add_foreign_key "message_reactions", "messages"
+  add_foreign_key "message_reactions", "users"
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "users", column: "sender_id"
 end

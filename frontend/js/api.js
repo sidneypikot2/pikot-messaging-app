@@ -140,6 +140,16 @@ const Api = {
     if (!res.ok) throw new Error(`Failed to delete message (${res.status})`);
   },
 
+  async toggleReaction(token, messageId, emoji) {
+    const res = await fetch(`${window.API_BASE_URL}/messages/${messageId}/reactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ emoji }),
+    });
+
+    if (!res.ok) throw new Error(`Failed to react (${res.status})`);
+  },
+
   async markConversationRead(token, conversationId) {
     const res = await fetch(`${window.API_BASE_URL}/conversations/${conversationId}/read`, {
       method: "POST",
