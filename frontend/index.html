@@ -41,8 +41,10 @@
         <p id="typing-indicator" class="typing-indicator" hidden></p>
         <p id="composer-error" class="composer-error" hidden></p>
         <form id="composer" class="composer">
-          <button type="button" id="emoji-picker-btn" class="emoji-picker-btn" aria-label="Insert emoji">🙂</button>
-          <textarea id="composer-input" placeholder="Type a message…" required></textarea>
+          <div class="composer-input-wrap">
+            <textarea id="composer-input" placeholder="Type a message…" required></textarea>
+            <button type="button" id="emoji-picker-btn" class="emoji-picker-btn" aria-label="Insert emoji">🙂</button>
+          </div>
           <button type="submit" id="composer-send">Send</button>
         </form>
       </div>
