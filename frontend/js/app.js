@@ -244,10 +244,29 @@ function buildMessageEl(message) {
   row.className = `message-row ${message.sender.id === currentUser.id ? "own" : "other"}`;
   row.id = `message-${message.id}`;
 
+  const bubbleWrap = document.createElement("div");
+  bubbleWrap.className = "message-bubble-wrap";
+
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
   renderBubbleContent(bubble, message);
-  row.appendChild(bubble);
+  bubbleWrap.appendChild(bubble);
+
+  if (!message.deleted) {
+    const reactBtn = document.createElement("button");
+    reactBtn.type = "button";
+    reactBtn.className = "react-trigger";
+    reactBtn.textContent = "🙂";
+    reactBtn.setAttribute("aria-label", "Add reaction");
+    reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
+    bubbleWrap.appendChild(reactBtn);
+  }
+
+  row.appendChild(bubbleWrap);
+
+  if (!message.deleted && message.reactions && message.reactions.length > 0) {
+    row.appendChild(buildReactionsStrip(message));
+  }
 
   const meta = document.createElement("div");
   meta.className = "message-meta";
@@ -282,6 +301,76 @@ function buildMessageEl(message) {
   row.appendChild(meta);
   return row;
 }
+
+function buildReactionsStrip(message) {
+  const strip = document.createElement("div");
+  strip.className = "reactions-strip";
+  message.reactions.forEach((r) => {
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.dataset.emoji = r.emoji;
+    pill.className = `reaction-pill${r.reacted_by_me ? " mine" : ""}`;
+    pill.textContent = `${r.emoji} ${r.count}`;
+    pill.addEventListener("click", () => sendReaction(message.id, r.emoji));
+    strip.appendChild(pill);
+  });
+  return strip;
+}
+
+function sendReaction(messageId, emoji) {
+  // No optimistic DOM mutation — the toggle's own broadcast comes back over the
+  // already-open ConversationChannel subscription and updates the strip via
+  // applyReactionUpdate, the same round-trip pattern sendMessage's own echo relies on.
+  Api.toggleReaction(token, messageId, emoji).catch((err) => showComposerError(err.message));
+}
+
+let openEmojiPickerPanel = null;
+
+// Appended to document.body (not the anchor's own parent) and positioned with
+// getBoundingClientRect, since the picker is too big to trust simple CSS anchoring —
+// a message near the right/bottom edge of the viewport would otherwise clip off-screen.
+function positionPopover(popover, anchorEl) {
+  document.body.appendChild(popover);
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const popRect = popover.getBoundingClientRect();
+  const margin = 8;
+
+  let top = anchorRect.top - popRect.height - margin;
+  if (top < margin) top = anchorRect.bottom + margin; // flip below if no room above
+
+  let left = anchorRect.right - popRect.width;
+  if (left < margin) left = anchorRect.left;
+  if (left + popRect.width > window.innerWidth - margin) left = window.innerWidth - popRect.width - margin;
+
+  popover.style.position = "fixed";
+  popover.style.top = `${top}px`;
+  popover.style.left = `${left}px`;
+}
+
+// Shared by the per-message react-trigger and the composer's emoji button — both just
+// supply an anchor element and an onSelect callback.
+function openEmojiPickerFor(anchorEl, onSelect) {
+  closeEmojiPicker();
+  const panel = EmojiPicker.create((emoji) => {
+    onSelect(emoji);
+    closeEmojiPicker();
+  });
+  positionPopover(panel, anchorEl);
+  openEmojiPickerPanel = panel;
+}
+
+function closeEmojiPicker() {
+  if (openEmojiPickerPanel) {
+    openEmojiPickerPanel.remove();
+    openEmojiPickerPanel = null;
+  }
+}
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".emoji-picker") && !event.target.closest(".react-trigger") && !event.target.closest("#emoji-picker-btn")) {
+    closeEmojiPicker();
+  }
+});
 
 function renderBubbleContent(bubble, message) {
   bubble.classList.toggle("deleted", message.deleted);
@@ -348,6 +437,11 @@ function handleIncoming(data) {
     return;
   }
 
+  if (data.event === "reaction_added" || data.event === "reaction_removed") {
+    applyReactionUpdate(data);
+    return;
+  }
+
   const { message } = data;
   const existing = document.getElementById(`message-${message.id}`);
 
@@ -369,6 +463,39 @@ function handleIncoming(data) {
   // server-side until the next time the conversation is opened.
   if (data.event === "message_created") Api.markConversationRead(token, message.conversation_id).catch(() => {});
   loadConversations(); // bump this conversation to the top / refresh previews
+}
+
+function applyReactionUpdate(data) {
+  const row = document.getElementById(`message-${data.message_id}`);
+  if (!row) return; // message not rendered in this view — safe to ignore
+
+  let strip = row.querySelector(".reactions-strip");
+  const { emoji, count, user_id } = data.reaction;
+  const existingPill = strip?.querySelector(`[data-emoji="${CSS.escape(emoji)}"]`);
+  const reactedByMe = user_id === currentUser.id ? data.event === "reaction_added" : existingPill?.classList.contains("mine");
+
+  if (!strip) {
+    strip = document.createElement("div");
+    strip.className = "reactions-strip";
+    row.insertBefore(strip, row.querySelector(".message-meta"));
+  }
+
+  let pill = strip.querySelector(`[data-emoji="${CSS.escape(emoji)}"]`);
+  if (data.event === "reaction_removed" && count === 0) {
+    pill?.remove();
+    if (!strip.children.length) strip.remove();
+    return;
+  }
+
+  if (!pill) {
+    pill = document.createElement("button");
+    pill.type = "button";
+    pill.dataset.emoji = emoji;
+    pill.addEventListener("click", () => sendReaction(data.message_id, emoji));
+    strip.appendChild(pill);
+  }
+  pill.className = `reaction-pill${reactedByMe ? " mine" : ""}`;
+  pill.textContent = `${emoji} ${count}`;
 }
 
 // --- Notification sound ---
@@ -413,6 +540,12 @@ composerInputEl.addEventListener("input", () => {
 // brand-new one just created by someone else's first message) has no ConversationChannel
 // subscription to receive its broadcast on otherwise (KAN-16).
 function handleNotification(data) {
+  if (data.event === "reaction_added" || data.event === "reaction_removed") {
+    // No sound / sidebar bump for a reaction — only for actual new messages.
+    if (data.conversation_id === activeConversationId) handleIncoming(data);
+    return;
+  }
+
   const { message, event } = data;
   if (message.conversation_id === activeConversationId) {
     handleIncoming(data); // dedup-safe (existing-id check) if also delivered via ConversationChannel
@@ -432,6 +565,26 @@ function showComposerError(message) {
 function clearComposerError() {
   composerErrorEl.hidden = true;
   composerErrorEl.textContent = "";
+}
+
+const emojiPickerBtnEl = document.getElementById("emoji-picker-btn");
+
+emojiPickerBtnEl.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (openEmojiPickerPanel) {
+    closeEmojiPicker();
+    return;
+  }
+  openEmojiPickerFor(emojiPickerBtnEl, (emoji) => insertAtCursor(composerInputEl, emoji));
+});
+
+function insertAtCursor(textarea, text) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+  const newPos = start + text.length;
+  textarea.setSelectionRange(newPos, newPos);
+  textarea.focus();
 }
 
 composerEl.addEventListener("submit", async (event) => {

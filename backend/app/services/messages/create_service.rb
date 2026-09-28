@@ -10,7 +10,7 @@ module Messages
       raise NotAuthorizedError, "not a member of this conversation" unless member?
 
       message = @conversation.messages.create!(sender: @sender, body: @body)
-      payload = { event: "message_created", message: MessageSerializer.call(message) }
+      payload = { event: "message_created", message: MessageSerializer.call(message, current_user: @sender) }
       ConversationChannel.broadcast_to(@conversation, payload)
       # Also to each member's personal channel — a member who hasn't opened this
       # conversation (or, for a first message, didn't even know it existed) has no
