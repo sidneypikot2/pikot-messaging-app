@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/messenger.css" />
 </head>
 <body>
-  <div class="messenger">
+  <div id="messenger" class="messenger">
     <aside class="sidebar">
       <div class="sidebar-header">
         <h1>PikotChat</h1>
@@ -30,6 +30,7 @@
 
       <div id="thread-active" class="thread-active" hidden>
         <header class="thread-header">
+          <button type="button" id="thread-back" class="thread-back" aria-label="Back to conversations">←</button>
           <div id="thread-avatar" class="avatar"></div>
           <span id="thread-title"></span>
         </header>
