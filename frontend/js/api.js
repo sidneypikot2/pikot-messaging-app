@@ -107,11 +107,14 @@ const Api = {
     return res.json(); // { messages: [...], has_more }
   },
 
-  async sendMessage(token, conversationId, body) {
+  async sendMessage(token, conversationId, body, replyToMessageId) {
+    const payload = { body };
+    if (replyToMessageId) payload.reply_to_message_id = replyToMessageId;
+
     const res = await fetch(`${window.API_BASE_URL}/conversations/${conversationId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) throw new Error(`Failed to send message (${res.status})`);

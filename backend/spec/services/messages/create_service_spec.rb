@@ -27,6 +27,17 @@ RSpec.describe Messages::CreateService do
       .and have_broadcasted_to(other).from_channel(NotificationsChannel)
   end
 
+  it "saves the reply_to_message_id when replying" do
+    conversation = create(:conversation)
+    sender = create(:user)
+    create(:conversation_membership, conversation: conversation, user: sender)
+    original = create(:message, conversation: conversation)
+
+    message = described_class.call(conversation: conversation, sender: sender, body: "reply", reply_to_message_id: original.id)
+
+    expect(message.reply_to_message).to eq(original)
+  end
+
   it "raises when the sender is not a member of the conversation" do
     conversation = create(:conversation)
     sender = create(:user)

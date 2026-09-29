@@ -192,6 +192,7 @@ erDiagram
     USERS ||--o{ GROUP_INVITATIONS : "invited_by / invitee"
     CONVERSATIONS ||--o{ CONVERSATION_MEMBERSHIPS : has
     CONVERSATIONS ||--o{ MESSAGES : contains
+    MESSAGES |o--o{ MESSAGES : "reply_to_message"
     CONVERSATIONS ||--o{ GROUP_INVITATIONS : "for group"
 
     USERS {
@@ -231,6 +232,7 @@ erDiagram
         bigint id PK
         bigint conversation_id FK
         bigint sender_id FK
+        bigint reply_to_message_id FK "nullable, self-reference"
         text body
         datetime edited_at
         datetime deleted_at
@@ -262,6 +264,8 @@ erDiagram
 **`group_invitations` implements "add users with the other user's approval."** An existing group member creates a `GroupInvitation` (status `pending`) targeting the invited user, delivered over their personal `NotificationsChannel`. Accepting creates/reactivates an active `ConversationMembership`; declining marks the invitation `declined`.
 
 **Soft-deleted messages.** `deleted_at` is set rather than destroying the row, so a deleted message can render as "This message was deleted" instead of a gap. `edited_at` is set (and `body` overwritten) on update, for an "(edited)" marker.
+
+**Replies (KAN-29).** `messages.reply_to_message_id` is a nullable self-reference. On create, the original must exist, be in the same conversation, and not be soft-deleted; afterwards the reply stays valid even if the original is deleted. `MessageSerializer` embeds one level of quote as `reply_to: { id, sender, body, deleted }` (`body` is `null` once the original is deleted, and the frontend renders "Original message was deleted"). No reply-specific broadcast exists — clients re-render quotes from the original's own `message_updated`/`message_deleted` events. Replies are conversation-scoped, so they apply to group chats unchanged.
 
 **Indexes worth calling out** (in addition to FKs/PKs):
 - `users`: unique index on `email` (already exists); unique index on `[provider, uid]` (already exists); unique index on `username` once added

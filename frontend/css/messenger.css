@@ -392,6 +392,11 @@ body {
   align-items: center;
 }
 
+.message-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
 .message-actions button {
   border: none;
   background: none;
@@ -403,6 +408,100 @@ body {
 }
 
 .message-actions button:hover {
+  color: var(--orange-dark);
+}
+
+/* Replies */
+
+.message-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 100%;
+  margin-bottom: 0.2rem;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  border-left: 3px solid var(--orange);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.message-quote:hover {
+  opacity: 1;
+}
+
+.message-quote-author {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.message-quote-body {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-quote.deleted {
+  border-left-color: var(--border);
+}
+
+.message-quote.deleted .message-quote-body {
+  font-style: italic;
+}
+
+.message-row.highlight .message-bubble {
+  animation: message-highlight 1.2s ease;
+}
+
+@keyframes message-highlight {
+  0%, 40% { box-shadow: 0 0 0 3px var(--orange); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 1.5rem;
+  padding: 0.45rem 0.8rem;
+  border-left: 3px solid var(--orange);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.reply-bar[hidden] {
+  display: none;
+}
+
+.reply-bar-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-bar-text strong {
+  color: var(--navy);
+}
+
+.reply-bar-cancel {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.reply-bar-cancel:hover {
   color: var(--orange-dark);
 }
 

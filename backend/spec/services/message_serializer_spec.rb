@@ -8,7 +8,7 @@ RSpec.describe MessageSerializer do
 
     expect(result).to include(
       id: message.id, conversation_id: message.conversation_id, body: "hello",
-      deleted: false, edited: false, reactions: []
+      deleted: false, edited: false, reactions: [], reply_to: nil
     )
     expect(result[:sender][:id]).to eq(message.sender.id)
   end
@@ -20,6 +20,26 @@ RSpec.describe MessageSerializer do
 
     expect(result[:body]).to be_nil
     expect(result[:deleted]).to be true
+  end
+
+  it "includes a quote of the replied-to message" do
+    original = create(:message, body: "original")
+    reply = create(:message, conversation: original.conversation, reply_to_message: original)
+
+    result = described_class.call(reply, current_user: reply.sender)
+
+    expect(result[:reply_to]).to include(id: original.id, body: "original", deleted: false)
+    expect(result[:reply_to][:sender][:id]).to eq(original.sender.id)
+  end
+
+  it "hides the quoted body once the replied-to message is deleted" do
+    original = create(:message, body: "original")
+    reply = create(:message, conversation: original.conversation, reply_to_message: original)
+    original.update!(deleted_at: Time.current)
+
+    result = described_class.call(reply.reload, current_user: reply.sender)
+
+    expect(result[:reply_to]).to include(id: original.id, body: nil, deleted: true)
   end
 
   it "reports edited: true once edited_at is set" do

@@ -1,15 +1,16 @@
 module Messages
   class CreateService < ApplicationService
-    def initialize(conversation:, sender:, body:)
+    def initialize(conversation:, sender:, body:, reply_to_message_id: nil)
       @conversation = conversation
       @sender = sender
       @body = body
+      @reply_to_message_id = reply_to_message_id
     end
 
     def call
       raise NotAuthorizedError, "not a member of this conversation" unless member?
 
-      message = @conversation.messages.create!(sender: @sender, body: @body)
+      message = @conversation.messages.create!(sender: @sender, body: @body, reply_to_message_id: @reply_to_message_id)
       payload = { event: "message_created", message: MessageSerializer.call(message, current_user: @sender) }
       ConversationChannel.broadcast_to(@conversation, payload)
       # Also to each member's personal channel — a member who hasn't opened this

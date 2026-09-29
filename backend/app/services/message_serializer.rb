@@ -14,11 +14,25 @@ class MessageSerializer < ApplicationService
       edited: @message.edited?,
       created_at: @message.created_at,
       updated_at: @message.updated_at,
-      reactions: grouped_reactions
+      reactions: grouped_reactions,
+      reply_to: reply_to
     }
   end
 
   private
+
+  # One level only — the quoted message's own reply_to isn't included.
+  def reply_to
+    original = @message.reply_to_message
+    return unless original
+
+    {
+      id: original.id,
+      sender: UserSerializer.call(original.sender),
+      body: original.deleted? ? nil : original.body,
+      deleted: original.deleted?
+    }
+  end
 
   def grouped_reactions
     @message.reactions.group(:emoji).count.map do |emoji, count|
