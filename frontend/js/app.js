@@ -744,7 +744,11 @@ function handleIncoming(data) {
   // channel, once via NotificationsChannel's delegation below), and only the first
   // delivery ever reaches this branch — the second finds `existing` and takes the
   // replace-in-place branch above instead, so this can't double-play for one message.
-  if (data.event === "message_created" && message.sender.id !== currentUser.id) playNotificationSound();
+  // Silent while the user is looking at this conversation — the message appearing is
+  // notice enough — but still plays when the tab or window is in the background (KAN-33).
+  if (data.event === "message_created" && message.sender.id !== currentUser.id && !pageInForeground()) {
+    playNotificationSound();
+  }
 
   appendMessageEl(message);
   // Keeps the persisted "read up to" marker current while this conversation is already
@@ -799,6 +803,12 @@ function playNotificationSound() {
   // Autoplay can be rejected before any user gesture on the page; ignore that case
   // rather than surface an unhandled rejection.
   notificationSound.play().catch(() => {});
+}
+
+// Hidden covers a background tab or minimized window; hasFocus covers the tab being
+// visible while another window has focus.
+function pageInForeground() {
+  return !document.hidden && document.hasFocus();
 }
 
 // --- Reaction toast ---
