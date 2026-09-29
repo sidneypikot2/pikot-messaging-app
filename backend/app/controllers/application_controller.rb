@@ -6,6 +6,7 @@ class ApplicationController < ActionController::API
 
   rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
   rescue_from NotAuthorizedError, with: :render_forbidden
+  rescue_from ActiveRecord::RecordInvalid, with: :render_unprocessable
 
   private
 
@@ -25,5 +26,9 @@ class ApplicationController < ActionController::API
 
   def render_forbidden
     render json: { error: "Forbidden" }, status: :forbidden
+  end
+
+  def render_unprocessable(exception)
+    render json: { errors: exception.record.errors.full_messages }, status: :unprocessable_content
   end
 end

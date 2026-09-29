@@ -15,6 +15,7 @@ let conversationsCache = []; // last-fetched conversation list, checked before s
 let typingPingActive = false; // throttles outgoing pings to ~1 per 3s of continuous typing
 let typingPingResetTimer = null;
 let typingIndicatorTimer = null; // hides the received indicator if no further ping arrives
+let replyingTo = null; // message the composer is currently replying to, if any
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -31,6 +32,8 @@ const composerInputEl = document.getElementById("composer-input");
 const composerSendEl = document.getElementById("composer-send");
 const composerErrorEl = document.getElementById("composer-error");
 const typingIndicatorEl = document.getElementById("typing-indicator");
+const replyBarEl = document.getElementById("reply-bar");
+const replyBarTextEl = document.getElementById("reply-bar-text");
 const logoutBtn = document.getElementById("logout-btn");
 
 function displayName(user) {
@@ -138,6 +141,7 @@ async function selectConversation(conversationId, otherUser) {
   messageListEl.innerHTML = "";
   resetPaginationState();
   clearComposerError();
+  cancelReply();
 
   await loadMessages();
   unsubscribeActive = cable.subscribeToConversation(conversationId, handleIncoming);
@@ -244,6 +248,8 @@ function buildMessageEl(message) {
   row.className = `message-row ${message.sender.id === currentUser.id ? "own" : "other"}`;
   row.id = `message-${message.id}`;
 
+  if (message.reply_to) row.appendChild(buildQuoteEl(message.reply_to));
+
   const bubbleWrap = document.createElement("div");
   bubbleWrap.className = "message-bubble-wrap";
 
@@ -279,21 +285,17 @@ function buildMessageEl(message) {
     meta.appendChild(editedTag);
   }
 
-  if (message.sender.id === currentUser.id && !message.deleted) {
+  if (!message.deleted) {
     const actions = document.createElement("span");
     actions.className = "message-actions";
 
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", () => startEditingMessage(message));
-    actions.appendChild(editBtn);
+    const replyBtn = document.createElement("button");
+    replyBtn.type = "button";
+    replyBtn.textContent = "Reply";
+    replyBtn.addEventListener("click", () => startReplyingTo(message));
+    actions.appendChild(replyBtn);
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.addEventListener("click", () => deleteMessage(message));
-    actions.appendChild(deleteBtn);
+    if (message.sender.id === currentUser.id) appendOwnMessageActions(actions, message);
 
     meta.appendChild(actions);
   }
@@ -301,6 +303,97 @@ function buildMessageEl(message) {
   row.appendChild(meta);
   return row;
 }
+
+function appendOwnMessageActions(actions, message) {
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.textContent = "Edit";
+  editBtn.addEventListener("click", () => startEditingMessage(message));
+  actions.appendChild(editBtn);
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.textContent = "Delete";
+  deleteBtn.addEventListener("click", () => deleteMessage(message));
+  actions.appendChild(deleteBtn);
+}
+
+// --- Replies ---
+
+const QUOTE_SNIPPET_LENGTH = 100;
+
+function snippet(text) {
+  return text.length > QUOTE_SNIPPET_LENGTH ? `${text.slice(0, QUOTE_SNIPPET_LENGTH)}…` : text;
+}
+
+function buildQuoteEl(replyTo) {
+  const quote = document.createElement("button");
+  quote.type = "button";
+  quote.className = "message-quote";
+  quote.dataset.quoteOf = replyTo.id;
+  renderQuoteContent(quote, replyTo);
+  quote.addEventListener("click", () => scrollToMessage(replyTo.id));
+  return quote;
+}
+
+function renderQuoteContent(quote, replyTo) {
+  quote.replaceChildren();
+  quote.classList.toggle("deleted", replyTo.deleted);
+
+  const author = document.createElement("span");
+  author.className = "message-quote-author";
+  author.textContent = displayName(replyTo.sender);
+  quote.appendChild(author);
+
+  const body = document.createElement("span");
+  body.className = "message-quote-body";
+  body.textContent = replyTo.deleted ? "Original message was deleted" : snippet(replyTo.body);
+  quote.appendChild(body);
+}
+
+// Only scrolls if the original is loaded — an older one outside the fetched pages is
+// simply not in the DOM, and paging back to find it isn't worth it for a quote click.
+function scrollToMessage(messageId) {
+  const target = document.getElementById(`message-${messageId}`);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.remove("highlight");
+  void target.offsetWidth; // restart the animation if it's clicked twice in a row
+  target.classList.add("highlight");
+}
+
+// Keeps every quote of `message` in sync when the original is edited or deleted.
+function refreshQuotesOf(message) {
+  document.querySelectorAll(`.message-quote[data-quote-of="${message.id}"]`).forEach((quote) => {
+    renderQuoteContent(quote, { id: message.id, sender: message.sender, body: message.body, deleted: message.deleted });
+  });
+}
+
+function startReplyingTo(message) {
+  replyingTo = message;
+  replyBarTextEl.replaceChildren();
+  const label = document.createElement("strong");
+  label.textContent = `Replying to ${displayName(message.sender)}: `;
+  replyBarTextEl.appendChild(label);
+  replyBarTextEl.appendChild(document.createTextNode(snippet(message.body)));
+  replyBarEl.hidden = false;
+  composerInputEl.focus();
+}
+
+function cancelReply() {
+  replyingTo = null;
+  replyBarEl.hidden = true;
+  replyBarTextEl.replaceChildren();
+}
+
+document.getElementById("reply-bar-cancel").addEventListener("click", () => {
+  cancelReply();
+  composerInputEl.focus();
+});
+
+composerInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && replyingTo) cancelReply();
+});
 
 function buildReactionsStrip(message) {
   const strip = document.createElement("div");
@@ -396,6 +489,7 @@ function startEditingMessage(message) {
     try {
       const { message: updated } = await Api.updateMessage(token, message.id, textarea.value);
       editWrapper.replaceWith(buildMessageEl(updated));
+      refreshQuotesOf(updated);
     } catch (err) {
       showComposerError(err.message);
       editWrapper.replaceWith(row);
@@ -426,6 +520,8 @@ async function deleteMessage(message) {
     await Api.deleteMessage(token, message.id);
     const row = document.getElementById(`message-${message.id}`);
     if (row) row.replaceWith(buildMessageEl({ ...message, deleted: true }));
+    refreshQuotesOf({ ...message, deleted: true });
+    if (replyingTo?.id === message.id) cancelReply();
   } catch (err) {
     showComposerError(err.message);
   }
@@ -447,6 +543,10 @@ function handleIncoming(data) {
 
   if (existing) {
     existing.replaceWith(buildMessageEl(message));
+    refreshQuotesOf(message);
+    // Someone else deleting the message this composer is replying to would otherwise
+    // only surface as a 422 on send.
+    if (message.deleted && replyingTo?.id === message.id) cancelReply();
     return;
   }
 
@@ -605,8 +705,9 @@ composerEl.addEventListener("submit", async (event) => {
       unsubscribeActive = cable.subscribeToConversation(activeConversationId, handleIncoming);
     }
 
-    await Api.sendMessage(token, activeConversationId, body);
+    await Api.sendMessage(token, activeConversationId, body, replyingTo?.id);
     composerInputEl.value = "";
+    cancelReply();
   } catch (err) {
     showComposerError(err.message);
   } finally {

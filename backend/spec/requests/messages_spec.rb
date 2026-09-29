@@ -47,6 +47,17 @@ RSpec.describe "Messages", type: :request do
       expect(second_page.last["id"]).to eq(messages[4].id)
     end
 
+    it "includes reply_to on replies" do
+      original = create(:message, conversation: conversation)
+      create(:message, conversation: conversation, reply_to_message: original)
+
+      get "/conversations/#{conversation.id}/messages", headers: auth_headers
+
+      replies = response.parsed_body["messages"].map { |m| m["reply_to"] }
+      expect(replies.first).to be_nil
+      expect(replies.last["id"]).to eq(original.id)
+    end
+
     it "404s for a conversation the user is not a member of" do
       other_conversation = create(:conversation)
 
@@ -62,6 +73,32 @@ RSpec.describe "Messages", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body["message"]["body"]).to eq("hi")
+    end
+
+    it "creates a reply that quotes the original" do
+      original = create(:message, conversation: conversation, body: "original")
+
+      post "/conversations/#{conversation.id}/messages",
+        params: { body: "reply", reply_to_message_id: original.id }, headers: auth_headers
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body["message"]["reply_to"]).to include("id" => original.id, "body" => "original")
+    end
+
+    it "422s when replying to a message from another conversation" do
+      other = create(:message)
+
+      post "/conversations/#{conversation.id}/messages",
+        params: { body: "reply", reply_to_message_id: other.id }, headers: auth_headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["errors"]).to include("Reply to message must be in the same conversation")
+    end
+
+    it "422s for a blank body" do
+      post "/conversations/#{conversation.id}/messages", params: { body: "" }, headers: auth_headers
+
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
