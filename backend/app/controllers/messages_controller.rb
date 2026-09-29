@@ -9,6 +9,7 @@ class MessagesController < ApplicationController
 
     scope = conversation.messages.includes(:sender, reply_to_message: :sender).order(id: :desc).limit(limit + 1)
     scope = scope.where("messages.id < ?", params[:before]) if params[:before].present?
+    scope = scope.where.not(id: current_user.message_hides.select(:message_id))
 
     page = scope.to_a
     has_more = page.size > limit
@@ -29,8 +30,14 @@ class MessagesController < ApplicationController
     render json: { message: MessageSerializer.call(message, current_user: current_user) }
   end
 
+  # scope=me is "Unsend for you" (KAN-30); anything else unsends for everyone.
   def destroy
-    Messages::DeleteService.call(message: Message.find(params[:id]), sender: current_user)
+    message = Message.find(params[:id])
+    if params[:scope] == "me"
+      Messages::HideService.call(message: message, user: current_user)
+    else
+      Messages::DeleteService.call(message: message, sender: current_user)
+    end
     head :no_content
   end
 

@@ -139,6 +139,36 @@ RSpec.describe "Messages", type: :request do
 
       expect(response).to have_http_status(:forbidden)
     end
+
+    context "with scope=me" do
+      it "hides the message for the current user only" do
+        message = create(:message, conversation: conversation, sender: current_user)
+
+        delete "/messages/#{message.id}", params: { scope: "me" }, headers: auth_headers
+
+        expect(response).to have_http_status(:no_content)
+        expect(message.reload.deleted_at).to be_nil
+        expect(message.hidden_for?(current_user)).to be true
+      end
+
+      it "leaves the message out of the current user's message list" do
+        hidden = create(:message, conversation: conversation, sender: current_user)
+        visible = create(:message, conversation: conversation)
+        delete "/messages/#{hidden.id}", params: { scope: "me" }, headers: auth_headers
+
+        get "/conversations/#{conversation.id}/messages", headers: auth_headers
+
+        expect(response.parsed_body["messages"].map { |m| m["id"] }).to eq([ visible.id ])
+      end
+
+      it "403s for a message in a conversation the user is not a member of" do
+        message = create(:message)
+
+        delete "/messages/#{message.id}", params: { scope: "me" }, headers: auth_headers
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
   end
 
   describe "POST /messages/:id/reactions" do

@@ -300,19 +300,23 @@ body {
   }
 }
 
+/* The row spans the thread's full width so hovering anywhere along the message's line
+   (not just over the bubble) reveals its toolbar (KAN-30); the 65% cap moves onto the
+   row's children, which align to their side. */
 .message-row {
   display: flex;
   flex-direction: column;
+}
+
+.message-row > * {
   max-width: 65%;
 }
 
 .message-row.own {
-  align-self: flex-end;
   align-items: flex-end;
 }
 
 .message-row.other {
-  align-self: flex-start;
   align-items: flex-start;
 }
 
@@ -390,25 +394,6 @@ body {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-}
-
-.message-actions {
-  display: inline-flex;
-  gap: 0.5rem;
-}
-
-.message-actions button {
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-size: 0.72rem;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-}
-
-.message-actions button:hover {
-  color: var(--orange-dark);
 }
 
 /* Replies */
@@ -512,24 +497,214 @@ body {
   display: inline-flex;
 }
 
-.react-trigger {
+/* Hover toolbar (KAN-30) — Messenger-style react / reply / ⋮ beside the bubble, outside
+   it: to the right of other people's messages, to the left of your own. Hidden until
+   the message is hovered, or while its ⋮ menu is open. */
+
+.message-toolbar {
   position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: #fff;
-  font-size: 0.75rem;
-  line-height: 1;
-  cursor: pointer;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.15rem;
+  align-items: center;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.1s ease;
 }
 
-.message-row:hover .react-trigger {
+.message-row.other .message-toolbar {
+  left: 100%;
+  padding-left: 6px;
+}
+
+/* The gap to the bubble is padding, not an offset, so the pointer never leaves the
+   (hovered) row on its way from the bubble to a button. row-reverse keeps 🙂 nearest the bubble on both sides, with ⋮ outermost. */
+.message-row.own .message-toolbar {
+  right: 100%;
+  padding-right: 6px;
+  flex-direction: row-reverse;
+}
+
+/* The toolbar's transform/opacity make it a stacking context, so the ⋮ menu's own
+   z-index only counts inside it; the toolbar itself has to sit above later rows (whose
+   positioned bubble wraps would otherwise paint over an open menu). */
+.message-toolbar.menu-open {
+  z-index: 20;
+}
+
+.message-row:hover .message-toolbar,
+.message-toolbar.menu-open,
+.message-toolbar:focus-within {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.message-toolbar > button,
+.message-menu-trigger {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.message-toolbar > button:hover,
+.message-menu-trigger:hover,
+.menu-open .message-menu-trigger {
+  background: rgba(31, 36, 48, 0.07);
+  color: var(--text);
+}
+
+.message-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.message-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(27, 37, 89, 0.12);
+}
+
+.message-menu button {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.message-menu button:hover,
+.message-menu button:focus-visible {
+  background: var(--bg);
+}
+
+/* Unsend dialog (KAN-30) */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(31, 36, 48, 0.45);
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(27, 37, 89, 0.2);
+}
+
+.modal-header {
+  position: relative;
+  padding: 1rem 3rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.modal-close {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.unsend-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.unsend-option input {
+  margin-top: 0.2rem;
+  accent-color: var(--orange);
+}
+
+.unsend-option strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.unsend-option-hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.modal-footer button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-cancel {
+  background: none;
+  color: var(--orange-dark);
+}
+
+.modal-confirm {
+  background: var(--orange);
+  color: #fff;
+}
+
+.modal-confirm:hover {
+  background: var(--orange-dark);
 }
 
 .reactions-strip {

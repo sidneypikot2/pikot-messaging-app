@@ -26,11 +26,14 @@ class MessageSerializer < ApplicationService
     original = @message.reply_to_message
     return unless original
 
+    # The current user unsent the original for themselves only (KAN-30).
+    removed = original.hidden_for?(@current_user)
     {
       id: original.id,
       sender: UserSerializer.call(original.sender),
-      body: original.deleted? ? nil : original.body,
-      deleted: original.deleted?
+      body: original.deleted? || removed ? nil : original.body,
+      deleted: original.deleted?,
+      removed: removed
     }
   end
 

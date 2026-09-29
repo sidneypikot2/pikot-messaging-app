@@ -16,6 +16,11 @@ let typingPingActive = false; // throttles outgoing pings to ~1 per 3s of contin
 let typingPingResetTimer = null;
 let typingIndicatorTimer = null; // hides the received indicator if no further ping arrives
 let replyingTo = null; // message the composer is currently replying to, if any
+let openMessageMenu = null; // the ⋯ menu currently open on a message, if any
+let unsendTarget = null; // message the unsend dialog is currently open for
+// Messages unsent "for you" during this page's lifetime — a later broadcast about one (an
+// edit, say) would otherwise find no row and re-append it as if it were new.
+const hiddenMessageIds = new Set();
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -258,15 +263,7 @@ function buildMessageEl(message) {
   renderBubbleContent(bubble, message);
   bubbleWrap.appendChild(bubble);
 
-  if (!message.deleted) {
-    const reactBtn = document.createElement("button");
-    reactBtn.type = "button";
-    reactBtn.className = "react-trigger";
-    reactBtn.textContent = "🙂";
-    reactBtn.setAttribute("aria-label", "Add reaction");
-    reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
-    bubbleWrap.appendChild(reactBtn);
-  }
+  if (!message.deleted) bubbleWrap.appendChild(buildMessageToolbar(message));
 
   row.appendChild(bubbleWrap);
 
@@ -285,38 +282,136 @@ function buildMessageEl(message) {
     meta.appendChild(editedTag);
   }
 
-  if (!message.deleted) {
-    const actions = document.createElement("span");
-    actions.className = "message-actions";
-
-    const replyBtn = document.createElement("button");
-    replyBtn.type = "button";
-    replyBtn.textContent = "Reply";
-    replyBtn.addEventListener("click", () => startReplyingTo(message));
-    actions.appendChild(replyBtn);
-
-    if (message.sender.id === currentUser.id) appendOwnMessageActions(actions, message);
-
-    meta.appendChild(actions);
-  }
-
   row.appendChild(meta);
   return row;
 }
 
-function appendOwnMessageActions(actions, message) {
-  const editBtn = document.createElement("button");
-  editBtn.type = "button";
-  editBtn.textContent = "Edit";
-  editBtn.addEventListener("click", () => startEditingMessage(message));
-  actions.appendChild(editBtn);
+// --- Message hover toolbar + ⋮ menu (KAN-30) ---
 
-  const deleteBtn = document.createElement("button");
-  deleteBtn.type = "button";
-  deleteBtn.textContent = "Delete";
-  deleteBtn.addEventListener("click", () => deleteMessage(message));
-  actions.appendChild(deleteBtn);
+// Messenger-style: react / reply / ⋮ sit beside the bubble and only show while the
+// message is hovered (or while its ⋮ menu is open). The ⋮ menu is own-messages only.
+function buildMessageToolbar(message) {
+  const toolbar = document.createElement("div");
+  toolbar.className = "message-toolbar";
+
+  const reactBtn = document.createElement("button");
+  reactBtn.type = "button";
+  reactBtn.className = "react-trigger";
+  reactBtn.textContent = "🙂";
+  reactBtn.setAttribute("aria-label", "Add reaction");
+  reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
+  toolbar.appendChild(reactBtn);
+
+  const replyBtn = document.createElement("button");
+  replyBtn.type = "button";
+  replyBtn.className = "reply-trigger";
+  replyBtn.textContent = "↩";
+  replyBtn.setAttribute("aria-label", "Reply");
+  replyBtn.title = "Reply";
+  replyBtn.addEventListener("click", () => startReplyingTo(message));
+  toolbar.appendChild(replyBtn);
+
+  if (message.sender.id === currentUser.id) {
+    // Wrapper so the menu can be positioned against the ⋮ button itself.
+    const menuAnchor = document.createElement("span");
+    menuAnchor.className = "message-menu-anchor";
+    menuAnchor.appendChild(buildMessageMenuTrigger(message));
+    toolbar.appendChild(menuAnchor);
+  }
+
+  return toolbar;
 }
+
+function buildMessageMenuTrigger(message) {
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "message-menu-trigger";
+  trigger.textContent = "⋮";
+  trigger.setAttribute("aria-label", "More actions");
+  trigger.setAttribute("aria-haspopup", "menu");
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const wasOpenHere = openMessageMenu?.parentElement === trigger.parentElement;
+    closeMessageMenu();
+    if (!wasOpenHere) openMessageMenuFor(trigger, message);
+  });
+  return trigger;
+}
+
+function openMessageMenuFor(trigger, message) {
+  const menu = document.createElement("div");
+  menu.className = "message-menu";
+  menu.setAttribute("role", "menu");
+
+  const items = [
+    ["Edit", () => startEditingMessage(message)],
+    ["Unsend", () => openUnsendDialog(message)],
+  ];
+  items.forEach(([label, action]) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.setAttribute("role", "menuitem");
+    item.textContent = label;
+    item.addEventListener("click", () => {
+      closeMessageMenu();
+      action();
+    });
+    menu.appendChild(item);
+  });
+
+  trigger.parentElement.appendChild(menu);
+  trigger.closest(".message-toolbar").classList.add("menu-open");
+  openMessageMenu = menu;
+}
+
+function closeMessageMenu() {
+  if (!openMessageMenu) return;
+  openMessageMenu.closest(".message-toolbar")?.classList.remove("menu-open");
+  openMessageMenu.remove();
+  openMessageMenu = null;
+}
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".message-menu")) closeMessageMenu();
+});
+
+// --- Unsend dialog (KAN-30) ---
+
+const unsendDialogEl = document.getElementById("unsend-dialog");
+const unsendFormEl = document.getElementById("unsend-form");
+
+function openUnsendDialog(message) {
+  unsendTarget = message;
+  unsendFormEl.elements["unsend-scope"].value = "everyone";
+  unsendDialogEl.hidden = false;
+  unsendFormEl.querySelector(".modal-confirm").focus();
+}
+
+function closeUnsendDialog() {
+  unsendDialogEl.hidden = true;
+  unsendTarget = null;
+}
+
+unsendDialogEl.querySelectorAll("[data-unsend-cancel]").forEach((btn) => btn.addEventListener("click", closeUnsendDialog));
+
+// Clicking the dimmed backdrop (but not the dialog itself) cancels, like the ✕.
+unsendDialogEl.addEventListener("click", (event) => {
+  if (event.target === unsendDialogEl) closeUnsendDialog();
+});
+
+unsendFormEl.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const message = unsendTarget;
+  const scope = unsendFormEl.elements["unsend-scope"].value;
+  closeUnsendDialog();
+  if (message) unsendMessage(message, scope);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!unsendDialogEl.hidden) closeUnsendDialog();
+  else closeMessageMenu();
+});
 
 // --- Replies ---
 
@@ -338,7 +433,8 @@ function buildQuoteEl(replyTo) {
 
 function renderQuoteContent(quote, replyTo) {
   quote.replaceChildren();
-  quote.classList.toggle("deleted", replyTo.deleted);
+  const unavailable = replyTo.deleted || replyTo.removed;
+  quote.classList.toggle("deleted", unavailable);
 
   const author = document.createElement("span");
   author.className = "message-quote-author";
@@ -347,7 +443,8 @@ function renderQuoteContent(quote, replyTo) {
 
   const body = document.createElement("span");
   body.className = "message-quote-body";
-  body.textContent = replyTo.deleted ? "Original message was deleted" : snippet(replyTo.body);
+  if (replyTo.removed) body.textContent = "You removed this message";
+  else body.textContent = replyTo.deleted ? "Original message was deleted" : snippet(replyTo.body);
   quote.appendChild(body);
 }
 
@@ -365,7 +462,7 @@ function scrollToMessage(messageId) {
 // Keeps every quote of `message` in sync when the original is edited or deleted.
 function refreshQuotesOf(message) {
   document.querySelectorAll(`.message-quote[data-quote-of="${message.id}"]`).forEach((quote) => {
-    renderQuoteContent(quote, { id: message.id, sender: message.sender, body: message.body, deleted: message.deleted });
+    renderQuoteContent(quote, { id: message.id, sender: message.sender, body: message.body, deleted: message.deleted, removed: message.removed });
   });
 }
 
@@ -515,9 +612,13 @@ function startEditingMessage(message) {
   row.replaceWith(editWrapper);
 }
 
-async function deleteMessage(message) {
+async function unsendMessage(message, scope) {
   try {
-    await Api.deleteMessage(token, message.id);
+    await Api.deleteMessage(token, message.id, scope);
+    if (scope === "me") {
+      removeHiddenMessage(message.id);
+      return;
+    }
     const row = document.getElementById(`message-${message.id}`);
     if (row) row.replaceWith(buildMessageEl({ ...message, deleted: true }));
     refreshQuotesOf({ ...message, deleted: true });
@@ -525,6 +626,21 @@ async function deleteMessage(message) {
   } catch (err) {
     showComposerError(err.message);
   }
+}
+
+// "Unsend for you": drops the message from this view only. Also called for the
+// message_hidden broadcast, so the user's other open tabs follow along.
+function removeHiddenMessage(messageId) {
+  hiddenMessageIds.add(messageId);
+  const row = document.getElementById(`message-${messageId}`);
+  if (row?.contains(openMessageMenu)) closeMessageMenu();
+  row?.remove();
+  document.querySelectorAll(`.message-quote[data-quote-of="${messageId}"]`).forEach((quote) => {
+    quote.classList.add("deleted");
+    quote.querySelector(".message-quote-body").textContent = "You removed this message";
+  });
+  if (replyingTo?.id === messageId) cancelReply();
+  if (unsendTarget?.id === messageId) closeUnsendDialog();
 }
 
 function handleIncoming(data) {
@@ -539,6 +655,7 @@ function handleIncoming(data) {
   }
 
   const { message } = data;
+  if (hiddenMessageIds.has(message.id)) return;
   const existing = document.getElementById(`message-${message.id}`);
 
   if (existing) {
@@ -640,6 +757,11 @@ composerInputEl.addEventListener("input", () => {
 // brand-new one just created by someone else's first message) has no ConversationChannel
 // subscription to receive its broadcast on otherwise (KAN-16).
 function handleNotification(data) {
+  if (data.event === "message_hidden") {
+    if (data.conversation_id === activeConversationId) removeHiddenMessage(data.message_id);
+    return;
+  }
+
   if (data.event === "reaction_added" || data.event === "reaction_removed") {
     // No sound / sidebar bump for a reaction — only for actual new messages.
     if (data.conversation_id === activeConversationId) handleIncoming(data);

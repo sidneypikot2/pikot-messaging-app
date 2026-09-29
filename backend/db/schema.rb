@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -57,6 +57,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
   create_table "conversations", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "message_hides", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "message_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["message_id", "user_id"], name: "index_message_hides_on_message_id_and_user_id", unique: true
+    t.index ["message_id"], name: "index_message_hides_on_message_id"
+    t.index ["user_id"], name: "index_message_hides_on_user_id"
   end
 
   create_table "message_reactions", force: :cascade do |t|
@@ -106,6 +116,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_150000) do
   add_foreign_key "conversation_memberships", "conversations"
   add_foreign_key "conversation_memberships", "messages", column: "last_read_message_id"
   add_foreign_key "conversation_memberships", "users"
+  add_foreign_key "message_hides", "messages"
+  add_foreign_key "message_hides", "users"
   add_foreign_key "message_reactions", "messages"
   add_foreign_key "message_reactions", "users"
   add_foreign_key "messages", "conversations"

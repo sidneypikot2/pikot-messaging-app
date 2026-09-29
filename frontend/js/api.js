@@ -134,8 +134,9 @@ const Api = {
     return res.json(); // { message }
   },
 
-  async deleteMessage(token, messageId) {
-    const res = await fetch(`${window.API_BASE_URL}/messages/${messageId}`, {
+  // scope: "everyone" (unsend for everyone) or "me" (unsend for you only) — KAN-30.
+  async deleteMessage(token, messageId, scope = "everyone") {
+    const res = await fetch(`${window.API_BASE_URL}/messages/${messageId}?scope=${encodeURIComponent(scope)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

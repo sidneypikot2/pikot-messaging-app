@@ -4,6 +4,7 @@ class User < ApplicationRecord
 
   has_many :conversation_memberships, dependent: :destroy
   has_many :conversations, through: :conversation_memberships
+  has_many :message_hides, dependent: :destroy
   has_many :sent_messages, class_name: "Message", foreign_key: :sender_id, inverse_of: :sender, dependent: :destroy
 
   normalizes :email, with: ->(email) { email.strip.downcase }

@@ -193,6 +193,8 @@ erDiagram
     CONVERSATIONS ||--o{ CONVERSATION_MEMBERSHIPS : has
     CONVERSATIONS ||--o{ MESSAGES : contains
     MESSAGES |o--o{ MESSAGES : "reply_to_message"
+    MESSAGES ||--o{ MESSAGE_HIDES : "hidden by"
+    USERS ||--o{ MESSAGE_HIDES : hides
     CONVERSATIONS ||--o{ GROUP_INVITATIONS : "for group"
 
     USERS {
@@ -240,6 +242,14 @@ erDiagram
         datetime updated_at
     }
 
+    MESSAGE_HIDES {
+        bigint id PK
+        bigint message_id FK
+        bigint user_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
     GROUP_INVITATIONS {
         bigint id PK
         bigint conversation_id FK
@@ -266,6 +276,8 @@ erDiagram
 **Soft-deleted messages.** `deleted_at` is set rather than destroying the row, so a deleted message can render as "This message was deleted" instead of a gap. `edited_at` is set (and `body` overwritten) on update, for an "(edited)" marker.
 
 **Replies (KAN-29).** `messages.reply_to_message_id` is a nullable self-reference. On create, the original must exist, be in the same conversation, and not be soft-deleted; afterwards the reply stays valid even if the original is deleted. `MessageSerializer` embeds one level of quote as `reply_to: { id, sender, body, deleted }` (`body` is `null` once the original is deleted, and the frontend renders "Original message was deleted"). No reply-specific broadcast exists — clients re-render quotes from the original's own `message_updated`/`message_deleted` events. Replies are conversation-scoped, so they apply to group chats unchanged.
+
+**Unsend for you (KAN-30).** `DELETE /messages/:id` takes `scope`: `everyone` (default) is the soft delete above, sender only; `me` is `Messages::HideService`, which records a `message_hides` row (unique on `[message_id, user_id]`) so the message disappears from that user's view only. Any conversation member may hide any message; the frontend currently offers it only on the user's own messages (⋮ in the Messenger-style hover toolbar beside the bubble → Unsend dialog). `GET /conversations/:id/messages` excludes the current user's hidden messages, and a quote of one serializes as `reply_to.removed: true` with `body: null` ("You removed this message"). Hiding broadcasts `{ event: "message_hidden", message_id, conversation_id }` on the hiding user's own `NotificationsChannel` only, so their other tabs follow along.
 
 **Indexes worth calling out** (in addition to FKs/PKs):
 - `users`: unique index on `email` (already exists); unique index on `[provider, uid]` (already exists); unique index on `username` once added
@@ -366,7 +378,7 @@ get "invitations", to: "group_invitations#index"
 | `GET` | `/conversations/:id/messages` | Paginated message history | ⏳ planned | — (query) |
 | `POST` | `/conversations/:id/messages` | Send a message | ⏳ planned | `Messages::CreateService` |
 | `PATCH` | `/messages/:id` | Edit a message | ⏳ planned | `Messages::UpdateService` |
-| `DELETE` | `/messages/:id` | Soft-delete a message | ⏳ planned | `Messages::DeleteService` |
+| `DELETE` | `/messages/:id` | Soft-delete a message (`scope=everyone`, default) or hide it for the current user (`scope=me`) | ⏳ planned | `Messages::DeleteService` / `Messages::HideService` |
 | `POST` | `/groupchats` | Create a group chat | ⏳ planned | `Groupchats::CreateService` |
 | `PATCH` | `/groupchats/:id` | Update group name/settings | ⏳ planned | `Groupchats::UpdateService` |
 | `DELETE` | `/groupchats/:id` | Delete a group chat (owner only) | ⏳ planned | `Groupchats::DeleteService` |
