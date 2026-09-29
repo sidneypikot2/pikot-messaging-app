@@ -54,6 +54,53 @@ function renderList(container, items, buildItemEl) {
 
 // --- Conversations ---
 
+function firstName(user) {
+  return user.first_name || displayName(user);
+}
+
+function activityPreviewText(activity, otherUser) {
+  const mine = activity.actor.id === currentUser.id;
+  const who = mine ? "You" : firstName(activity.actor);
+
+  if (activity.type === "reaction") {
+    let target = "a message";
+    if (activity.message_sender_id === currentUser.id) target = "your message";
+    else if (mine && otherUser) target = `${firstName(otherUser)}'s message`;
+    return `${who} reacted ${activity.emoji} to ${target}`;
+  }
+
+  if (activity.deleted) return `${who} unsent a message`;
+  return mine ? `You: ${activity.body}` : activity.body;
+}
+
+// "now", "5m", "3h", "2d", "3w", then a plain date — Messenger's list timestamps.
+function shortTimeAgo(iso) {
+  const date = new Date(iso);
+  const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  if (days < 28) return `${Math.floor(days / 7)}w`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+// Every message/reaction/hide event refreshes the previews, and one action can arrive
+// as several events (ConversationChannel + NotificationsChannel), so coalesce them into
+// a single refetch.
+let conversationsReloadTimer = null;
+function scheduleConversationsReload() {
+  clearTimeout(conversationsReloadTimer);
+  conversationsReloadTimer = setTimeout(loadConversations, 150);
+}
+
+// Keeps "5m"-style timestamps current between events without refetching.
+setInterval(() => {
+  if (conversationsCache.length > 0) renderList(conversationListEl, conversationsCache, buildConversationItem);
+}, 60000);
+
 async function loadConversations() {
   try {
     const { conversations } = await Api.conversations(token);
@@ -77,17 +124,42 @@ function buildConversationItem(conversation) {
   avatar.className = "avatar";
   if (conversation.other_user) Avatar.render(avatar, conversation.other_user);
 
+  const text = document.createElement("div");
+  text.className = "conversation-text";
+
   const name = document.createElement("span");
   name.className = "conversation-name";
   name.textContent = conversation.other_user ? displayName(conversation.other_user) : "Unknown";
-
-  li.appendChild(avatar);
-  li.appendChild(name);
+  text.appendChild(name);
 
   // Never for the currently-active conversation — the user can already see its content
   // directly, so a badge there would only ever be a stale/confusing flash regardless of
   // server timing.
   const unreadCount = conversation.id === activeConversationId ? 0 : conversation.unread_count;
+
+  // One-line Messenger-style preview of the latest message or reaction (KAN-32).
+  const activity = conversation.last_activity;
+  if (activity) {
+    const preview = document.createElement("div");
+    preview.className = "conversation-preview";
+    if (unreadCount > 0) preview.classList.add("unread");
+
+    const previewText = document.createElement("span");
+    previewText.className = "conversation-preview-text";
+    previewText.textContent = activityPreviewText(activity, conversation.other_user);
+
+    const time = document.createElement("span");
+    time.className = "conversation-preview-time";
+    time.textContent = ` · ${shortTimeAgo(activity.at)}`;
+    time.title = new Date(activity.at).toLocaleString();
+
+    preview.append(previewText, time);
+    text.appendChild(preview);
+  }
+
+  li.appendChild(avatar);
+  li.appendChild(text);
+
   if (unreadCount > 0) {
     const badge = document.createElement("span");
     badge.className = "unread-badge";
@@ -678,8 +750,11 @@ function handleIncoming(data) {
   // Keeps the persisted "read up to" marker current while this conversation is already
   // open — without this, a message arriving mid-session would still count as unread
   // server-side until the next time the conversation is opened.
-  if (data.event === "message_created") Api.markConversationRead(token, message.conversation_id).catch(() => {});
-  loadConversations(); // bump this conversation to the top / refresh previews
+  // Refetches once the marker has moved, so the list's cached unread_count for this
+  // conversation can't lag behind and resurface as a badge after switching away.
+  if (data.event === "message_created") {
+    Api.markConversationRead(token, message.conversation_id).then(scheduleConversationsReload).catch(() => {});
+  }
 }
 
 function applyReactionUpdate(data) {
@@ -791,6 +866,9 @@ composerInputEl.addEventListener("input", () => {
 // brand-new one just created by someone else's first message) has no ConversationChannel
 // subscription to receive its broadcast on otherwise (KAN-16).
 function handleNotification(data) {
+  // Bumps the conversation to the top and refreshes its preview line (KAN-32).
+  scheduleConversationsReload();
+
   if (data.event === "message_hidden") {
     if (data.conversation_id === activeConversationId) removeHiddenMessage(data.message_id);
     return;
@@ -812,7 +890,6 @@ function handleNotification(data) {
     handleIncoming(data); // dedup-safe (existing-id check) if also delivered via ConversationChannel
   } else {
     if (event === "message_created" && message.sender.id !== currentUser.id) playNotificationSound();
-    loadConversations();
   }
 }
 
