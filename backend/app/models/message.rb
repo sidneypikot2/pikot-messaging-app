@@ -3,6 +3,7 @@ class Message < ApplicationRecord
   belongs_to :sender, class_name: "User"
   belongs_to :reply_to_message, class_name: "Message", optional: true
   has_many :reactions, class_name: "MessageReaction", dependent: :destroy
+  has_many :hides, class_name: "MessageHide", dependent: :destroy
 
   validates :body, presence: true, length: { maximum: 5000 }
   # optional: true skips the existence check, so a reply_to_message_id pointing at no
@@ -12,6 +13,10 @@ class Message < ApplicationRecord
 
   def deleted?
     deleted_at.present?
+  end
+
+  def hidden_for?(user)
+    hides.exists?(user: user)
   end
 
   def edited?

@@ -42,6 +42,18 @@ RSpec.describe MessageSerializer do
     expect(result[:reply_to]).to include(id: original.id, body: nil, deleted: true)
   end
 
+  it "hides the quoted body only for a user who unsent the original for themselves" do
+    original = create(:message, body: "original")
+    reply = create(:message, conversation: original.conversation, reply_to_message: original)
+    create(:message_hide, message: original, user: reply.sender)
+
+    hider_view = described_class.call(reply, current_user: reply.sender)
+    other_view = described_class.call(reply, current_user: original.sender)
+
+    expect(hider_view[:reply_to]).to include(body: nil, deleted: false, removed: true)
+    expect(other_view[:reply_to]).to include(body: "original", removed: false)
+  end
+
   it "reports edited: true once edited_at is set" do
     message = create(:message, edited_at: Time.current)
 

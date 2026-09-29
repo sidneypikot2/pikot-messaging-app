@@ -55,6 +55,35 @@
     </main>
   </div>
 
+  <div id="unsend-dialog" class="modal-backdrop" hidden>
+    <form id="unsend-form" class="modal" role="dialog" aria-modal="true" aria-labelledby="unsend-title">
+      <header class="modal-header">
+        <h2 id="unsend-title">Who do you want to unsend this message for?</h2>
+        <button type="button" class="modal-close" data-unsend-cancel aria-label="Close">✕</button>
+      </header>
+      <div class="modal-body">
+        <label class="unsend-option">
+          <input type="radio" name="unsend-scope" value="everyone" checked />
+          <span>
+            <strong>Unsend for everyone</strong>
+            <span class="unsend-option-hint">This message will be unsent for everyone in the chat. Others may have already seen it.</span>
+          </span>
+        </label>
+        <label class="unsend-option">
+          <input type="radio" name="unsend-scope" value="me" />
+          <span>
+            <strong>Unsend for you</strong>
+            <span class="unsend-option-hint">This will remove the message from your devices. Other chat members will still be able to see it.</span>
+          </span>
+        </label>
+      </div>
+      <footer class="modal-footer">
+        <button type="button" class="modal-cancel" data-unsend-cancel>Cancel</button>
+        <button type="submit" class="modal-confirm">Remove</button>
+      </footer>
+    </form>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/session.js"></script>

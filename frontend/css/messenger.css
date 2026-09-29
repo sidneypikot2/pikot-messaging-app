@@ -532,6 +532,173 @@ body {
   opacity: 1;
 }
 
+/* Message ⋯ menu (KAN-30) — same hover-to-reveal pattern as .react-trigger, sitting just
+   left of it. Stays visible while its menu is open, even once the pointer leaves. */
+
+.message-menu-trigger {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.message-row:hover .message-menu-trigger,
+.menu-open .message-menu-trigger {
+  opacity: 1;
+}
+
+.message-menu {
+  position: absolute;
+  top: 16px;
+  right: 0;
+  z-index: 10;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(27, 37, 89, 0.12);
+}
+
+.message-menu button {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.message-menu button:hover,
+.message-menu button:focus-visible {
+  background: var(--bg);
+}
+
+/* Unsend dialog (KAN-30) */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(31, 36, 48, 0.45);
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(27, 37, 89, 0.2);
+}
+
+.modal-header {
+  position: relative;
+  padding: 1rem 3rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.modal-close {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.unsend-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.unsend-option input {
+  margin-top: 0.2rem;
+  accent-color: var(--orange);
+}
+
+.unsend-option strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.unsend-option-hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.modal-footer button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-cancel {
+  background: none;
+  color: var(--orange-dark);
+}
+
+.modal-confirm {
+  background: var(--orange);
+  color: #fff;
+}
+
+.modal-confirm:hover {
+  background: var(--orange-dark);
+}
+
 .reactions-strip {
   display: flex;
   flex-wrap: wrap;
