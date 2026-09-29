@@ -392,25 +392,6 @@ body {
   align-items: center;
 }
 
-.message-actions {
-  display: inline-flex;
-  gap: 0.5rem;
-}
-
-.message-actions button {
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-size: 0.72rem;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-}
-
-.message-actions button:hover {
-  color: var(--orange-dark);
-}
-
 /* Replies */
 
 .message-quote {
@@ -512,55 +493,71 @@ body {
   display: inline-flex;
 }
 
-.react-trigger {
+/* Hover toolbar (KAN-30) — Messenger-style react / reply / ⋮ beside the bubble, outside
+   it: to the right of other people's messages, to the left of your own. Hidden until
+   the message is hovered, or while its ⋮ menu is open. */
+
+.message-toolbar {
   position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: #fff;
-  font-size: 0.75rem;
-  line-height: 1;
-  cursor: pointer;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.15rem;
+  align-items: center;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.1s ease;
 }
 
-.message-row:hover .react-trigger {
-  opacity: 1;
+.message-row.other .message-toolbar {
+  left: 100%;
+  padding-left: 6px;
 }
 
-/* Message ⋯ menu (KAN-30) — always visible, just left of the user's own bubble (own
-   messages are right-aligned, so this sits in the free space beside them). */
+/* The gap to the bubble is padding, not an offset, so the pointer never leaves the
+   (hovered) row on its way from the bubble to a button. row-reverse keeps 🙂 nearest the bubble on both sides, with ⋮ outermost. */
+.message-row.own .message-toolbar {
+  right: 100%;
+  padding-right: 6px;
+  flex-direction: row-reverse;
+}
 
+.message-row:hover .message-toolbar,
+.message-toolbar.menu-open,
+.message-toolbar:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.message-toolbar > button,
 .message-menu-trigger {
-  position: absolute;
-  top: 50%;
-  right: calc(100% + 6px);
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  border: none;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: #fff;
+  background: none;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 1rem;
   line-height: 1;
   cursor: pointer;
 }
 
+.message-toolbar > button:hover,
 .message-menu-trigger:hover,
 .menu-open .message-menu-trigger {
-  color: var(--orange-dark);
-  border-color: var(--orange);
+  background: rgba(31, 36, 48, 0.07);
+  color: var(--text);
+}
+
+.message-menu-anchor {
+  position: relative;
+  display: inline-flex;
 }
 
 .message-menu {
   position: absolute;
-  top: calc(50% + 16px);
-  right: calc(100% + 6px);
+  top: calc(100% + 4px);
+  left: 0;
   z-index: 10;
   min-width: 120px;
   display: flex;

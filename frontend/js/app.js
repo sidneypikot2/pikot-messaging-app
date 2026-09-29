@@ -263,17 +263,7 @@ function buildMessageEl(message) {
   renderBubbleContent(bubble, message);
   bubbleWrap.appendChild(bubble);
 
-  if (!message.deleted) {
-    const reactBtn = document.createElement("button");
-    reactBtn.type = "button";
-    reactBtn.className = "react-trigger";
-    reactBtn.textContent = "🙂";
-    reactBtn.setAttribute("aria-label", "Add reaction");
-    reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
-    bubbleWrap.appendChild(reactBtn);
-
-    if (message.sender.id === currentUser.id) bubbleWrap.appendChild(buildMessageMenuTrigger(message));
-  }
+  if (!message.deleted) bubbleWrap.appendChild(buildMessageToolbar(message));
 
   row.appendChild(bubbleWrap);
 
@@ -292,30 +282,51 @@ function buildMessageEl(message) {
     meta.appendChild(editedTag);
   }
 
-  if (!message.deleted) {
-    const actions = document.createElement("span");
-    actions.className = "message-actions";
-
-    const replyBtn = document.createElement("button");
-    replyBtn.type = "button";
-    replyBtn.textContent = "Reply";
-    replyBtn.addEventListener("click", () => startReplyingTo(message));
-    actions.appendChild(replyBtn);
-
-    meta.appendChild(actions);
-  }
-
   row.appendChild(meta);
   return row;
 }
 
-// --- Message ⋯ menu (KAN-30) ---
+// --- Message hover toolbar + ⋮ menu (KAN-30) ---
+
+// Messenger-style: react / reply / ⋮ sit beside the bubble and only show while the
+// message is hovered (or while its ⋮ menu is open). The ⋮ menu is own-messages only.
+function buildMessageToolbar(message) {
+  const toolbar = document.createElement("div");
+  toolbar.className = "message-toolbar";
+
+  const reactBtn = document.createElement("button");
+  reactBtn.type = "button";
+  reactBtn.className = "react-trigger";
+  reactBtn.textContent = "🙂";
+  reactBtn.setAttribute("aria-label", "Add reaction");
+  reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
+  toolbar.appendChild(reactBtn);
+
+  const replyBtn = document.createElement("button");
+  replyBtn.type = "button";
+  replyBtn.className = "reply-trigger";
+  replyBtn.textContent = "↩";
+  replyBtn.setAttribute("aria-label", "Reply");
+  replyBtn.title = "Reply";
+  replyBtn.addEventListener("click", () => startReplyingTo(message));
+  toolbar.appendChild(replyBtn);
+
+  if (message.sender.id === currentUser.id) {
+    // Wrapper so the menu can be positioned against the ⋮ button itself.
+    const menuAnchor = document.createElement("span");
+    menuAnchor.className = "message-menu-anchor";
+    menuAnchor.appendChild(buildMessageMenuTrigger(message));
+    toolbar.appendChild(menuAnchor);
+  }
+
+  return toolbar;
+}
 
 function buildMessageMenuTrigger(message) {
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "message-menu-trigger";
-  trigger.textContent = "⋯";
+  trigger.textContent = "⋮";
   trigger.setAttribute("aria-label", "More actions");
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.addEventListener("click", (event) => {
@@ -349,13 +360,13 @@ function openMessageMenuFor(trigger, message) {
   });
 
   trigger.parentElement.appendChild(menu);
-  trigger.parentElement.classList.add("menu-open");
+  trigger.closest(".message-toolbar").classList.add("menu-open");
   openMessageMenu = menu;
 }
 
 function closeMessageMenu() {
   if (!openMessageMenu) return;
-  openMessageMenu.parentElement?.classList.remove("menu-open");
+  openMessageMenu.closest(".message-toolbar")?.classList.remove("menu-open");
   openMessageMenu.remove();
   openMessageMenu = null;
 }
