@@ -797,10 +797,11 @@ function handleNotification(data) {
   }
 
   if (data.event === "reaction_added" || data.event === "reaction_removed") {
-    if (data.conversation_id === activeConversationId) handleIncoming(data);
-    // Only here, not in handleIncoming — the active conversation also gets this event via
-    // ConversationChannel, and notifying there too would double up (KAN-31).
-    if (data.event === "reaction_added" && data.message_sender_id === currentUser.id && data.user.id !== currentUser.id) {
+    // Already looking at that conversation: the pill updating in place is notice enough,
+    // so no sound/toast (KAN-31).
+    if (data.conversation_id === activeConversationId) {
+      handleIncoming(data);
+    } else if (data.event === "reaction_added" && data.message_sender_id === currentUser.id && data.user.id !== currentUser.id) {
       notifyReaction(data);
     }
     return;
