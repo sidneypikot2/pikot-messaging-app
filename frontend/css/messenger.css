@@ -526,6 +526,13 @@ body {
   flex-direction: row-reverse;
 }
 
+/* The toolbar's transform/opacity make it a stacking context, so the ⋮ menu's own
+   z-index only counts inside it; the toolbar itself has to sit above later rows (whose
+   positioned bubble wraps would otherwise paint over an open menu). */
+.message-toolbar.menu-open {
+  z-index: 20;
+}
+
 .message-row:hover .message-toolbar,
 .message-toolbar.menu-open,
 .message-toolbar:focus-within {
