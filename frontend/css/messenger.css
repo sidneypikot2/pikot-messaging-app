@@ -163,9 +163,40 @@ body {
   background: rgba(242, 153, 74, 0.15);
 }
 
-.conversation-name {
+.conversation-text {
   flex: 1;
   min-width: 0; /* lets text-overflow ellipsis actually kick in inside the flex row */
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.conversation-preview {
+  display: flex;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.conversation-preview.unread {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.conversation-preview-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-preview-time {
+  flex-shrink: 0;
+  white-space: pre;
+}
+
+.conversation-name {
+  min-width: 0;
   font-weight: 600;
   font-size: 0.9rem;
   overflow: hidden;

@@ -8,6 +8,6 @@ class ConversationSerializer < ApplicationService
   def call
     other = @conversation.members.where.not(id: @current_user.id).first
     { id: @conversation.id, other_user: other && UserSerializer.call(other), created_at: @conversation.created_at,
-      unread_count: @unread_count }
+      unread_count: @unread_count, last_activity: Conversations::LastActivityService.call(@conversation, user: @current_user) }
   end
 end

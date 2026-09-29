@@ -4,7 +4,10 @@ class ConversationsController < ApplicationController
   def index
     conversations = current_user.conversations.order(updated_at: :desc)
     unread_counts = unread_counts_for(conversations)
-    render json: { conversations: conversations.map { |c| ConversationSerializer.call(c, current_user: current_user, unread_count: unread_counts[c.id] || 0) } }
+    serialized = conversations.map { |c| ConversationSerializer.call(c, current_user: current_user, unread_count: unread_counts[c.id] || 0) }
+    # Most recent activity first, Messenger-style (KAN-32) — nothing touches a
+    # conversation's own updated_at when a message or reaction lands in it.
+    render json: { conversations: serialized.sort_by { |c| c.dig(:last_activity, :at) || c[:created_at] }.reverse }
   end
 
   def show
