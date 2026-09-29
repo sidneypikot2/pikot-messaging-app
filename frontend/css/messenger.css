@@ -929,17 +929,46 @@ body {
   cursor: not-allowed;
 }
 
+/* Back button only exists on narrow screens (KAN-34), where the open chat replaces the list. */
+.thread-back {
+  display: none;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--navy);
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.thread-back:hover {
+  background: var(--bg);
+}
+
 @media (max-width: 720px) {
-  /* Stack instead of hiding the sidebar outright — a hidden-with-no-way-back sidebar
-     would make the conversation list permanently unreachable on narrow screens. */
+  /* One pane at a time, Messenger-mobile style (KAN-34): the list until a chat is opened,
+     then the chat alone with a back button to return to the list. */
   .messenger {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(160px, 35vh) 1fr;
   }
 
   .sidebar {
     border-right: none;
-    border-bottom: 1px solid var(--border);
+  }
+
+  .messenger:not(.messenger--chat-open) .thread,
+  .messenger--chat-open .sidebar {
+    display: none;
+  }
+
+  .thread-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .thread-back {
+    display: block;
   }
 }
 

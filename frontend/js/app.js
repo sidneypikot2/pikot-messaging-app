@@ -40,6 +40,8 @@ const typingIndicatorEl = document.getElementById("typing-indicator");
 const replyBarEl = document.getElementById("reply-bar");
 const replyBarTextEl = document.getElementById("reply-bar-text");
 const logoutBtn = document.getElementById("logout-btn");
+const messengerEl = document.getElementById("messenger");
+const threadBackEl = document.getElementById("thread-back");
 
 function displayName(user) {
   if (user.first_name || user.last_name) return `${user.first_name || ""} ${user.last_name || ""}`.trim();
@@ -213,6 +215,7 @@ async function selectConversation(conversationId, otherUser) {
 
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
+  messengerEl.classList.add("messenger--chat-open");
   threadTitleEl.textContent = otherUser ? displayName(otherUser) : "Conversation";
   if (otherUser) Avatar.render(threadAvatarEl, otherUser);
   messageListEl.innerHTML = "";
@@ -239,12 +242,37 @@ function selectDraftConversation(user) {
 
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
+  messengerEl.classList.add("messenger--chat-open");
   threadTitleEl.textContent = displayName(user);
   Avatar.render(threadAvatarEl, user);
   messageListEl.innerHTML = "";
   resetPaginationState();
   clearComposerError();
 }
+
+// Back button (KAN-34, narrow screens only): actually closes the conversation rather
+// than just hiding it, so it no longer counts as "open" — its messages get unread badges
+// and the notification sound again (KAN-33) while the list is showing.
+function closeConversation() {
+  if (unsubscribeActive) unsubscribeActive();
+  unsubscribeActive = null;
+  activeConversationId = null;
+  pendingOtherUser = null;
+  oldestLoadedMessageId = null;
+  resetTypingState();
+  cancelReply();
+  closeMessageMenu();
+
+  document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
+
+  threadActiveEl.hidden = true;
+  threadEmptyEl.hidden = false;
+  messengerEl.classList.remove("messenger--chat-open");
+  messageListEl.innerHTML = "";
+  resetPaginationState();
+}
+
+threadBackEl.addEventListener("click", closeConversation);
 
 // --- Messages ---
 
