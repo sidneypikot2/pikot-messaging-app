@@ -300,19 +300,23 @@ body {
   }
 }
 
+/* The row spans the thread's full width so hovering anywhere along the message's line
+   (not just over the bubble) reveals its toolbar (KAN-30); the 65% cap moves onto the
+   row's children, which align to their side. */
 .message-row {
   display: flex;
   flex-direction: column;
+}
+
+.message-row > * {
   max-width: 65%;
 }
 
 .message-row.own {
-  align-self: flex-end;
   align-items: flex-end;
 }
 
 .message-row.other {
-  align-self: flex-start;
   align-items: flex-start;
 }
 
