@@ -40,7 +40,11 @@ function createCable(token) {
   function send(command) {
     if (open) {
       socket.send(JSON.stringify(command));
-    } else {
+    } else if (command.command === "message") {
+      // Only "message" commands are queued: subscribe/unsubscribe state lives in
+      // `subscriptions`, which the "open" handler replays. Queueing a subscribe too sent
+      // it twice on the first connect, doubling every broadcast (e.g. the notification
+      // sound fired twice per event) (KAN-31).
       queue.push(command);
     }
   }

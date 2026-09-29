@@ -726,6 +726,40 @@ function playNotificationSound() {
   notificationSound.play().catch(() => {});
 }
 
+// --- Reaction toast ---
+// Someone else reacted to one of my messages (KAN-31). One toast at a time: a newer
+// reaction replaces the text of the one already showing rather than stacking.
+
+const reactionToastEl = document.createElement("button");
+reactionToastEl.type = "button";
+reactionToastEl.className = "reaction-toast";
+reactionToastEl.hidden = true;
+document.body.appendChild(reactionToastEl);
+let reactionToastTimer;
+let reactionToastTarget; // { conversationId, otherUser } the toast opens when clicked
+
+reactionToastEl.addEventListener("click", () => {
+  hideReactionToast();
+  const { conversationId, otherUser } = reactionToastTarget;
+  if (conversationId !== activeConversationId) selectConversation(conversationId, otherUser);
+});
+
+function notifyReaction(data) {
+  playNotificationSound();
+
+  const conversation = conversationsCache.find((c) => c.id === data.conversation_id);
+  reactionToastTarget = { conversationId: data.conversation_id, otherUser: conversation?.other_user || data.user };
+  reactionToastEl.textContent = `${displayName(data.user)} reacted ${data.reaction.emoji} to your message`;
+  reactionToastEl.hidden = false;
+  clearTimeout(reactionToastTimer);
+  reactionToastTimer = setTimeout(hideReactionToast, 5000);
+}
+
+function hideReactionToast() {
+  clearTimeout(reactionToastTimer);
+  reactionToastEl.hidden = true;
+}
+
 // --- Typing indicator ---
 // Ephemeral, no "stopped typing" round trip (SPEC.md) — the sender throttles pings to
 // ~1 per 3s of continuous typing, and the receiver just lets the shown indicator expire
@@ -763,8 +797,13 @@ function handleNotification(data) {
   }
 
   if (data.event === "reaction_added" || data.event === "reaction_removed") {
-    // No sound / sidebar bump for a reaction — only for actual new messages.
-    if (data.conversation_id === activeConversationId) handleIncoming(data);
+    // Already looking at that conversation: the pill updating in place is notice enough,
+    // so no sound/toast (KAN-31).
+    if (data.conversation_id === activeConversationId) {
+      handleIncoming(data);
+    } else if (data.event === "reaction_added" && data.message_sender_id === currentUser.id && data.user.id !== currentUser.id) {
+      notifyReaction(data);
+    }
     return;
   }
 

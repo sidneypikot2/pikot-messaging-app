@@ -15,6 +15,15 @@ RSpec.describe Reactions::ToggleService do
       .and have_broadcasted_to(sender).from_channel(NotificationsChannel)
   end
 
+  it "tells the message's author whose message it was and who reacted" do
+    expect {
+      described_class.call(message: message, user: sender, emoji: "👍")
+    }.to have_broadcasted_to(sender).from_channel(NotificationsChannel).with(
+      a_hash_including(event: "reaction_added", message_sender_id: message.sender_id,
+                       user: a_hash_including(id: sender.id))
+    )
+  end
+
   it "removes the reaction and broadcasts reaction_removed on a second toggle of the same emoji" do
     described_class.call(message: message, user: sender, emoji: "👍")
 

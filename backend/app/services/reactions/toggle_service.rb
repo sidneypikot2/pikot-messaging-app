@@ -29,7 +29,10 @@ module Reactions
     end
 
     def broadcast(event, emoji)
-      payload = { event: event, message_id: @message.id, reaction: reaction_group(emoji) }
+      # message_sender_id + user let the message's author tell "someone reacted to my
+      # message" apart from every other reaction broadcast, and name who did (KAN-31).
+      payload = { event: event, message_id: @message.id, message_sender_id: @message.sender_id,
+                  user: UserSerializer.call(@user), reaction: reaction_group(emoji) }
       ConversationChannel.broadcast_to(@message.conversation, payload)
       @message.conversation.members.each do |member|
         NotificationsChannel.broadcast_to(member, payload.merge(conversation_id: @message.conversation_id))
