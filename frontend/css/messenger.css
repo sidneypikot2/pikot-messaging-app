@@ -532,15 +532,16 @@ body {
   opacity: 1;
 }
 
-/* Message ⋯ menu (KAN-30) — same hover-to-reveal pattern as .react-trigger, sitting just
-   left of it. Stays visible while its menu is open, even once the pointer leaves. */
+/* Message ⋯ menu (KAN-30) — always visible, just left of the user's own bubble (own
+   messages are right-aligned, so this sits in the free space beside them). */
 
 .message-menu-trigger {
   position: absolute;
-  top: -10px;
-  right: 16px;
-  width: 22px;
-  height: 22px;
+  top: 50%;
+  right: calc(100% + 6px);
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: #fff;
@@ -548,19 +549,18 @@ body {
   font-size: 0.8rem;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.1s ease;
 }
 
-.message-row:hover .message-menu-trigger,
+.message-menu-trigger:hover,
 .menu-open .message-menu-trigger {
-  opacity: 1;
+  color: var(--orange-dark);
+  border-color: var(--orange);
 }
 
 .message-menu {
   position: absolute;
-  top: 16px;
-  right: 0;
+  top: calc(50% + 16px);
+  right: calc(100% + 6px);
   z-index: 10;
   min-width: 120px;
   display: flex;
