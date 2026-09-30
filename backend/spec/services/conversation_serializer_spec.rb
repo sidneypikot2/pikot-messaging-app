@@ -38,10 +38,11 @@ RSpec.describe ConversationSerializer do
     conversation = create(:conversation)
     message = create(:message, conversation: conversation, sender: alice)
     create(:conversation_membership, conversation: conversation, user: alice, last_read_message_id: message.id)
-    create(:conversation_membership, conversation: conversation, user: bob, last_read_message_id: message.id)
+    read_at = 5.minutes.ago.change(usec: 0)
+    create(:conversation_membership, conversation: conversation, user: bob, last_read_message_id: message.id, last_read_at: read_at)
 
     result = described_class.call(conversation, current_user: alice)
 
-    expect(result[:read_receipts]).to contain_exactly(hash_including(last_read_message_id: message.id, user: hash_including(id: bob.id)))
+    expect(result[:read_receipts]).to contain_exactly(hash_including(last_read_message_id: message.id, last_read_at: read_at, user: hash_including(id: bob.id)))
   end
 end

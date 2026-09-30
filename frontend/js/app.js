@@ -699,11 +699,23 @@ async function loadReadReceipts(conversationId) {
   }
 }
 
-function applyReadReceipt({ user, last_read_message_id }) {
+function applyReadReceipt({ user, last_read_message_id, last_read_at }) {
   if (user.id === currentUser.id || !last_read_message_id) return;
   const known = readReceipts.get(user.id);
   if (known && known.last_read_message_id >= last_read_message_id) return;
-  readReceipts.set(user.id, { user, last_read_message_id });
+  readReceipts.set(user.id, { user, last_read_message_id, last_read_at });
+}
+
+// "Seen by Ken Joseph at 4:55 PM", with the date added once it's no longer today. Reads
+// recorded before last_read_at existed have no time, so those just say who.
+function seenLabel(user, lastReadAt) {
+  const label = `Seen by ${displayName(user)}`;
+  if (!lastReadAt) return label;
+
+  const seenAt = new Date(lastReadAt);
+  const time = seenAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (seenAt.toDateString() === new Date().toDateString()) return `${label} at ${time}`;
+  return `${label} on ${seenAt.toLocaleDateString([], { month: "short", day: "numeric" })} at ${time}`;
 }
 
 // Messenger-style: the reader's small avatar sits under the newest message they've seen.
@@ -713,14 +725,19 @@ function applyReadReceipt({ user, last_read_message_id }) {
 function renderSeenIndicators() {
   messageListEl.querySelectorAll(".seen-indicator").forEach((el) => el.remove());
 
-  readReceipts.forEach(({ user, last_read_message_id }) => {
+  readReceipts.forEach(({ user, last_read_message_id, last_read_at }) => {
     const rows = [...messageListEl.querySelectorAll(".message-row")];
     const seenRow = rows.reverse().find((row) => Number(row.id.replace("message-", "")) <= last_read_message_id);
     if (!seenRow || seenRow.dataset.senderId === String(user.id)) return;
 
     const indicator = document.createElement("div");
     indicator.className = "seen-indicator";
-    indicator.title = `Seen by ${displayName(user)}`;
+    // Styled hover tooltip (CSS, from data-tooltip) rather than a native title, which
+    // only shows after a delay and can't be styled.
+    const label = seenLabel(user, last_read_at);
+    indicator.dataset.tooltip = label;
+    indicator.setAttribute("aria-label", label);
+    indicator.tabIndex = 0;
     const avatar = document.createElement("div");
     avatar.className = "avatar";
     Avatar.render(avatar, user);

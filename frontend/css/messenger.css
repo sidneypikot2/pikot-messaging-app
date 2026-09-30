@@ -430,8 +430,33 @@ body {
 /* Seen indicator (KAN-36) */
 
 .seen-indicator {
+  position: relative;
   align-self: flex-end;
   margin-top: 0.2rem;
+  cursor: default;
+}
+
+/* Opens to the left: the indicator sits at the thread's right edge. */
+.seen-indicator::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+
+.seen-indicator:hover::after,
+.seen-indicator:focus-visible::after {
+  opacity: 1;
 }
 
 .seen-indicator .avatar {

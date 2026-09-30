@@ -14,9 +14,9 @@ module Conversations
       last_message_id = @conversation.messages.maximum(:id)
       return membership if last_message_id.nil? || last_message_id <= membership.last_read_message_id.to_i
 
-      membership.update!(last_read_message_id: last_message_id)
-      ConversationChannel.broadcast_to(@conversation, event: "read", conversation_id: @conversation.id,
-                                                      user: UserSerializer.call(@user), last_read_message_id: last_message_id)
+      membership.update!(last_read_message_id: last_message_id, last_read_at: Time.current)
+      ConversationChannel.broadcast_to(@conversation, event: "read", conversation_id: @conversation.id, user: UserSerializer.call(@user),
+                                                      last_read_message_id: last_message_id, last_read_at: membership.last_read_at)
       membership
     end
   end

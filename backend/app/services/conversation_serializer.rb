@@ -18,7 +18,8 @@ class ConversationSerializer < ApplicationService
   # chats (KAN-35) can show several "seen by" avatars from the same data.
   def read_receipts
     @conversation.conversation_memberships.includes(:user).where.not(user_id: @current_user.id).map do |membership|
-      { user: UserSerializer.call(membership.user), last_read_message_id: membership.last_read_message_id }
+      { user: UserSerializer.call(membership.user), last_read_message_id: membership.last_read_message_id,
+        last_read_at: membership.last_read_at }
     end
   end
 end

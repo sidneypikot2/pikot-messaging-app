@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Conversations::MarkReadService do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:alice) { create(:user) }
   let(:bob) { create(:user) }
   let(:conversation) { create(:conversation) }
@@ -11,14 +13,15 @@ RSpec.describe Conversations::MarkReadService do
   it "moves the reader's marker to the latest message and broadcasts a read event" do
     create(:message, conversation: conversation, sender: alice)
     latest = create(:message, conversation: conversation, sender: alice)
+    freeze_time
 
     expect {
       described_class.call(conversation: conversation, user: bob)
     }.to have_broadcasted_to(conversation).from_channel(ConversationChannel).with(
       hash_including(event: "read", conversation_id: conversation.id, last_read_message_id: latest.id,
-                     user: hash_including(id: bob.id))
+                     last_read_at: Time.current, user: hash_including(id: bob.id))
     )
-    expect(bob_membership.reload.last_read_message_id).to eq(latest.id)
+    expect(bob_membership.reload).to have_attributes(last_read_message_id: latest.id, last_read_at: Time.current)
   end
 
   it "does not broadcast when the marker is already at the latest message" do
