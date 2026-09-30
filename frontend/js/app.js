@@ -312,7 +312,7 @@ async function loadMessages() {
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
-    renderSeenIndicators();
+    refreshThreadDecorations();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
     paginationStatusEl.classList.remove("pagination-status--centered");
@@ -340,7 +340,7 @@ async function loadOlderMessages() {
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
-    renderSeenIndicators();
+    refreshThreadDecorations();
     messageListEl.scrollTop = messageListEl.scrollHeight - previousHeight;
   } finally {
     isLoadingOlder = false;
@@ -361,6 +361,16 @@ function buildMessageEl(message) {
   row.className = `message-row ${message.sender.id === currentUser.id ? "own" : "other"}`;
   row.id = `message-${message.id}`;
   row.dataset.senderId = message.sender.id;
+  row.dataset.createdAt = message.created_at;
+
+  // Messenger-style "Edited" over the bubble — there's no per-message meta line any more
+  // for it to sit in (KAN-37).
+  if (message.edited && !message.deleted) {
+    const editedTag = document.createElement("div");
+    editedTag.className = "message-edited";
+    editedTag.textContent = "Edited";
+    row.appendChild(editedTag);
+  }
 
   if (message.reply_to) row.appendChild(buildQuoteEl(message.reply_to));
 
@@ -369,6 +379,9 @@ function buildMessageEl(message) {
 
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
+  // The exact send time lives in a hover tooltip; the thread itself only shows times at
+  // gaps (renderTimeDividers, KAN-37).
+  bubble.dataset.time = exactTime(new Date(message.created_at));
   renderBubbleContent(bubble, message);
   bubbleWrap.appendChild(bubble);
 
@@ -380,18 +393,6 @@ function buildMessageEl(message) {
     row.appendChild(buildReactionsStrip(message));
   }
 
-  const meta = document.createElement("div");
-  meta.className = "message-meta";
-  const time = document.createElement("span");
-  time.textContent = new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  meta.appendChild(time);
-  if (message.edited && !message.deleted) {
-    const editedTag = document.createElement("span");
-    editedTag.textContent = "(edited)";
-    meta.appendChild(editedTag);
-  }
-
-  row.appendChild(meta);
   return row;
 }
 
@@ -679,8 +680,64 @@ function renderBubbleContent(bubble, message) {
 function appendMessageEl(message) {
   if (document.getElementById(`message-${message.id}`)) return; // already rendered (e.g. own message echoed back)
   messageListEl.appendChild(buildMessageEl(message));
-  renderSeenIndicators();
+  refreshThreadDecorations();
   messageListEl.scrollTop = messageListEl.scrollHeight;
+}
+
+// --- Time dividers (KAN-37) ---
+
+const TIME_DIVIDER_GAP_MS = 15 * 60 * 1000;
+
+// Everything the thread draws from its neighbours or from other people's read markers,
+// redone as a whole whenever rows change since either can move.
+function refreshThreadDecorations() {
+  renderTimeDividers();
+  renderSeenIndicators();
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// Messenger's divider labels: "2:24 PM" today, "Yesterday 9:10 AM", "Mon 9:10 AM" within
+// the week, then "Sep 28, 4:55 PM" (plus the year once it isn't this year).
+function dividerLabel(date) {
+  const now = new Date();
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (daysAgo === 0) return time;
+  if (daysAgo === 1) return `Yesterday ${time}`;
+  if (daysAgo < 7) return `${date.toLocaleDateString([], { weekday: "short" })} ${time}`;
+
+  const dateOptions = { month: "short", day: "numeric" };
+  if (date.getFullYear() !== now.getFullYear()) dateOptions.year = "numeric";
+  return `${date.toLocaleDateString([], dateOptions)}, ${time}`;
+}
+
+// "Tuesday, Sep 30, 2:24 PM" — a bubble's hover tooltip.
+function exactTime(date) {
+  const options = { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+  return date.toLocaleString([], options);
+}
+
+// A centered time label above the first loaded message and above any message sent
+// TIME_DIVIDER_GAP_MS or more after the one before it. Includes rows mid-edit (they keep
+// the message's id and created-at), so editing doesn't shift the dividers around.
+function renderTimeDividers() {
+  messageListEl.querySelectorAll(".time-divider").forEach((el) => el.remove());
+
+  let previous = null;
+  messageListEl.querySelectorAll("[data-created-at]").forEach((row) => {
+    const sentAt = new Date(row.dataset.createdAt);
+    if (!previous || sentAt - previous >= TIME_DIVIDER_GAP_MS) {
+      const divider = document.createElement("div");
+      divider.className = "time-divider";
+      divider.textContent = dividerLabel(sentAt);
+      row.before(divider);
+    }
+    previous = sentAt;
+  });
 }
 
 // --- Seen indicator (KAN-36) ---
@@ -693,7 +750,7 @@ async function loadReadReceipts(conversationId) {
     const { conversation } = await Api.conversation(token, conversationId);
     if (conversationId !== activeConversationId) return; // switched threads mid-request
     conversation.read_receipts.forEach(applyReadReceipt);
-    renderSeenIndicators();
+    refreshThreadDecorations();
   } catch {
     // The indicator is a nicety — the thread works fine without it.
   }
@@ -760,7 +817,7 @@ function startEditingMessage(message) {
       const { message: updated } = await Api.updateMessage(token, message.id, textarea.value);
       editWrapper.replaceWith(buildMessageEl(updated));
       refreshQuotesOf(updated);
-      renderSeenIndicators();
+      refreshThreadDecorations();
     } catch (err) {
       showComposerError(err.message);
       editWrapper.replaceWith(row);
@@ -779,6 +836,7 @@ function startEditingMessage(message) {
   // arriving before the save's HTTP response resolves falls through to appendMessageEl
   // and creates a duplicate instead of updating this element in place.
   editWrapper.id = `message-${message.id}`;
+  editWrapper.dataset.createdAt = message.created_at; // keeps its time divider while editing
   editWrapper.appendChild(textarea);
   editWrapper.appendChild(saveBtn);
   editWrapper.appendChild(cancelBtn);
@@ -809,7 +867,7 @@ function removeHiddenMessage(messageId) {
   const row = document.getElementById(`message-${messageId}`);
   if (row?.contains(openMessageMenu)) closeMessageMenu();
   row?.remove();
-  renderSeenIndicators();
+  refreshThreadDecorations();
   document.querySelectorAll(`.message-quote[data-quote-of="${messageId}"]`).forEach((quote) => {
     quote.classList.add("deleted");
     quote.querySelector(".message-quote-body").textContent = "You removed this message";
@@ -831,7 +889,7 @@ function handleIncoming(data) {
 
   if (data.event === "read") {
     applyReadReceipt(data);
-    renderSeenIndicators();
+    refreshThreadDecorations();
     return;
   }
 
@@ -842,7 +900,7 @@ function handleIncoming(data) {
   if (existing) {
     existing.replaceWith(buildMessageEl(message));
     refreshQuotesOf(message);
-    renderSeenIndicators();
+    refreshThreadDecorations();
     // Someone else deleting the message this composer is replying to would otherwise
     // only surface as a 422 on send.
     if (message.deleted && replyingTo?.id === message.id) cancelReply();
@@ -883,7 +941,7 @@ function applyReactionUpdate(data) {
   if (!strip) {
     strip = document.createElement("div");
     strip.className = "reactions-strip";
-    row.insertBefore(strip, row.querySelector(".message-meta"));
+    row.querySelector(".message-bubble-wrap").after(strip);
   }
 
   let pill = strip.querySelector(`[data-emoji="${CSS.escape(emoji)}"]`);
