@@ -39,4 +39,18 @@ RSpec.describe Conversations::MarkReadService do
     }.not_to have_broadcasted_to(conversation).from_channel(ConversationChannel)
     expect(bob_membership.reload.last_read_message_id).to be_nil
   end
+
+  it "tracks each group member's marker separately" do
+    carol = create(:user)
+    group = Groupchats::CreateService.call(owner: alice, name: "Trip", member_ids: [ bob.id, carol.id ])
+    first = create(:message, conversation: group, sender: alice)
+    described_class.call(conversation: group, user: bob)
+    create(:message, conversation: group, sender: alice)
+
+    expect {
+      described_class.call(conversation: group, user: carol)
+    }.to have_broadcasted_to(group).from_channel(ConversationChannel).with(hash_including(event: "read", user: hash_including(id: carol.id)))
+    expect(group.conversation_memberships.find_by!(user: bob).last_read_message_id).to eq(first.id)
+    expect(group.conversation_memberships.find_by!(user: carol).last_read_message_id).to eq(group.messages.maximum(:id))
+  end
 end

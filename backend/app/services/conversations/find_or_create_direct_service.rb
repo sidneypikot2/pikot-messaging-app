@@ -17,7 +17,8 @@ module Conversations
     private
 
     def find_existing(other_user)
-      Conversation.joins(:conversation_memberships)
+      # Direct only — two people can also share any number of group chats (KAN-35).
+      Conversation.where(kind: :direct).joins(:conversation_memberships)
         .where(conversation_memberships: { user_id: @current_user.id })
         .where(id: other_user.conversation_ids)
         .first
