@@ -427,6 +427,20 @@ body {
   align-items: center;
 }
 
+/* Seen indicator (KAN-36) */
+
+.seen-indicator {
+  align-self: flex-end;
+  margin-top: 0.2rem;
+}
+
+.seen-indicator .avatar {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  font-size: 0.45rem;
+}
+
 /* Replies */
 
 .message-quote {

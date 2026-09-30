@@ -21,6 +21,10 @@ let unsendTarget = null; // message the unsend dialog is currently open for
 // Messages unsent "for you" during this page's lifetime — a later broadcast about one (an
 // edit, say) would otherwise find no row and re-append it as if it were new.
 const hiddenMessageIds = new Set();
+// How far each other member of the open conversation has read, keyed by user id — drives
+// the Messenger-style "seen" avatar (KAN-36). A map rather than one value so group chats
+// (KAN-35) can stack several readers from the same data.
+const readReceipts = new Map();
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -201,6 +205,7 @@ async function selectConversation(conversationId, otherUser) {
   pendingOtherUser = null;
   activeConversationId = conversationId;
   oldestLoadedMessageId = null;
+  readReceipts.clear();
   resetTypingState();
 
   document.querySelectorAll("#conversation-list li").forEach((li) => {
@@ -226,6 +231,7 @@ async function selectConversation(conversationId, otherUser) {
   await loadMessages();
   unsubscribeActive = cable.subscribeToConversation(conversationId, handleIncoming);
   Api.markConversationRead(token, conversationId).catch(() => {});
+  loadReadReceipts(conversationId);
 }
 
 // No conversation exists yet — just show the person and an empty thread until the
@@ -306,6 +312,7 @@ async function loadMessages() {
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
+    renderSeenIndicators();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
     paginationStatusEl.classList.remove("pagination-status--centered");
@@ -333,6 +340,7 @@ async function loadOlderMessages() {
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
+    renderSeenIndicators();
     messageListEl.scrollTop = messageListEl.scrollHeight - previousHeight;
   } finally {
     isLoadingOlder = false;
@@ -352,6 +360,7 @@ function buildMessageEl(message) {
   const row = document.createElement("div");
   row.className = `message-row ${message.sender.id === currentUser.id ? "own" : "other"}`;
   row.id = `message-${message.id}`;
+  row.dataset.senderId = message.sender.id;
 
   if (message.reply_to) row.appendChild(buildQuoteEl(message.reply_to));
 
@@ -670,7 +679,54 @@ function renderBubbleContent(bubble, message) {
 function appendMessageEl(message) {
   if (document.getElementById(`message-${message.id}`)) return; // already rendered (e.g. own message echoed back)
   messageListEl.appendChild(buildMessageEl(message));
+  renderSeenIndicators();
   messageListEl.scrollTop = messageListEl.scrollHeight;
+}
+
+// --- Seen indicator (KAN-36) ---
+
+// Fetched after the thread is on screen rather than before, so opening a conversation
+// isn't held up by it. Keeps whichever marker is further along in case a live "read"
+// event for the same reader already landed while this request was in flight.
+async function loadReadReceipts(conversationId) {
+  try {
+    const { conversation } = await Api.conversation(token, conversationId);
+    if (conversationId !== activeConversationId) return; // switched threads mid-request
+    conversation.read_receipts.forEach(applyReadReceipt);
+    renderSeenIndicators();
+  } catch {
+    // The indicator is a nicety — the thread works fine without it.
+  }
+}
+
+function applyReadReceipt({ user, last_read_message_id }) {
+  if (user.id === currentUser.id || !last_read_message_id) return;
+  const known = readReceipts.get(user.id);
+  if (known && known.last_read_message_id >= last_read_message_id) return;
+  readReceipts.set(user.id, { user, last_read_message_id });
+}
+
+// Messenger-style: the reader's small avatar sits under the newest message they've seen.
+// Rows are in id order, so that's the last rendered row at or below their marker — which
+// also means an unsent-for-you message (no row) falls back to the one above it. Nothing
+// shows when that message is the reader's own: they obviously saw what they just sent.
+function renderSeenIndicators() {
+  messageListEl.querySelectorAll(".seen-indicator").forEach((el) => el.remove());
+
+  readReceipts.forEach(({ user, last_read_message_id }) => {
+    const rows = [...messageListEl.querySelectorAll(".message-row")];
+    const seenRow = rows.reverse().find((row) => Number(row.id.replace("message-", "")) <= last_read_message_id);
+    if (!seenRow || seenRow.dataset.senderId === String(user.id)) return;
+
+    const indicator = document.createElement("div");
+    indicator.className = "seen-indicator";
+    indicator.title = `Seen by ${displayName(user)}`;
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    Avatar.render(avatar, user);
+    indicator.appendChild(avatar);
+    seenRow.appendChild(indicator);
+  });
 }
 
 function startEditingMessage(message) {
@@ -687,6 +743,7 @@ function startEditingMessage(message) {
       const { message: updated } = await Api.updateMessage(token, message.id, textarea.value);
       editWrapper.replaceWith(buildMessageEl(updated));
       refreshQuotesOf(updated);
+      renderSeenIndicators();
     } catch (err) {
       showComposerError(err.message);
       editWrapper.replaceWith(row);
@@ -735,6 +792,7 @@ function removeHiddenMessage(messageId) {
   const row = document.getElementById(`message-${messageId}`);
   if (row?.contains(openMessageMenu)) closeMessageMenu();
   row?.remove();
+  renderSeenIndicators();
   document.querySelectorAll(`.message-quote[data-quote-of="${messageId}"]`).forEach((quote) => {
     quote.classList.add("deleted");
     quote.querySelector(".message-quote-body").textContent = "You removed this message";
@@ -754,6 +812,12 @@ function handleIncoming(data) {
     return;
   }
 
+  if (data.event === "read") {
+    applyReadReceipt(data);
+    renderSeenIndicators();
+    return;
+  }
+
   const { message } = data;
   if (hiddenMessageIds.has(message.id)) return;
   const existing = document.getElementById(`message-${message.id}`);
@@ -761,6 +825,7 @@ function handleIncoming(data) {
   if (existing) {
     existing.replaceWith(buildMessageEl(message));
     refreshQuotesOf(message);
+    renderSeenIndicators();
     // Someone else deleting the message this composer is replying to would otherwise
     // only surface as a 422 on send.
     if (message.deleted && replyingTo?.id === message.id) cancelReply();

@@ -31,4 +31,17 @@ RSpec.describe ConversationSerializer do
 
     expect(result[:unread_count]).to eq(5)
   end
+
+  it "lists how far each other member has read, excluding the current user" do
+    alice = create(:user)
+    bob = create(:user)
+    conversation = create(:conversation)
+    message = create(:message, conversation: conversation, sender: alice)
+    create(:conversation_membership, conversation: conversation, user: alice, last_read_message_id: message.id)
+    create(:conversation_membership, conversation: conversation, user: bob, last_read_message_id: message.id)
+
+    result = described_class.call(conversation, current_user: alice)
+
+    expect(result[:read_receipts]).to contain_exactly(hash_including(last_read_message_id: message.id, user: hash_including(id: bob.id)))
+  end
 end
