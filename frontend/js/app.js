@@ -15,7 +15,10 @@ let pendingOtherUser = null; // search result selected, but no conversation crea
 let conversationsCache = []; // last-fetched conversation list, checked before starting a new draft
 let typingPingActive = false; // throttles outgoing pings to ~1 per 3s of continuous typing
 let typingPingResetTimer = null;
-let typingIndicatorTimer = null; // hides the received indicator if no further ping arrives
+// Who is typing where, per conversation: conversation id → Map(user id → { user, timer }).
+// Each typer expires on their own, so two people typing in a group don't hide each
+// other, and a conversation's entry survives switching away from it (KAN-38).
+const typersByConversation = new Map();
 let replyingTo = null; // message the composer is currently replying to, if any
 let openMessageMenu = null; // the ⋯ menu currently open on a message, if any
 let unsendTarget = null; // message the unsend dialog is currently open for
@@ -45,7 +48,6 @@ const composerEl = document.getElementById("composer");
 const composerInputEl = document.getElementById("composer-input");
 const composerSendEl = document.getElementById("composer-send");
 const composerErrorEl = document.getElementById("composer-error");
-const typingIndicatorEl = document.getElementById("typing-indicator");
 const replyBarEl = document.getElementById("reply-bar");
 const replyBarTextEl = document.getElementById("reply-bar-text");
 const logoutBtn = document.getElementById("logout-btn");
@@ -179,9 +181,19 @@ function buildConversationItem(conversation) {
   // server timing.
   const unreadCount = conversation.id === activeConversationId ? 0 : conversation.unread_count;
 
-  // One-line Messenger-style preview of the latest message or reaction (KAN-32).
+  // One-line Messenger-style preview of the latest message or reaction (KAN-32), or
+  // "typing…" while someone is (KAN-38).
   const activity = conversation.last_activity;
-  if (activity) {
+  const typers = typersIn(conversation.id);
+  if (typers.length > 0) {
+    const preview = document.createElement("div");
+    preview.className = "conversation-preview typing";
+    const previewText = document.createElement("span");
+    previewText.className = "conversation-preview-text";
+    previewText.textContent = listTypingText(typers, conversation);
+    preview.appendChild(previewText);
+    text.appendChild(preview);
+  } else if (activity) {
     const preview = document.createElement("div");
     preview.className = "conversation-preview";
     if (unreadCount > 0) preview.classList.add("unread");
@@ -213,13 +225,12 @@ function buildConversationItem(conversation) {
   return li;
 }
 
-// Resets both the sent-ping throttle and the shown indicator so a stale "X is
-// typing…" from a previous thread can't linger after switching conversations.
+// Resets the sent-ping throttle on switching conversations, and redraws the typing row
+// for the newly open one (someone may already be typing there).
 function resetTypingState() {
   typingPingActive = false;
   clearTimeout(typingPingResetTimer);
-  clearTimeout(typingIndicatorTimer);
-  typingIndicatorEl.hidden = true;
+  renderTypingRow();
 }
 
 // messageListEl.innerHTML = "" (below) destroys paginationStatusEl too, since it's a
@@ -268,6 +279,7 @@ async function selectConversation(conversation) {
   cancelReply();
 
   await loadMessages();
+  renderTypingRow(); // the list was cleared above; someone may already be typing here
   unsubscribeActive = cable.subscribeToConversation(conversationId, handleIncoming);
   Api.markConversationRead(token, conversationId).catch(() => {});
   loadReadReceipts(conversationId);
@@ -730,6 +742,7 @@ function renderBubbleContent(bubble, message) {
 function appendMessageEl(message) {
   if (document.getElementById(`message-${message.id}`)) return; // already rendered (e.g. own message echoed back)
   messageListEl.appendChild(buildMessageEl(message));
+  if (typingRowEl.isConnected) messageListEl.appendChild(typingRowEl); // stays the last row
   refreshThreadDecorations();
   messageListEl.scrollTop = messageListEl.scrollHeight;
 }
@@ -1033,7 +1046,7 @@ function removeHiddenMessage(messageId) {
 
 function handleIncoming(data) {
   if (data.event === "typing") {
-    if (data.user.id !== currentUser.id) showTypingIndicator(data.user);
+    if (activeConversationId) noteTyping(activeConversationId, data.user);
     return;
   }
 
@@ -1049,6 +1062,7 @@ function handleIncoming(data) {
   }
 
   const { message } = data;
+  if (data.event === "message_created") clearTyping(message.conversation_id, message.sender.id);
   if (hiddenMessageIds.has(message.id)) return;
   const existing = document.getElementById(`message-${message.id}`);
 
@@ -1169,16 +1183,108 @@ function hideReactionToast() {
 
 // --- Typing indicator ---
 // Ephemeral, no "stopped typing" round trip (SPEC.md) — the sender throttles pings to
-// ~1 per 3s of continuous typing, and the receiver just lets the shown indicator expire
-// a few seconds after the last ping it received.
+// ~1 per 3s of continuous typing, and the receiver lets each typer expire a few seconds
+// after the last ping it got from them, or as soon as their message arrives. Pings come
+// in on ConversationChannel for the open conversation and on NotificationsChannel for
+// every conversation (KAN-38), so the same ping can arrive twice; noting it is idempotent.
 
-function showTypingIndicator(user) {
-  typingIndicatorEl.textContent = `${displayName(user)} is typing…`;
-  typingIndicatorEl.hidden = false;
-  clearTimeout(typingIndicatorTimer);
-  typingIndicatorTimer = setTimeout(() => {
-    typingIndicatorEl.hidden = true;
-  }, 4000);
+const TYPING_EXPIRY_MS = 4000;
+const MAX_TYPING_AVATARS = 3;
+
+const typingRowEl = document.createElement("div");
+typingRowEl.className = "typing-row";
+
+function typersIn(conversationId) {
+  return [...(typersByConversation.get(conversationId)?.values() || [])].map(({ user }) => user);
+}
+
+function noteTyping(conversationId, user) {
+  if (user.id === currentUser.id) return;
+  if (!typersByConversation.has(conversationId)) typersByConversation.set(conversationId, new Map());
+  const typers = typersByConversation.get(conversationId);
+  const isNew = !typers.has(user.id);
+  clearTimeout(typers.get(user.id)?.timer);
+  typers.set(user.id, { user, timer: setTimeout(() => clearTyping(conversationId, user.id), TYPING_EXPIRY_MS) });
+  if (isNew) typingChanged(conversationId);
+}
+
+function clearTyping(conversationId, userId) {
+  const typers = typersByConversation.get(conversationId);
+  if (!typers?.has(userId)) return;
+  clearTimeout(typers.get(userId).timer);
+  typers.delete(userId);
+  if (typers.size === 0) typersByConversation.delete(conversationId);
+  typingChanged(conversationId);
+}
+
+function typingChanged(conversationId) {
+  if (conversationId === activeConversationId) renderTypingRow();
+  refreshConversationItem(conversationId);
+}
+
+// Rebuilds just that list row, so a typing change doesn't refetch the whole list.
+function refreshConversationItem(conversationId) {
+  const li = conversationListEl.querySelector(`li[data-conversation-id="${conversationId}"]`);
+  const conversation = conversationsCache.find((c) => c.id === conversationId);
+  if (li && conversation) li.replaceWith(buildConversationItem(conversation));
+}
+
+// "Alice", "Alice and Bob", "Alice, Bob and 2 others".
+function typerNames(typers) {
+  const names = typers.map(firstName);
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  const others = names.length - 2;
+  return `${names[0]}, ${names[1]} and ${others} ${others === 1 ? "other" : "others"}`;
+}
+
+function typingLabel(typers) {
+  return `${typerNames(typers)} ${typers.length === 1 ? "is" : "are"} typing`;
+}
+
+// The list only has room for a short line: a 1:1 can only be the other person.
+function listTypingText(typers, conversation) {
+  if (!isGroup(conversation)) return "typing…";
+  if (typers.length > 2) return `${typers.length} people are typing…`;
+  return `${typingLabel(typers)}…`;
+}
+
+// Messenger-style: the typers' avatars beside a bubble of bouncing dots, as the last row
+// of the thread. Only scrolls it into view if the reader was already at the bottom.
+function renderTypingRow() {
+  const typers = activeConversationId ? typersIn(activeConversationId) : [];
+  if (typers.length === 0) {
+    typingRowEl.remove();
+    return;
+  }
+
+  const atBottom = messageListEl.scrollHeight - messageListEl.scrollTop - messageListEl.clientHeight < 40;
+
+  const avatars = document.createElement("div");
+  avatars.className = "typing-avatars";
+  const shown = typers.length > MAX_TYPING_AVATARS ? typers.slice(0, MAX_TYPING_AVATARS - 1) : typers;
+  shown.forEach((user) => {
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    Avatar.render(avatar, user);
+    avatars.appendChild(avatar);
+  });
+  if (typers.length > shown.length) {
+    const more = document.createElement("div");
+    more.className = "typing-more";
+    more.textContent = `+${typers.length - shown.length}`;
+    avatars.appendChild(more);
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "typing-bubble";
+  bubble.append(...[0, 1, 2].map(() => document.createElement("span")));
+
+  typingRowEl.replaceChildren(avatars, bubble);
+  typingRowEl.title = typingLabel(typers);
+  typingRowEl.setAttribute("aria-label", typingLabel(typers));
+  messageListEl.appendChild(typingRowEl);
+  if (atBottom) messageListEl.scrollTop = messageListEl.scrollHeight;
 }
 
 composerInputEl.addEventListener("input", () => {
@@ -1198,6 +1304,12 @@ composerInputEl.addEventListener("input", () => {
 // brand-new one just created by someone else's first message) has no ConversationChannel
 // subscription to receive its broadcast on otherwise (KAN-16).
 function handleNotification(data) {
+  // Someone typing somewhere (KAN-38): no list refetch, sound or toast.
+  if (data.event === "typing") {
+    noteTyping(data.conversation_id, data.user);
+    return;
+  }
+
   // Bumps the conversation to the top and refreshes its preview line (KAN-32).
   scheduleConversationsReload();
 
@@ -1221,6 +1333,7 @@ function handleNotification(data) {
   }
 
   const { message, event } = data;
+  if (event === "message_created") clearTyping(message.conversation_id, message.sender.id);
   if (message.conversation_id === activeConversationId) {
     handleIncoming(data); // dedup-safe (existing-id check) if also delivered via ConversationChannel
   } else {
