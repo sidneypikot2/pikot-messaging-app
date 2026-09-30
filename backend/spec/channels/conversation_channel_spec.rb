@@ -32,6 +32,8 @@ RSpec.describe ConversationChannel, type: :channel do
     expect(subscription).to be_rejected
   end
 
+  RSpec::Matchers.define_negated_matcher :not_have_broadcasted_to, :have_broadcasted_to
+
   describe "#typing" do
     it "broadcasts to the conversation when performed by a member" do
       conversation = create(:conversation)
@@ -43,6 +45,22 @@ RSpec.describe ConversationChannel, type: :channel do
       expect {
         perform :typing
       }.to have_broadcasted_to(conversation).with(event: "typing", user: UserSerializer.call(user))
+    end
+
+    it "notifies the other members, but not the typer, on their notifications stream" do
+      conversation = create(:conversation)
+      user = create(:user)
+      other = create(:user)
+      create(:conversation_membership, conversation: conversation, user: user)
+      create(:conversation_membership, conversation: conversation, user: other)
+      stub_connection current_user: user
+      subscribe(conversation_id: conversation.id)
+
+      expect {
+        perform :typing
+      }.to have_broadcasted_to(other).from_channel(NotificationsChannel)
+        .with(event: "typing", conversation_id: conversation.id, user: UserSerializer.call(user))
+        .and(not_have_broadcasted_to(user).from_channel(NotificationsChannel))
     end
 
     it "does not broadcast if the member's membership was removed after subscribing" do
