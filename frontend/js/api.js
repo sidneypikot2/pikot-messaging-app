@@ -79,7 +79,7 @@ const Api = {
 
     if (!res.ok) throw new Error(`Failed to load conversations (${res.status})`);
 
-    return res.json(); // { conversations: [{ id, other_user, created_at }] }
+    return res.json(); // { conversations: [{ id, kind, name, members, other_user, created_at, ... }] }
   },
 
   async createConversation(token, otherUserId) {
@@ -92,6 +92,20 @@ const Api = {
     if (!res.ok) throw new Error(`Failed to start conversation (${res.status})`);
 
     return res.json(); // { conversation }
+  },
+
+  // Group chat (KAN-35): the creator plus memberIds (at least 2 other people).
+  async createGroupchat(token, name, memberIds) {
+    const res = await fetch(`${window.API_BASE_URL}/groupchats`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name, member_ids: memberIds }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.errors && data.errors.join(", ")) || `Failed to create group (${res.status})`);
+
+    return data; // { conversation }
   },
 
   async messages(token, conversationId, beforeCursor) {

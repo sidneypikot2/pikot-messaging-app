@@ -80,7 +80,15 @@ body {
   padding: 0 1.25rem 0.75rem;
 }
 
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .search-box input {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--border);
@@ -242,6 +250,130 @@ body {
   object-fit: cover;
 }
 
+/* A group's picture (KAN-35): two members' avatars overlapped in a 40px square. */
+.avatar-stack {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+}
+
+.avatar-stack .avatar {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  font-size: 0.6rem;
+  border: 2px solid #fff;
+}
+
+.avatar-stack .avatar:first-child {
+  top: 0;
+  right: 0;
+}
+
+.avatar-stack .avatar:last-child {
+  bottom: 0;
+  left: 0;
+}
+
+/* New group button + dialog (KAN-35) */
+
+.new-group-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.new-group-btn:hover {
+  color: var(--orange-dark);
+}
+
+.new-group-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.new-group-input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
+}
+
+.new-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.new-group-chips:empty {
+  display: none;
+}
+
+.new-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.new-group-chip .avatar {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  font-size: 0.55rem;
+}
+
+.new-group-chip button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.new-group-search {
+  position: relative;
+}
+
+.new-group-results {
+  left: 0;
+  right: 0;
+}
+
+.new-group-hint {
+  margin: -0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.new-group-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--error);
+}
+
+.modal-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Thread */
 
 .thread {
@@ -277,9 +409,21 @@ body {
   background: #fff;
 }
 
+.thread-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .thread-header span {
   font-weight: 700;
   color: var(--navy);
+}
+
+.thread-header .thread-subtitle {
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 .message-list {
@@ -427,17 +571,54 @@ body {
   align-items: center;
 }
 
-/* Seen indicator (KAN-36) */
+/* Seen indicator (KAN-36, groups KAN-35) — "Seen at 4:55 PM" text in 1:1 chats; small
+   overlapping reader avatars, or "Seen by everyone", in groups. */
 
 .seen-indicator {
-  position: relative;
   align-self: flex-end;
   margin-top: 0.2rem;
   cursor: default;
 }
 
-/* Opens to the left: the indicator sits at the thread's right edge. */
-.seen-indicator::after {
+.seen-text {
+  position: relative;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.seen-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.seen-avatars > * + * {
+  margin-left: -4px;
+}
+
+.seen-avatars .avatar,
+.seen-more {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  font-size: 0.45rem;
+  border: 1.5px solid var(--bg);
+  box-sizing: content-box;
+}
+
+.seen-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Opens to the left: seen indicators sit at the thread's right edge. pre-line lets a
+   group's "Seen by everyone"/"+N" tooltip list one reader per line. */
+.has-tooltip::after {
   content: attr(data-tooltip);
   position: absolute;
   right: 0;
@@ -447,23 +628,42 @@ body {
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   font-size: 0.75rem;
-  white-space: nowrap;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: pre;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s;
   z-index: 5;
 }
 
-.seen-indicator:hover::after,
-.seen-indicator:focus-visible::after {
+.has-tooltip:hover::after,
+.has-tooltip:focus-visible::after {
   opacity: 1;
 }
 
-.seen-indicator .avatar {
-  width: 16px;
-  height: 16px;
-  min-width: 16px;
-  font-size: 0.45rem;
+/* Group sender labels (KAN-35): name above the first bubble of a run, avatar beside the
+   last. The padding makes room for the avatar left of the bubbles. */
+
+.message-list--group .message-row.other {
+  padding-left: 36px;
+}
+
+.message-sender-name {
+  margin: 0 0 0.15rem 0.6rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.message-sender-avatar {
+  position: absolute;
+  left: -36px;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  font-size: 0.6rem;
 }
 
 /* Replies */

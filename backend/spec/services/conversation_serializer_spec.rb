@@ -45,4 +45,23 @@ RSpec.describe ConversationSerializer do
 
     expect(result[:read_receipts]).to contain_exactly(hash_including(last_read_message_id: message.id, last_read_at: read_at, user: hash_including(id: bob.id)))
   end
+
+  it "describes a group by kind, name and members, with no other_user" do
+    alice, bob, carol = create_list(:user, 3)
+    group = Groupchats::CreateService.call(owner: alice, name: "Trip", member_ids: [ bob.id, carol.id ])
+
+    result = described_class.call(group, current_user: alice)
+
+    expect(result).to include(kind: "group", name: "Trip", other_user: nil)
+    expect(result[:members].map { |m| m[:id] }).to eq([ alice.id, bob.id, carol.id ])
+    expect(result[:read_receipts].map { |r| r[:user][:id] }).to contain_exactly(bob.id, carol.id)
+  end
+
+  it "marks a direct conversation as direct" do
+    alice = create(:user)
+    conversation = create(:conversation)
+    create(:conversation_membership, conversation: conversation, user: alice)
+
+    expect(described_class.call(conversation, current_user: alice)).to include(kind: "direct", name: nil)
+  end
 end

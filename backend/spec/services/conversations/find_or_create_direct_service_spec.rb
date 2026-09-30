@@ -30,4 +30,15 @@ RSpec.describe Conversations::FindOrCreateDirectService do
       described_class.call(current_user: alice, other_user_id: alice.id)
     }.to raise_error(ArgumentError)
   end
+
+  it "starts a direct conversation even when the two people already share a group" do
+    alice, bob, carol = create_list(:user, 3)
+    group = Groupchats::CreateService.call(owner: alice, name: "Trip", member_ids: [ bob.id, carol.id ])
+
+    conversation = described_class.call(current_user: alice, other_user_id: bob.id)
+
+    expect(conversation).not_to eq(group)
+    expect(conversation).to be_direct
+    expect(conversation.members).to contain_exactly(alice, bob)
+  end
 end

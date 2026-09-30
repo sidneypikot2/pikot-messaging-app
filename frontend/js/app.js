@@ -6,6 +6,7 @@ if (!token) {
 let currentUser = null;
 let cable = null;
 let activeConversationId = null;
+let activeConversation = null; // the open conversation's list entry (kind, name, members, …); null for a draft
 let unsubscribeActive = null;
 let oldestLoadedMessageId = null;
 let hasMoreOlder = true; // whether the current thread has older messages left to load
@@ -25,6 +26,9 @@ const hiddenMessageIds = new Set();
 // the Messenger-style "seen" avatar (KAN-36). A map rather than one value so group chats
 // (KAN-35) can stack several readers from the same data.
 const readReceipts = new Map();
+// Every sender seen in this page's lifetime, keyed by id — group chats label runs of
+// someone's messages with their name and avatar (KAN-35), and rows only carry the id.
+const knownSenders = new Map();
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -34,6 +38,7 @@ const threadEmptyEl = document.getElementById("thread-empty");
 const threadActiveEl = document.getElementById("thread-active");
 const threadAvatarEl = document.getElementById("thread-avatar");
 const threadTitleEl = document.getElementById("thread-title");
+const threadSubtitleEl = document.getElementById("thread-subtitle");
 const messageListEl = document.getElementById("message-list");
 const paginationStatusEl = document.getElementById("pagination-status");
 const composerEl = document.getElementById("composer");
@@ -64,7 +69,37 @@ function firstName(user) {
   return user.first_name || displayName(user);
 }
 
-function activityPreviewText(activity, otherUser) {
+function isGroup(conversation) {
+  return conversation?.kind === "group";
+}
+
+function conversationTitle(conversation) {
+  if (isGroup(conversation)) return conversation.name;
+  return conversation.other_user ? displayName(conversation.other_user) : "Unknown";
+}
+
+// A group shows two of its other members' avatars overlapped, Messenger-style (KAN-35).
+function renderConversationAvatar(el, conversation) {
+  el.style.background = "";
+  if (!isGroup(conversation)) {
+    el.className = "avatar";
+    if (conversation.other_user) Avatar.render(el, conversation.other_user);
+    else el.replaceChildren();
+    return;
+  }
+
+  el.className = "avatar-stack";
+  const others = conversation.members.filter((member) => member.id !== currentUser.id).slice(0, 2);
+  el.replaceChildren(...others.map((member) => {
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    Avatar.render(avatar, member);
+    return avatar;
+  }));
+}
+
+function activityPreviewText(activity, conversation) {
+  const otherUser = conversation.other_user;
   const mine = activity.actor.id === currentUser.id;
   const who = mine ? "You" : firstName(activity.actor);
 
@@ -76,7 +111,9 @@ function activityPreviewText(activity, otherUser) {
   }
 
   if (activity.deleted) return `${who} unsent a message`;
-  return mine ? `You: ${activity.body}` : activity.body;
+  if (mine) return `You: ${activity.body}`;
+  // In a group the reader needs to know who said it; in a 1:1 it can only be them.
+  return isGroup(conversation) ? `${who}: ${activity.body}` : activity.body;
 }
 
 // "now", "5m", "3h", "2d", "3w", then a plain date — Messenger's list timestamps.
@@ -127,15 +164,14 @@ function buildConversationItem(conversation) {
   if (conversation.id === activeConversationId) li.classList.add("active");
 
   const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  if (conversation.other_user) Avatar.render(avatar, conversation.other_user);
+  renderConversationAvatar(avatar, conversation);
 
   const text = document.createElement("div");
   text.className = "conversation-text";
 
   const name = document.createElement("span");
   name.className = "conversation-name";
-  name.textContent = conversation.other_user ? displayName(conversation.other_user) : "Unknown";
+  name.textContent = conversationTitle(conversation);
   text.appendChild(name);
 
   // Never for the currently-active conversation — the user can already see its content
@@ -152,7 +188,7 @@ function buildConversationItem(conversation) {
 
     const previewText = document.createElement("span");
     previewText.className = "conversation-preview-text";
-    previewText.textContent = activityPreviewText(activity, conversation.other_user);
+    previewText.textContent = activityPreviewText(activity, conversation);
 
     const time = document.createElement("span");
     time.className = "conversation-preview-time";
@@ -173,7 +209,7 @@ function buildConversationItem(conversation) {
     li.appendChild(badge);
   }
 
-  li.addEventListener("click", () => selectConversation(conversation.id, conversation.other_user));
+  li.addEventListener("click", () => selectConversation(conversation));
   return li;
 }
 
@@ -199,11 +235,15 @@ function resetPaginationState() {
   isLoadingOlder = false;
 }
 
-async function selectConversation(conversationId, otherUser) {
+// `conversation` is a list entry (or anything with the same shape) — the header, sender
+// labels and seen indicators all read its kind and members.
+async function selectConversation(conversation) {
   if (unsubscribeActive) unsubscribeActive();
 
+  const conversationId = conversation.id;
   pendingOtherUser = null;
   activeConversationId = conversationId;
+  activeConversation = conversation;
   oldestLoadedMessageId = null;
   readReceipts.clear();
   resetTypingState();
@@ -221,8 +261,7 @@ async function selectConversation(conversationId, otherUser) {
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
   messengerEl.classList.add("messenger--chat-open");
-  threadTitleEl.textContent = otherUser ? displayName(otherUser) : "Conversation";
-  if (otherUser) Avatar.render(threadAvatarEl, otherUser);
+  renderThreadHeader(conversation);
   messageListEl.innerHTML = "";
   resetPaginationState();
   clearComposerError();
@@ -240,6 +279,7 @@ function selectDraftConversation(user) {
   if (unsubscribeActive) unsubscribeActive();
   unsubscribeActive = null;
   activeConversationId = null;
+  activeConversation = null;
   pendingOtherUser = user;
   oldestLoadedMessageId = null;
   resetTypingState();
@@ -249,8 +289,7 @@ function selectDraftConversation(user) {
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
   messengerEl.classList.add("messenger--chat-open");
-  threadTitleEl.textContent = displayName(user);
-  Avatar.render(threadAvatarEl, user);
+  renderThreadHeader({ kind: "direct", other_user: user });
   messageListEl.innerHTML = "";
   resetPaginationState();
   clearComposerError();
@@ -263,6 +302,7 @@ function closeConversation() {
   if (unsubscribeActive) unsubscribeActive();
   unsubscribeActive = null;
   activeConversationId = null;
+  activeConversation = null;
   pendingOtherUser = null;
   oldestLoadedMessageId = null;
   resetTypingState();
@@ -279,6 +319,14 @@ function closeConversation() {
 }
 
 threadBackEl.addEventListener("click", closeConversation);
+
+// A group's header adds its member count under the name (KAN-35).
+function renderThreadHeader(conversation) {
+  threadTitleEl.textContent = conversationTitle(conversation);
+  renderConversationAvatar(threadAvatarEl, conversation);
+  threadSubtitleEl.hidden = !isGroup(conversation);
+  threadSubtitleEl.textContent = isGroup(conversation) ? `${conversation.members.length} members` : "";
+}
 
 // --- Messages ---
 
@@ -312,7 +360,7 @@ async function loadMessages() {
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
-    renderSeenIndicators();
+    refreshThreadDecorations();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
     paginationStatusEl.classList.remove("pagination-status--centered");
@@ -340,7 +388,7 @@ async function loadOlderMessages() {
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
-    renderSeenIndicators();
+    refreshThreadDecorations();
     messageListEl.scrollTop = messageListEl.scrollHeight - previousHeight;
   } finally {
     isLoadingOlder = false;
@@ -361,6 +409,7 @@ function buildMessageEl(message) {
   row.className = `message-row ${message.sender.id === currentUser.id ? "own" : "other"}`;
   row.id = `message-${message.id}`;
   row.dataset.senderId = message.sender.id;
+  knownSenders.set(message.sender.id, message.sender);
 
   if (message.reply_to) row.appendChild(buildQuoteEl(message.reply_to));
 
@@ -519,6 +568,7 @@ unsendFormEl.addEventListener("submit", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (!unsendDialogEl.hidden) closeUnsendDialog();
+  else if (!newGroupDialogEl.hidden) closeNewGroupDialog();
   else closeMessageMenu();
 });
 
@@ -679,7 +729,7 @@ function renderBubbleContent(bubble, message) {
 function appendMessageEl(message) {
   if (document.getElementById(`message-${message.id}`)) return; // already rendered (e.g. own message echoed back)
   messageListEl.appendChild(buildMessageEl(message));
-  renderSeenIndicators();
+  refreshThreadDecorations();
   messageListEl.scrollTop = messageListEl.scrollHeight;
 }
 
@@ -693,7 +743,7 @@ async function loadReadReceipts(conversationId) {
     const { conversation } = await Api.conversation(token, conversationId);
     if (conversationId !== activeConversationId) return; // switched threads mid-request
     conversation.read_receipts.forEach(applyReadReceipt);
-    renderSeenIndicators();
+    refreshThreadDecorations();
   } catch {
     // The indicator is a nicety — the thread works fine without it.
   }
@@ -706,44 +756,152 @@ function applyReadReceipt({ user, last_read_message_id, last_read_at }) {
   readReceipts.set(user.id, { user, last_read_message_id, last_read_at });
 }
 
-// "Seen by Ken Joseph at 4:55 PM", with the date added once it's no longer today. Reads
-// recorded before last_read_at existed have no time, so those just say who.
-function seenLabel(user, lastReadAt) {
-  const label = `Seen by ${displayName(user)}`;
-  if (!lastReadAt) return label;
+// "at 4:55 PM", or "on Sep 29 at 4:55 PM" once it's no longer today. Reads recorded
+// before last_read_at existed have no time, so those get "".
+function seenTime(lastReadAt) {
+  if (!lastReadAt) return "";
 
   const seenAt = new Date(lastReadAt);
   const time = seenAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (seenAt.toDateString() === new Date().toDateString()) return `${label} at ${time}`;
-  return `${label} on ${seenAt.toLocaleDateString([], { month: "short", day: "numeric" })} at ${time}`;
+  if (seenAt.toDateString() === new Date().toDateString()) return `at ${time}`;
+  return `on ${seenAt.toLocaleDateString([], { month: "short", day: "numeric" })} at ${time}`;
 }
 
-// Messenger-style: the reader's small avatar sits under the newest message they've seen.
+// "Seen by Ken Joseph at 4:55 PM" — a group reader's tooltip.
+function seenLabel(user, lastReadAt) {
+  return `Seen by ${displayName(user)} ${seenTime(lastReadAt)}`.trim();
+}
+
+function messageIdOf(row) {
+  return Number(row.id.replace("message-", ""));
+}
+
+// Everything the thread draws from its neighbours or from other people's read markers,
+// redone as a whole whenever rows change since either can move.
+function refreshThreadDecorations() {
+  decorateSenderRuns();
+  renderSeenIndicators();
+}
+
+// Group chats (KAN-35): other people's messages carry the sender's name above the first
+// bubble of a run and their avatar beside the last one, Messenger-style.
+function decorateSenderRuns() {
+  messageListEl.querySelectorAll(".message-sender-name, .message-sender-avatar").forEach((el) => el.remove());
+  messageListEl.classList.toggle("message-list--group", isGroup(activeConversation));
+  if (!isGroup(activeConversation)) return;
+
+  const rows = [...messageListEl.querySelectorAll(".message-row")];
+  rows.forEach((row, index) => {
+    if (!row.classList.contains("other")) return;
+    const sender = knownSenders.get(Number(row.dataset.senderId));
+    if (!sender) return;
+
+    if (rows[index - 1]?.dataset.senderId !== row.dataset.senderId) {
+      const name = document.createElement("div");
+      name.className = "message-sender-name";
+      name.textContent = firstName(sender);
+      row.prepend(name);
+    }
+    if (rows[index + 1]?.dataset.senderId !== row.dataset.senderId) {
+      const avatar = document.createElement("div");
+      avatar.className = "avatar message-sender-avatar";
+      Avatar.render(avatar, sender);
+      row.querySelector(".message-bubble-wrap").appendChild(avatar);
+    }
+  });
+}
+
+// Messenger-style: each reader's marker sits under the newest message they've seen.
 // Rows are in id order, so that's the last rendered row at or below their marker — which
 // also means an unsent-for-you message (no row) falls back to the one above it. Nothing
 // shows when that message is the reader's own: they obviously saw what they just sent.
+// 1:1 chats show "Seen at 4:55 PM" text; groups show the readers' avatars, or "Seen by
+// everyone" once every other member has read the newest message.
 function renderSeenIndicators() {
   messageListEl.querySelectorAll(".seen-indicator").forEach((el) => el.remove());
+  const rowsNewestFirst = [...messageListEl.querySelectorAll(".message-row")].reverse();
+  if (rowsNewestFirst.length === 0) return;
 
-  readReceipts.forEach(({ user, last_read_message_id, last_read_at }) => {
-    const rows = [...messageListEl.querySelectorAll(".message-row")];
-    const seenRow = rows.reverse().find((row) => Number(row.id.replace("message-", "")) <= last_read_message_id);
-    if (!seenRow || seenRow.dataset.senderId === String(user.id)) return;
+  const readersByRow = new Map();
+  readReceipts.forEach((receipt) => {
+    const seenRow = rowsNewestFirst.find((row) => messageIdOf(row) <= receipt.last_read_message_id);
+    if (!seenRow || seenRow.dataset.senderId === String(receipt.user.id)) return;
+    if (!readersByRow.has(seenRow)) readersByRow.set(seenRow, []);
+    readersByRow.get(seenRow).push(receipt);
+  });
 
-    const indicator = document.createElement("div");
-    indicator.className = "seen-indicator";
-    // Styled hover tooltip (CSS, from data-tooltip) rather than a native title, which
-    // only shows after a delay and can't be styled.
-    const label = seenLabel(user, last_read_at);
-    indicator.dataset.tooltip = label;
-    indicator.setAttribute("aria-label", label);
-    indicator.tabIndex = 0;
+  if (!isGroup(activeConversation)) {
+    readersByRow.forEach(([receipt], row) => row.appendChild(buildSeenText(receipt)));
+    return;
+  }
+
+  const newestRow = rowsNewestFirst[0];
+  const everyone = everyoneWhoMustSee(newestRow);
+  if (everyone.length > 0 && everyone.every((receipt) => receipt.last_read_message_id >= messageIdOf(newestRow))) {
+    readersByRow.delete(newestRow);
+    newestRow.appendChild(buildSeenByEveryone(everyone));
+  }
+  readersByRow.forEach((receipts, row) => row.appendChild(buildSeenAvatars(receipts)));
+}
+
+// The read receipts of every member besides me and the newest message's sender, or []
+// if any of them hasn't read anything yet (so can't have seen it either).
+function everyoneWhoMustSee(newestRow) {
+  const others = activeConversation.members.filter((member) => member.id !== currentUser.id && String(member.id) !== newestRow.dataset.senderId);
+  const receipts = others.map((member) => readReceipts.get(member.id));
+  return receipts.every(Boolean) ? receipts : [];
+}
+
+function buildSeenText({ last_read_at }) {
+  const indicator = document.createElement("div");
+  indicator.className = "seen-indicator seen-text";
+  indicator.textContent = `Seen ${seenTime(last_read_at)}`.trim();
+  return indicator;
+}
+
+function buildSeenByEveryone(receipts) {
+  const indicator = document.createElement("div");
+  indicator.className = "seen-indicator seen-text seen-everyone";
+  indicator.textContent = "Seen by everyone";
+  withTooltip(indicator, receipts.map(({ user, last_read_at }) => seenLabel(user, last_read_at)).join("\n"));
+  return indicator;
+}
+
+const MAX_SEEN_AVATARS = 5;
+
+// Earliest reader first, so the newest one lands nearest the right edge; past
+// MAX_SEEN_AVATARS the rest collapse into a "+N" chip listing them.
+function buildSeenAvatars(receipts) {
+  const indicator = document.createElement("div");
+  indicator.className = "seen-indicator seen-avatars";
+  const ordered = [...receipts].sort((a, b) => new Date(a.last_read_at || 0) - new Date(b.last_read_at || 0));
+  const shown = ordered.length > MAX_SEEN_AVATARS ? ordered.slice(0, MAX_SEEN_AVATARS - 1) : ordered;
+  const rest = ordered.slice(shown.length);
+
+  shown.forEach(({ user, last_read_at }) => {
     const avatar = document.createElement("div");
     avatar.className = "avatar";
     Avatar.render(avatar, user);
-    indicator.appendChild(avatar);
-    seenRow.appendChild(indicator);
+    indicator.appendChild(withTooltip(avatar, seenLabel(user, last_read_at)));
   });
+
+  if (rest.length > 0) {
+    const more = document.createElement("div");
+    more.className = "seen-more";
+    more.textContent = `+${rest.length}`;
+    indicator.appendChild(withTooltip(more, rest.map(({ user, last_read_at }) => seenLabel(user, last_read_at)).join("\n")));
+  }
+  return indicator;
+}
+
+// Styled hover tooltip (CSS, from data-tooltip) rather than a native title, which only
+// shows after a delay and can't be styled.
+function withTooltip(el, label) {
+  el.classList.add("has-tooltip");
+  el.dataset.tooltip = label;
+  el.setAttribute("aria-label", label);
+  el.tabIndex = 0;
+  return el;
 }
 
 function startEditingMessage(message) {
@@ -760,7 +918,7 @@ function startEditingMessage(message) {
       const { message: updated } = await Api.updateMessage(token, message.id, textarea.value);
       editWrapper.replaceWith(buildMessageEl(updated));
       refreshQuotesOf(updated);
-      renderSeenIndicators();
+      refreshThreadDecorations();
     } catch (err) {
       showComposerError(err.message);
       editWrapper.replaceWith(row);
@@ -809,7 +967,7 @@ function removeHiddenMessage(messageId) {
   const row = document.getElementById(`message-${messageId}`);
   if (row?.contains(openMessageMenu)) closeMessageMenu();
   row?.remove();
-  renderSeenIndicators();
+  refreshThreadDecorations();
   document.querySelectorAll(`.message-quote[data-quote-of="${messageId}"]`).forEach((quote) => {
     quote.classList.add("deleted");
     quote.querySelector(".message-quote-body").textContent = "You removed this message";
@@ -831,7 +989,7 @@ function handleIncoming(data) {
 
   if (data.event === "read") {
     applyReadReceipt(data);
-    renderSeenIndicators();
+    refreshThreadDecorations();
     return;
   }
 
@@ -842,7 +1000,7 @@ function handleIncoming(data) {
   if (existing) {
     existing.replaceWith(buildMessageEl(message));
     refreshQuotesOf(message);
-    renderSeenIndicators();
+    refreshThreadDecorations();
     // Someone else deleting the message this composer is replying to would otherwise
     // only surface as a 422 on send.
     if (message.deleted && replyingTo?.id === message.id) cancelReply();
@@ -931,19 +1089,18 @@ reactionToastEl.className = "reaction-toast";
 reactionToastEl.hidden = true;
 document.body.appendChild(reactionToastEl);
 let reactionToastTimer;
-let reactionToastTarget; // { conversationId, otherUser } the toast opens when clicked
+let reactionToastTarget; // the conversation the toast opens when clicked
 
 reactionToastEl.addEventListener("click", () => {
   hideReactionToast();
-  const { conversationId, otherUser } = reactionToastTarget;
-  if (conversationId !== activeConversationId) selectConversation(conversationId, otherUser);
+  if (reactionToastTarget.id !== activeConversationId) selectConversation(reactionToastTarget);
 });
 
 function notifyReaction(data) {
   playNotificationSound();
 
   const conversation = conversationsCache.find((c) => c.id === data.conversation_id);
-  reactionToastTarget = { conversationId: data.conversation_id, otherUser: conversation?.other_user || data.user };
+  reactionToastTarget = conversation || { id: data.conversation_id, kind: "direct", other_user: data.user };
   reactionToastEl.textContent = `${displayName(data.user)} reacted ${data.reaction.emoji} to your message`;
   reactionToastEl.hidden = false;
   clearTimeout(reactionToastTimer);
@@ -988,6 +1145,9 @@ composerInputEl.addEventListener("input", () => {
 function handleNotification(data) {
   // Bumps the conversation to the top and refreshes its preview line (KAN-32).
   scheduleConversationsReload();
+
+  // A group someone added me to (KAN-35) — the reload above is all it needs.
+  if (data.event === "conversation_created") return;
 
   if (data.event === "message_hidden") {
     if (data.conversation_id === activeConversationId) removeHiddenMessage(data.message_id);
@@ -1126,7 +1286,7 @@ function renderSearchResults(users) {
 
       const existing = conversationsCache.find((c) => c.other_user && c.other_user.id === user.id);
       if (existing) {
-        selectConversation(existing.id, existing.other_user);
+        selectConversation(existing);
       } else {
         selectDraftConversation(user);
       }
@@ -1137,6 +1297,138 @@ function renderSearchResults(users) {
 
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-box")) searchResultsEl.hidden = true;
+});
+
+// --- New group dialog (KAN-35) ---
+
+const newGroupDialogEl = document.getElementById("new-group-dialog");
+const newGroupFormEl = document.getElementById("new-group-form");
+const newGroupNameEl = document.getElementById("new-group-name");
+const newGroupSearchEl = document.getElementById("new-group-search");
+const newGroupResultsEl = document.getElementById("new-group-results");
+const newGroupChipsEl = document.getElementById("new-group-chips");
+const newGroupErrorEl = document.getElementById("new-group-error");
+const newGroupCreateEl = document.getElementById("new-group-create");
+const MIN_GROUP_OTHER_MEMBERS = 2; // matches Groupchats::CreateService
+const newGroupMembers = new Map(); // picked people, keyed by id, in the order they were added
+let newGroupSearchDebounce = null;
+
+function openNewGroupDialog() {
+  newGroupMembers.clear();
+  newGroupNameEl.value = "";
+  newGroupSearchEl.value = "";
+  newGroupResultsEl.hidden = true;
+  newGroupErrorEl.hidden = true;
+  renderNewGroupChips();
+  newGroupDialogEl.hidden = false;
+  newGroupNameEl.focus();
+}
+
+function closeNewGroupDialog() {
+  clearTimeout(newGroupSearchDebounce);
+  newGroupDialogEl.hidden = true;
+}
+
+function updateNewGroupCreateEnabled() {
+  newGroupCreateEl.disabled = !newGroupNameEl.value.trim() || newGroupMembers.size < MIN_GROUP_OTHER_MEMBERS;
+}
+
+function renderNewGroupChips() {
+  renderList(newGroupChipsEl, [...newGroupMembers.values()], (user) => {
+    const chip = document.createElement("span");
+    chip.className = "new-group-chip";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    Avatar.render(avatar, user);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "✕";
+    remove.setAttribute("aria-label", `Remove ${displayName(user)}`);
+    remove.addEventListener("click", () => {
+      newGroupMembers.delete(user.id);
+      renderNewGroupChips();
+    });
+
+    chip.append(avatar, document.createTextNode(displayName(user)), remove);
+    return chip;
+  });
+  updateNewGroupCreateEnabled();
+}
+
+function renderNewGroupResults(users) {
+  const choices = users.filter((user) => !newGroupMembers.has(user.id));
+  newGroupResultsEl.hidden = false;
+
+  if (choices.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "search-empty";
+    empty.textContent = "No matching users";
+    newGroupResultsEl.replaceChildren(empty);
+    return;
+  }
+
+  renderList(newGroupResultsEl, choices, (user) => {
+    const li = document.createElement("li");
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    Avatar.render(avatar, user);
+    const name = document.createElement("span");
+    name.textContent = displayName(user);
+    li.append(avatar, name);
+    li.addEventListener("click", () => {
+      newGroupMembers.set(user.id, user);
+      newGroupSearchEl.value = "";
+      newGroupResultsEl.hidden = true;
+      renderNewGroupChips();
+      newGroupSearchEl.focus();
+    });
+    return li;
+  });
+}
+
+document.getElementById("new-group-btn").addEventListener("click", openNewGroupDialog);
+newGroupDialogEl.querySelectorAll("[data-new-group-cancel]").forEach((btn) => btn.addEventListener("click", closeNewGroupDialog));
+newGroupDialogEl.addEventListener("click", (event) => {
+  if (event.target === newGroupDialogEl) closeNewGroupDialog();
+  else if (!event.target.closest(".new-group-search")) newGroupResultsEl.hidden = true;
+});
+newGroupNameEl.addEventListener("input", updateNewGroupCreateEnabled);
+
+newGroupSearchEl.addEventListener("input", () => {
+  clearTimeout(newGroupSearchDebounce);
+  const query = newGroupSearchEl.value.trim();
+  if (!query) {
+    newGroupResultsEl.hidden = true;
+    return;
+  }
+
+  newGroupSearchDebounce = setTimeout(async () => {
+    try {
+      const { users } = await Api.searchUsers(token, query);
+      renderNewGroupResults(users);
+    } catch {
+      renderNewGroupResults([]);
+    }
+  }, 300);
+});
+
+newGroupFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  newGroupErrorEl.hidden = true;
+  newGroupCreateEl.disabled = true;
+
+  try {
+    const { conversation } = await Api.createGroupchat(token, newGroupNameEl.value.trim(), [...newGroupMembers.keys()]);
+    closeNewGroupDialog();
+    await loadConversations();
+    selectConversation(conversation);
+  } catch (err) {
+    newGroupErrorEl.textContent = err.message;
+    newGroupErrorEl.hidden = false;
+    updateNewGroupCreateEnabled();
+  }
 });
 
 // --- Logout ---

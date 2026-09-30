@@ -15,7 +15,12 @@
       </div>
 
       <div class="search-box">
-        <input type="text" id="user-search" placeholder="Search people…" autocomplete="off" />
+        <div class="search-row">
+          <input type="text" id="user-search" placeholder="Search people…" autocomplete="off" />
+          <button type="button" id="new-group-btn" class="new-group-btn" aria-label="New group" title="New group">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-7 1.6-7 4v2h11.1a6 6 0 0 1 3.4-5.5C15 13.2 12.1 13 9 13Zm10 0h-2v3h-3v2h3v3h2v-3h3v-2h-3v-3Z"/></svg>
+          </button>
+        </div>
         <ul id="search-results" class="search-results" hidden></ul>
       </div>
 
@@ -32,7 +37,10 @@
         <header class="thread-header">
           <button type="button" id="thread-back" class="thread-back" aria-label="Back to conversations">←</button>
           <div id="thread-avatar" class="avatar"></div>
-          <span id="thread-title"></span>
+          <div class="thread-heading">
+            <span id="thread-title"></span>
+            <span id="thread-subtitle" class="thread-subtitle" hidden></span>
+          </div>
         </header>
 
         <div id="message-list" class="message-list">
@@ -81,6 +89,29 @@
       <footer class="modal-footer">
         <button type="button" class="modal-cancel" data-unsend-cancel>Cancel</button>
         <button type="submit" class="modal-confirm">Remove</button>
+      </footer>
+    </form>
+  </div>
+
+  <div id="new-group-dialog" class="modal-backdrop" hidden>
+    <form id="new-group-form" class="modal" role="dialog" aria-modal="true" aria-labelledby="new-group-title">
+      <header class="modal-header">
+        <h2 id="new-group-title">New group</h2>
+        <button type="button" class="modal-close" data-new-group-cancel aria-label="Close">✕</button>
+      </header>
+      <div class="modal-body">
+        <input type="text" id="new-group-name" class="new-group-input" placeholder="Group name" maxlength="100" autocomplete="off" />
+        <div id="new-group-chips" class="new-group-chips"></div>
+        <div class="new-group-search">
+          <input type="text" id="new-group-search" class="new-group-input" placeholder="Add people…" autocomplete="off" />
+          <ul id="new-group-results" class="search-results new-group-results" hidden></ul>
+        </div>
+        <p class="new-group-hint">Add at least 2 people.</p>
+        <p id="new-group-error" class="new-group-error" hidden></p>
+      </div>
+      <footer class="modal-footer">
+        <button type="button" class="modal-cancel" data-new-group-cancel>Cancel</button>
+        <button type="submit" id="new-group-create" class="modal-confirm" disabled>Create group</button>
       </footer>
     </form>
   </div>

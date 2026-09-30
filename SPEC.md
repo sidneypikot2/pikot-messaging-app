@@ -138,7 +138,7 @@ pikot-messaging-app/
 │   │   │   ├── users_controller.rb           # search (planned)
 │   │   │   ├── conversations_controller.rb   # (planned)
 │   │   │   ├── messages_controller.rb        # (planned)
-│   │   │   └── groupchats_controller.rb      # (planned)
+│   │   │   └── groupchats_controller.rb      # create only (KAN-35)
 │   │   ├── models/
 │   │   │   ├── user.rb
 │   │   │   ├── conversation.rb               # (planned)
@@ -157,7 +157,7 @@ pikot-messaging-app/
 │   │   │   │   └── search_service.rb         # (planned)
 │   │   │   ├── messages/                     # (planned)
 │   │   │   ├── conversations/                # (planned)
-│   │   │   └── groupchats/                   # (planned)
+│   │   │   └── groupchats/                   # create_service.rb (KAN-35)
 │   │   ├── mailers/
 │   │   └── lib/
 │   │       └── json_web_token.rb
@@ -277,6 +277,8 @@ erDiagram
 
 **Replies (KAN-29).** `messages.reply_to_message_id` is a nullable self-reference. On create, the original must exist, be in the same conversation, and not be soft-deleted; afterwards the reply stays valid even if the original is deleted. `MessageSerializer` embeds one level of quote as `reply_to: { id, sender, body, deleted }` (`body` is `null` once the original is deleted, and the frontend renders "Original message was deleted"). No reply-specific broadcast exists — clients re-render quotes from the original's own `message_updated`/`message_deleted` events. Replies are conversation-scoped, so they apply to group chats unchanged.
 
+**Group chats, first slice (KAN-35).** `conversations` gained `kind` (`direct`/`group`, enum with `scopes: false` since a `group` scope would clash with `ActiveRecord#group`), `name` and `owner_id`. `POST /groupchats` (`Groupchats::CreateService`) takes `name` and `member_ids` (at least 2 people besides the creator) and adds everyone as members directly — `group_invitations`, roles and `status` are not built yet. Each member gets `{ event: "conversation_created", conversation }` on their `NotificationsChannel`. `FindOrCreateDirectService` only matches `direct` conversations, so sharing a group never stands in for a DM. `ConversationSerializer` adds `kind`, `name` and `members` (everyone, in join order); `other_user` is `null` for groups. Messages, replies, reactions, unsend, typing, unread counts and read markers were already conversation-scoped and work in groups unchanged. Seen indicator: 1:1 chats show "Seen at TIME" text under the newest message the other person read; groups show those readers' small avatars (up to 5, then "+N"), or "Seen by everyone" under the newest message once every member besides the viewer and its sender has read it.
+
 **Unsend for you (KAN-30).** `DELETE /messages/:id` takes `scope`: `everyone` (default) is the soft delete above, sender only; `me` is `Messages::HideService`, which records a `message_hides` row (unique on `[message_id, user_id]`) so the message disappears from that user's view only. Any conversation member may hide any message; the frontend currently offers it only on the user's own messages (⋮ in the Messenger-style hover toolbar beside the bubble → Unsend dialog). `GET /conversations/:id/messages` excludes the current user's hidden messages, and a quote of one serializes as `reply_to.removed: true` with `body: null` ("You removed this message"). Hiding broadcasts `{ event: "message_hidden", message_id, conversation_id }` on the hiding user's own `NotificationsChannel` only, so their other tabs follow along.
 
 **Indexes worth calling out** (in addition to FKs/PKs):
@@ -379,7 +381,7 @@ get "invitations", to: "group_invitations#index"
 | `POST` | `/conversations/:id/messages` | Send a message | ⏳ planned | `Messages::CreateService` |
 | `PATCH` | `/messages/:id` | Edit a message | ⏳ planned | `Messages::UpdateService` |
 | `DELETE` | `/messages/:id` | Soft-delete a message (`scope=everyone`, default) or hide it for the current user (`scope=me`) | ⏳ planned | `Messages::DeleteService` / `Messages::HideService` |
-| `POST` | `/groupchats` | Create a group chat | ⏳ planned | `Groupchats::CreateService` |
+| `POST` | `/groupchats` | Create a group chat (KAN-35: members added directly, invitations still planned) | ✅ implemented | `Groupchats::CreateService` |
 | `PATCH` | `/groupchats/:id` | Update group name/settings | ⏳ planned | `Groupchats::UpdateService` |
 | `DELETE` | `/groupchats/:id` | Delete a group chat (owner only) | ⏳ planned | `Groupchats::DeleteService` |
 | `POST` | `/groupchats/:id/invitations` | Invite a user to the group | ⏳ planned | `Groupchats::InviteMemberService` |

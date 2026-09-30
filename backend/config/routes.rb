@@ -30,6 +30,9 @@ Rails.application.routes.draw do
     member { post :read }
     resources :messages, only: [ :index, :create ]
   end
+  # Group chats (KAN-35) — creation only for now; they're Conversation records, so
+  # reading and messaging go through the conversation routes above.
+  resources :groupchats, only: [ :create ]
   resources :messages, only: [ :update, :destroy ] do
     member { post :reactions, action: :toggle_reaction }
   end
