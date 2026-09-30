@@ -154,6 +154,15 @@ const Api = {
     if (!res.ok) throw new Error(`Failed to react (${res.status})`);
   },
 
+  async conversation(token, conversationId) {
+    const res = await fetch(`${window.API_BASE_URL}/conversations/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Failed to load conversation (${res.status})`);
+    return res.json();
+  },
+
   async markConversationRead(token, conversationId) {
     const res = await fetch(`${window.API_BASE_URL}/conversations/${conversationId}/read`, {
       method: "POST",

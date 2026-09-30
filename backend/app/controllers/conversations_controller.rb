@@ -22,9 +22,7 @@ class ConversationsController < ApplicationController
 
   def read
     conversation = current_user.conversations.find(params[:id])
-    membership = conversation.conversation_memberships.find_by!(user_id: current_user.id)
-    last_message_id = conversation.messages.maximum(:id)
-    membership.update!(last_read_message_id: last_message_id) if last_message_id
+    Conversations::MarkReadService.call(conversation: conversation, user: current_user)
     head :no_content
   end
 
