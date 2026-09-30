@@ -410,6 +410,16 @@ function buildMessageEl(message) {
   row.id = `message-${message.id}`;
   row.dataset.senderId = message.sender.id;
   knownSenders.set(message.sender.id, message.sender);
+  row.dataset.createdAt = message.created_at;
+
+  // Messenger-style "Edited" over the bubble — there's no per-message meta line any more
+  // for it to sit in (KAN-37).
+  if (message.edited && !message.deleted) {
+    const editedTag = document.createElement("div");
+    editedTag.className = "message-edited";
+    editedTag.textContent = "Edited";
+    row.appendChild(editedTag);
+  }
 
   if (message.reply_to) row.appendChild(buildQuoteEl(message.reply_to));
 
@@ -418,6 +428,9 @@ function buildMessageEl(message) {
 
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
+  // The exact send time lives in a hover tooltip; the thread itself only shows times at
+  // gaps (renderTimeDividers, KAN-37).
+  bubble.dataset.time = exactTime(new Date(message.created_at));
   renderBubbleContent(bubble, message);
   bubbleWrap.appendChild(bubble);
 
@@ -429,18 +442,6 @@ function buildMessageEl(message) {
     row.appendChild(buildReactionsStrip(message));
   }
 
-  const meta = document.createElement("div");
-  meta.className = "message-meta";
-  const time = document.createElement("span");
-  time.textContent = new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  meta.appendChild(time);
-  if (message.edited && !message.deleted) {
-    const editedTag = document.createElement("span");
-    editedTag.textContent = "(edited)";
-    meta.appendChild(editedTag);
-  }
-
-  row.appendChild(meta);
   return row;
 }
 
@@ -733,6 +734,63 @@ function appendMessageEl(message) {
   messageListEl.scrollTop = messageListEl.scrollHeight;
 }
 
+// --- Time dividers (KAN-37) ---
+
+const TIME_DIVIDER_GAP_MS = 15 * 60 * 1000;
+
+// Everything the thread draws from its neighbours or from other people's read markers,
+// redone as a whole whenever rows change since either can move.
+function refreshThreadDecorations() {
+  renderTimeDividers();
+  decorateSenderRuns(); // after the dividers, since a divider also starts a new run
+  renderSeenIndicators();
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// Messenger's divider labels: "2:24 PM" today, "Yesterday 9:10 AM", "Mon 9:10 AM" within
+// the week, then "Sep 28, 4:55 PM" (plus the year once it isn't this year).
+function dividerLabel(date) {
+  const now = new Date();
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (daysAgo === 0) return time;
+  if (daysAgo === 1) return `Yesterday ${time}`;
+  if (daysAgo < 7) return `${date.toLocaleDateString([], { weekday: "short" })} ${time}`;
+
+  const dateOptions = { month: "short", day: "numeric" };
+  if (date.getFullYear() !== now.getFullYear()) dateOptions.year = "numeric";
+  return `${date.toLocaleDateString([], dateOptions)}, ${time}`;
+}
+
+// "Tuesday, Sep 30, 2:24 PM" — a bubble's hover tooltip.
+function exactTime(date) {
+  const options = { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+  return date.toLocaleString([], options);
+}
+
+// A centered time label above the first loaded message and above any message sent
+// TIME_DIVIDER_GAP_MS or more after the one before it. Includes rows mid-edit (they keep
+// the message's id and created-at), so editing doesn't shift the dividers around.
+function renderTimeDividers() {
+  messageListEl.querySelectorAll(".time-divider").forEach((el) => el.remove());
+
+  let previous = null;
+  messageListEl.querySelectorAll("[data-created-at]").forEach((row) => {
+    const sentAt = new Date(row.dataset.createdAt);
+    if (!previous || sentAt - previous >= TIME_DIVIDER_GAP_MS) {
+      const divider = document.createElement("div");
+      divider.className = "time-divider";
+      divider.textContent = dividerLabel(sentAt);
+      row.before(divider);
+    }
+    previous = sentAt;
+  });
+}
+
 // --- Seen indicator (KAN-36) ---
 
 // Fetched after the thread is on screen rather than before, so opening a conversation
@@ -776,13 +834,6 @@ function messageIdOf(row) {
   return Number(row.id.replace("message-", ""));
 }
 
-// Everything the thread draws from its neighbours or from other people's read markers,
-// redone as a whole whenever rows change since either can move.
-function refreshThreadDecorations() {
-  decorateSenderRuns();
-  renderSeenIndicators();
-}
-
 // Group chats (KAN-35): other people's messages carry the sender's name above the first
 // bubble of a run and their avatar beside the last one, Messenger-style.
 function decorateSenderRuns() {
@@ -791,18 +842,21 @@ function decorateSenderRuns() {
   if (!isGroup(activeConversation)) return;
 
   const rows = [...messageListEl.querySelectorAll(".message-row")];
+  // A time divider (KAN-37) between two messages breaks the run, as in Messenger.
+  const startsRun = (row, index) =>
+    rows[index - 1]?.dataset.senderId !== row.dataset.senderId || row.previousElementSibling?.classList.contains("time-divider");
   rows.forEach((row, index) => {
     if (!row.classList.contains("other")) return;
     const sender = knownSenders.get(Number(row.dataset.senderId));
     if (!sender) return;
 
-    if (rows[index - 1]?.dataset.senderId !== row.dataset.senderId) {
+    if (startsRun(row, index)) {
       const name = document.createElement("div");
       name.className = "message-sender-name";
       name.textContent = firstName(sender);
       row.prepend(name);
     }
-    if (rows[index + 1]?.dataset.senderId !== row.dataset.senderId) {
+    if (!rows[index + 1] || startsRun(rows[index + 1], index + 1)) {
       const avatar = document.createElement("div");
       avatar.className = "avatar message-sender-avatar";
       Avatar.render(avatar, sender);
@@ -937,6 +991,7 @@ function startEditingMessage(message) {
   // arriving before the save's HTTP response resolves falls through to appendMessageEl
   // and creates a duplicate instead of updating this element in place.
   editWrapper.id = `message-${message.id}`;
+  editWrapper.dataset.createdAt = message.created_at; // keeps its time divider while editing
   editWrapper.appendChild(textarea);
   editWrapper.appendChild(saveBtn);
   editWrapper.appendChild(cancelBtn);
@@ -1041,7 +1096,7 @@ function applyReactionUpdate(data) {
   if (!strip) {
     strip = document.createElement("div");
     strip.className = "reactions-strip";
-    row.insertBefore(strip, row.querySelector(".message-meta"));
+    row.querySelector(".message-bubble-wrap").after(strip);
   }
 
   let pill = strip.querySelector(`[data-emoji="${CSS.escape(emoji)}"]`);
