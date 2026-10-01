@@ -30,7 +30,7 @@
 
       <div class="search-box">
         <div class="search-row">
-          <input type="text" id="user-search" placeholder="Search people…" autocomplete="off" />
+          <input type="text" id="user-search" aria-label="Search people" placeholder="Search people…" autocomplete="off" />
           <button type="button" id="new-group-btn" class="new-group-btn" aria-label="New group" title="New group">
             <span class="icon" aria-hidden="true">group_add</span>
           </button>
@@ -69,7 +69,7 @@
         </div>
         <form id="composer" class="composer">
           <div class="composer-input-wrap">
-            <textarea id="composer-input" placeholder="Type a message…" required></textarea>
+            <textarea id="composer-input" aria-label="Message" placeholder="Type a message…" required></textarea>
             <button type="button" id="emoji-picker-btn" class="emoji-picker-btn" aria-label="Insert emoji" title="Insert emoji"><span class="icon" aria-hidden="true">mood</span></button>
           </div>
           <button type="submit" id="composer-send" aria-label="Send" title="Send"><span class="icon icon--filled" aria-hidden="true">send</span></button>
@@ -117,10 +117,10 @@
         <button type="button" class="modal-close" data-new-group-cancel aria-label="Close"><span class="icon" aria-hidden="true">close</span></button>
       </header>
       <div class="modal-body">
-        <input type="text" id="new-group-name" class="new-group-input" placeholder="Group name" maxlength="100" autocomplete="off" />
+        <input type="text" id="new-group-name" class="new-group-input" aria-label="Group name" placeholder="Group name" maxlength="100" autocomplete="off" />
         <div id="new-group-chips" class="new-group-chips"></div>
         <div class="new-group-search">
-          <input type="text" id="new-group-search" class="new-group-input" placeholder="Add people…" autocomplete="off" />
+          <input type="text" id="new-group-search" class="new-group-input" aria-label="Add people" placeholder="Add people…" autocomplete="off" />
           <ul id="new-group-results" class="search-results new-group-results" hidden></ul>
         </div>
         <p class="new-group-hint">Add at least 2 people.</p>
