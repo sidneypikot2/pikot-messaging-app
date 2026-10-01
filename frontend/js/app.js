@@ -226,10 +226,10 @@ document.addEventListener("click", (event) => {
   if (!statusMenuEl.hidden && !event.target.closest(".status-picker")) toggleStatusMenu(false);
 });
 
-// Auto-idle: after 10 minutes with no mouse, keyboard, touch or scroll activity in this
+// Auto-idle: after 5 minutes with no mouse, keyboard, touch or scroll activity in this
 // tab, tell the server it's away; the next activity says it's back. The server only
 // shows "Idle" once every one of my tabs is away (KAN-39).
-const AWAY_AFTER_MS = 10 * 60 * 1000;
+const AWAY_AFTER_MS = 5 * 60 * 1000;
 let awayTimer = null;
 let tabAway = false;
 
