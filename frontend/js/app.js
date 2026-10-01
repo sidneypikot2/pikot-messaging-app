@@ -501,6 +501,7 @@ async function selectConversation(conversation) {
   messengerEl.classList.add("messenger--chat-open");
   renderThreadHeader(conversation);
   applyChatTheme(conversation);
+  resetPinnedNote(conversation);
   if (chatInfoOpen) renderChatInfo();
   messageListEl.innerHTML = "";
   resetPaginationState();
@@ -532,6 +533,7 @@ function selectDraftConversation(user) {
   messengerEl.classList.add("messenger--chat-open");
   renderThreadHeader({ kind: "direct", other_user: user });
   applyChatTheme(null);
+  resetPinnedNote(null);
   closeChatInfo(); // nothing to set up until the first message creates the conversation
   messageListEl.innerHTML = "";
   resetPaginationState();
@@ -553,6 +555,7 @@ function closeConversation() {
   closeMessageMenu();
   closeChatInfo();
   closeSettingsDialog();
+  resetPinnedNote(null);
 
   document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
 

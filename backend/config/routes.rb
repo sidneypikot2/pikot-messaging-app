@@ -36,6 +36,8 @@ Rails.application.routes.draw do
     resources :messages, only: [ :index, :create ]
     resources :members, only: [ :create, :update, :destroy ], controller: "conversation_members"
     resource :mute, only: [ :update, :destroy ], controller: "conversation_mutes"
+    # Pinned note (KAN-44): one per chat, any member can edit; blank clears it.
+    resource :note, only: [ :update ], controller: "conversation_notes"
   end
   # Group chats (KAN-35) — creation only for now; they're Conversation records, so
   # reading and messaging go through the conversation routes above.

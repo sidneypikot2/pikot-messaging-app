@@ -55,8 +55,12 @@
             <span id="thread-title"></span>
             <span id="thread-subtitle" class="thread-subtitle" hidden></span>
           </div>
+          <button type="button" id="thread-note-btn" class="thread-info-btn thread-note-btn" aria-label="Pinned note" aria-expanded="false" title="Pinned note"><span class="icon" aria-hidden="true">push_pin</span></button>
           <button type="button" id="thread-info-btn" class="thread-info-btn" aria-label="Conversation information" aria-expanded="false" title="Conversation information"><span class="icon" aria-hidden="true">info</span></button>
         </header>
+
+        <!-- Pinned note (KAN-44), filled in by renderPinnedNote in pinned-note.js. -->
+        <section id="pinned-note" class="pinned-note" aria-label="Pinned note" hidden></section>
 
         <div id="message-list" class="message-list">
           <p id="pagination-status" class="pagination-status" hidden></p>
@@ -158,5 +162,6 @@
   <script src="js/emoji-picker.js"></script>
   <script src="js/app.js"></script>
   <script src="js/conversation-settings.js"></script>
+  <script src="js/pinned-note.js"></script>
 </body>
 </html>

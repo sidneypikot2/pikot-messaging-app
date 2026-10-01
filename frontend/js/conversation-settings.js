@@ -80,6 +80,8 @@ function systemLineText(event, actor, conversation) {
       return `${who} removed ${targetName(event.target)} from the group`;
     case "left":
       return `${who} left the group`;
+    case "note":
+      return event.cleared ? `${who} removed the pinned note` : `${who} updated the pinned note`;
     default:
       return `${who} changed the chat settings`;
   }
@@ -106,6 +108,7 @@ function applyConversationUpdate(conversation) {
   renderThreadHeader(conversation);
   applyChatTheme(conversation);
   refreshThreadDecorations(); // sender names follow nicknames
+  renderPinnedNote(conversation);
   if (chatInfoOpen) renderChatInfo();
 }
 
@@ -215,7 +218,15 @@ function renderChatInfo() {
   ];
   if (group) customize.push(buildInfoAction("edit", "Change group name", openRenameDialog));
 
-  const sections = [buildInfoSection("Customize chat", customize)];
+  const note = conversation.note;
+  const sections = [
+    buildInfoSection("Pinned note", [
+      buildInfoAction("push_pin", note ? "View pinned note" : "Add a pinned note", openPinnedNoteFromInfo, {
+        detail: note ? notePreview(note.body) : "Keep addresses, plans and links handy",
+      }),
+    ]),
+    buildInfoSection("Customize chat", customize),
+  ];
   if (group) sections.push(buildInfoSection(`Chat members (${conversation.members.length})`, buildMemberRows(conversation)));
 
   const privacy = [
