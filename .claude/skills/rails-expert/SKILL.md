@@ -1,6 +1,6 @@
 ---
 name: rails-expert
-description: Rails 7+ specialist that optimizes Active Record queries with includes/eager_load, implements Turbo Frames and Turbo Streams for partial page updates, configures Action Cable for WebSocket connections, sets up Sidekiq workers for background job processing, and writes comprehensive RSpec test suites. Use when building Rails 7+ web applications with Hotwire, real-time features, or background job processing. Invoke for Active Record optimization, Turbo Frames/Streams, Action Cable, Sidekiq, RSpec Rails.
+description: Rails specialist for the API-only backend in backend/ - Active Record query optimization (includes/eager_load), Action Cable channels, background job processing (Active Job, Sidekiq workers), and RSpec + FactoryBot suites. Use when writing or reviewing models, services, controllers, channels, jobs, migrations or specs. This app has no Hotwire/Turbo - ignore those parts.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
