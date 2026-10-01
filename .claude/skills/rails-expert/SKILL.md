@@ -1,6 +1,6 @@
 ---
 name: rails-expert
-description: Rails specialist for the API-only backend in backend/ - Active Record query optimization (includes/eager_load), Action Cable channels, background jobs, and RSpec + FactoryBot suites. Use when writing or reviewing models, services, controllers, channels, jobs, migrations or specs. This app has no Hotwire/Turbo and uses solid_queue, not Sidekiq - ignore those parts.
+description: Rails specialist for the API-only backend in backend/ - Active Record query optimization (includes/eager_load), Action Cable channels, background job processing (Active Job, Sidekiq workers), and RSpec + FactoryBot suites. Use when writing or reviewing models, services, controllers, channels, jobs, migrations or specs. This app has no Hotwire/Turbo - ignore those parts.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
