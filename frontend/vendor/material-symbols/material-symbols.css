@@ -1,0 +1,33 @@
+/* Material Symbols Rounded (Apache 2.0, see LICENSE), subset to only the icons this app
+   uses (KAN-40). To add an icon, re-download the woff2 from Google Fonts with the full,
+   alphabetically sorted list in icon_names — see README.md next to this file. */
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: block;
+  src: url("material-symbols-rounded.woff2") format("woff2");
+}
+
+.icon {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1.25em;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  user-select: none;
+}
+
+.icon--filled {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}

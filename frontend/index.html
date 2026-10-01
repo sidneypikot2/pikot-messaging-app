@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PikotChat</title>
+  <link rel="stylesheet" href="vendor/material-symbols/material-symbols.css" />
   <link rel="stylesheet" href="css/messenger.css" />
 </head>
 <body>
@@ -24,14 +25,14 @@
           </div>
           <h1>PikotChat</h1>
         </div>
-        <button type="button" id="logout-btn" class="logout-btn">Log out</button>
+        <button type="button" id="logout-btn" class="logout-btn" aria-label="Log out" title="Log out"><span class="icon" aria-hidden="true">logout</span></button>
       </div>
 
       <div class="search-box">
         <div class="search-row">
           <input type="text" id="user-search" placeholder="Search people…" autocomplete="off" />
           <button type="button" id="new-group-btn" class="new-group-btn" aria-label="New group" title="New group">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-7 1.6-7 4v2h11.1a6 6 0 0 1 3.4-5.5C15 13.2 12.1 13 9 13Zm10 0h-2v3h-3v2h3v3h2v-3h3v-2h-3v-3Z"/></svg>
+            <span class="icon" aria-hidden="true">group_add</span>
           </button>
         </div>
         <ul id="search-results" class="search-results" hidden></ul>
@@ -48,7 +49,7 @@
 
       <div id="thread-active" class="thread-active" hidden>
         <header class="thread-header">
-          <button type="button" id="thread-back" class="thread-back" aria-label="Back to conversations">←</button>
+          <button type="button" id="thread-back" class="thread-back" aria-label="Back to conversations"><span class="icon" aria-hidden="true">arrow_back</span></button>
           <div id="thread-avatar-wrap" class="avatar-wrap"><div id="thread-avatar" class="avatar"></div></div>
           <div class="thread-heading">
             <span id="thread-title"></span>
@@ -63,14 +64,14 @@
         <p id="composer-error" class="composer-error" hidden></p>
         <div id="reply-bar" class="reply-bar" hidden>
           <span id="reply-bar-text" class="reply-bar-text"></span>
-          <button type="button" id="reply-bar-cancel" class="reply-bar-cancel" aria-label="Cancel reply">✕</button>
+          <button type="button" id="reply-bar-cancel" class="reply-bar-cancel" aria-label="Cancel reply"><span class="icon" aria-hidden="true">close</span></button>
         </div>
         <form id="composer" class="composer">
           <div class="composer-input-wrap">
             <textarea id="composer-input" placeholder="Type a message…" required></textarea>
-            <button type="button" id="emoji-picker-btn" class="emoji-picker-btn" aria-label="Insert emoji">🙂</button>
+            <button type="button" id="emoji-picker-btn" class="emoji-picker-btn" aria-label="Insert emoji" title="Insert emoji"><span class="icon" aria-hidden="true">mood</span></button>
           </div>
-          <button type="submit" id="composer-send">Send</button>
+          <button type="submit" id="composer-send" aria-label="Send" title="Send"><span class="icon icon--filled" aria-hidden="true">send</span></button>
         </form>
       </div>
     </main>
@@ -80,7 +81,7 @@
     <form id="unsend-form" class="modal" role="dialog" aria-modal="true" aria-labelledby="unsend-title">
       <header class="modal-header">
         <h2 id="unsend-title">Who do you want to unsend this message for?</h2>
-        <button type="button" class="modal-close" data-unsend-cancel aria-label="Close">✕</button>
+        <button type="button" class="modal-close" data-unsend-cancel aria-label="Close"><span class="icon" aria-hidden="true">close</span></button>
       </header>
       <div class="modal-body">
         <label class="unsend-option">
@@ -109,7 +110,7 @@
     <form id="new-group-form" class="modal" role="dialog" aria-modal="true" aria-labelledby="new-group-title">
       <header class="modal-header">
         <h2 id="new-group-title">New group</h2>
-        <button type="button" class="modal-close" data-new-group-cancel aria-label="Close">✕</button>
+        <button type="button" class="modal-close" data-new-group-cancel aria-label="Close"><span class="icon" aria-hidden="true">close</span></button>
       </header>
       <div class="modal-body">
         <input type="text" id="new-group-name" class="new-group-input" placeholder="Group name" maxlength="100" autocomplete="off" />
@@ -131,6 +132,7 @@
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/session.js"></script>
+  <script src="js/icons.js"></script>
   <script src="js/avatar.js"></script>
   <script src="js/cable.js"></script>
   <script src="js/emoji-picker.js"></script>

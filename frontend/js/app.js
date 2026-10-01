@@ -684,15 +684,16 @@ function buildMessageToolbar(message) {
   const reactBtn = document.createElement("button");
   reactBtn.type = "button";
   reactBtn.className = "react-trigger";
-  reactBtn.textContent = "🙂";
+  reactBtn.appendChild(Icon.create("mood"));
   reactBtn.setAttribute("aria-label", "Add reaction");
+  reactBtn.title = "React";
   reactBtn.addEventListener("click", (e) => openEmojiPickerFor(e.currentTarget, (emoji) => sendReaction(message.id, emoji)));
   toolbar.appendChild(reactBtn);
 
   const replyBtn = document.createElement("button");
   replyBtn.type = "button";
   replyBtn.className = "reply-trigger";
-  replyBtn.textContent = "↩";
+  replyBtn.appendChild(Icon.create("reply"));
   replyBtn.setAttribute("aria-label", "Reply");
   replyBtn.title = "Reply";
   replyBtn.addEventListener("click", () => startReplyingTo(message));
@@ -713,8 +714,9 @@ function buildMessageMenuTrigger(message) {
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "message-menu-trigger";
-  trigger.textContent = "⋮";
+  trigger.appendChild(Icon.create("more_vert"));
   trigger.setAttribute("aria-label", "More actions");
+  trigger.title = "More";
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -731,14 +733,14 @@ function openMessageMenuFor(trigger, message) {
   menu.setAttribute("role", "menu");
 
   const items = [
-    ["Edit", () => startEditingMessage(message)],
-    ["Unsend", () => openUnsendDialog(message)],
+    ["Edit", "edit", () => startEditingMessage(message)],
+    ["Unsend", "undo", () => openUnsendDialog(message)],
   ];
-  items.forEach(([label, action]) => {
+  items.forEach(([label, icon, action]) => {
     const item = document.createElement("button");
     item.type = "button";
     item.setAttribute("role", "menuitem");
-    item.textContent = label;
+    item.append(Icon.create(icon), label);
     item.addEventListener("click", () => {
       closeMessageMenu();
       action();
@@ -1736,7 +1738,7 @@ function renderNewGroupChips() {
 
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.textContent = "✕";
+    remove.appendChild(Icon.create("close"));
     remove.setAttribute("aria-label", `Remove ${displayName(user)}`);
     remove.addEventListener("click", () => {
       newGroupMembers.delete(user.id);

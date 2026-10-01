@@ -8,7 +8,7 @@ const EmojiPicker = {
 
   CATEGORIES: [
     {
-      name: "Smileys", icon: "😀", emoji: [
+      name: "Smileys", icon: "emoji_emotions", emoji: [
         ["😀", "grinning face happy"], ["😃", "smiling face happy"], ["😄", "smiling face happy"], ["😁", "grinning happy"],
         ["😆", "laughing happy"], ["😅", "sweat smile"], ["🤣", "rofl laughing"], ["😂", "joy tears laughing"],
         ["🙂", "slight smile"], ["😉", "wink"], ["😊", "blush smile"], ["😇", "angel innocent halo"],
@@ -18,7 +18,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Emotions", icon: "😢", emoji: [
+      name: "Emotions", icon: "sentiment_dissatisfied", emoji: [
         ["😢", "cry sad"], ["😭", "sob cry"], ["😡", "angry mad"], ["🤬", "swearing angry"],
         ["😱", "scream shock"], ["😨", "fearful scared"], ["😰", "anxious sweat"], ["😥", "sad relief"],
         ["😓", "sweat"], ["🥺", "pleading puppy eyes"], ["😤", "huff frustrated"], ["😩", "weary tired"],
@@ -27,7 +27,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Gestures", icon: "👍", emoji: [
+      name: "Gestures", icon: "thumb_up", emoji: [
         ["👍", "thumbs up good"], ["👎", "thumbs down bad"], ["👌", "ok"], ["✌️", "peace victory"],
         ["🤞", "fingers crossed hope"], ["🤟", "love you gesture"], ["🤘", "rock on"], ["🤙", "call me"],
         ["👋", "wave hello bye"], ["🤚", "raised hand"], ["✋", "stop hand"], ["🖖", "spock vulcan"],
@@ -37,7 +37,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Hearts", icon: "❤️", emoji: [
+      name: "Hearts", icon: "favorite", emoji: [
         ["❤️", "red heart love"], ["🧡", "orange heart"], ["💛", "yellow heart"], ["💚", "green heart"],
         ["💙", "blue heart"], ["💜", "purple heart"], ["🖤", "black heart"], ["🤍", "white heart"],
         ["🤎", "brown heart"], ["💔", "broken heart sad"], ["❣️", "heart exclamation"], ["💕", "two hearts love"],
@@ -45,7 +45,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Animals", icon: "🐶", emoji: [
+      name: "Animals", icon: "emoji_nature", emoji: [
         ["🐶", "dog puppy"], ["🐱", "cat kitten"], ["🐭", "mouse"], ["🐹", "hamster"],
         ["🐰", "rabbit bunny"], ["🦊", "fox"], ["🐻", "bear"], ["🐼", "panda"],
         ["🐨", "koala"], ["🐯", "tiger"], ["🦁", "lion"], ["🐮", "cow"],
@@ -55,7 +55,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Food", icon: "🍕", emoji: [
+      name: "Food", icon: "emoji_food_beverage", emoji: [
         ["🍏", "green apple"], ["🍎", "red apple"], ["🍌", "banana"], ["🍉", "watermelon"],
         ["🍇", "grapes"], ["🍓", "strawberry"], ["🍒", "cherries"], ["🍑", "peach"],
         ["🍍", "pineapple"], ["🥑", "avocado"], ["🍕", "pizza"], ["🍔", "burger"],
@@ -65,7 +65,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Activities", icon: "⚽", emoji: [
+      name: "Activities", icon: "emoji_events", emoji: [
         ["⚽", "soccer ball"], ["🏀", "basketball"], ["🏈", "football"], ["⚾", "baseball"],
         ["🎾", "tennis"], ["🏐", "volleyball"], ["🎱", "8ball pool"], ["🏓", "ping pong"],
         ["🎮", "video game controller"], ["🎲", "dice game"], ["🎸", "guitar music"], ["🎨", "art palette"],
@@ -75,7 +75,7 @@ const EmojiPicker = {
       ],
     },
     {
-      name: "Symbols", icon: "💯", emoji: [
+      name: "Symbols", icon: "emoji_symbols", emoji: [
         ["💯", "100 perfect"], ["✅", "check mark done"], ["❌", "cross no wrong"], ["❓", "question mark"],
         ["❗", "exclamation mark"], ["⭐", "star"], ["🌟", "glowing star"], ["✨", "sparkles"],
         ["💥", "boom explosion"], ["💫", "dizzy stars"], ["💤", "sleep zzz"], ["💢", "anger mark"],
@@ -131,7 +131,7 @@ const EmojiPicker = {
 
     const recent = this.getRecent();
     const panes = [];
-    if (recent.length > 0) panes.push({ icon: "🕐", name: "Recently used", emoji: recent.map((e) => [e, ""]) });
+    if (recent.length > 0) panes.push({ icon: "schedule", name: "Recently used", emoji: recent.map((e) => [e, ""]) });
     this.CATEGORIES.forEach((cat) => panes.push(cat));
 
     const renderGrid = (pairs) => {
@@ -152,8 +152,9 @@ const EmojiPicker = {
     const tabButtons = panes.map((pane, index) => {
       const tab = document.createElement("button");
       tab.type = "button";
-      tab.textContent = pane.icon;
+      tab.appendChild(Icon.create(pane.icon));
       tab.title = pane.name;
+      tab.setAttribute("aria-label", pane.name);
       tab.addEventListener("click", () => showPane(index));
       tabsEl.appendChild(tab);
       return tab;
