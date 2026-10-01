@@ -282,6 +282,41 @@ body {
   left: 0;
 }
 
+/* Online indicator (KAN-39): the avatar's own overflow:hidden would clip a badge, so
+   avatars that can carry one sit in this wrapper instead. */
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #31a24c;
+  border: 2.5px solid #fff;
+}
+
+/* Left within the hour: a "5m" pill where the dot would be, Messenger-style. */
+.presence-ago {
+  position: absolute;
+  right: -6px;
+  bottom: -3px;
+  padding: 0 4px;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  background: #ddf3e1;
+  color: #1f7a35;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 13px;
+  white-space: nowrap;
+}
+
 /* New group button + dialog (KAN-35) */
 
 .new-group-btn {
