@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": ["Bash(~/.claude/scripts/discord-thread.sh:*)"],
+    "deny": [
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(**/.env)",
+      "Write(**/.env.*)"
+    ]
+  }
+}
