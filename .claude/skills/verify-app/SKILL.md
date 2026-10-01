@@ -1,6 +1,6 @@
 ---
 name: verify-app
-description: Run PikotChat locally and prove a change works in the real app - start the Docker stack, log in with the dev test accounts, drive the chat UI in Chrome (two users in two tabs for real-time checks), capture screenshots and post them to the Jira ticket and Discord thread. Use after any frontend or user-visible backend change, or when asked to run, test, screenshot or verify the app.
+description: Run PikotChat locally and prove a change works in the real app - start the Docker stack, log in with the dev test accounts, drive the chat UI in Chrome (two users in two tabs for real-time checks), capture screenshots and post them to the Jira ticket. Use after any change that touches frontend/, or when asked to run, test, screenshot or verify the app.
 ---
 
 # Verify the app
@@ -87,7 +87,8 @@ Screenshots are the most expensive part of a verification run. Keep them few and
   `filePath` to get an `uploadCommand`, run it to get a `fileId`, then pass that as
   `inlineFileId` to `addOrEditJiraIssueComment`. Don't also run the operation's second
   phase (attaching the file to the issue) for a file that's already embedded.
-- Discord: post the same screenshots to the task's thread (`reply` with `files`).
+- Discord: one line in the task's thread saying what was verified, pointing at the ticket.
+  Don't re-upload the screenshots there.
 - Do this when the PR is opened and the ticket moves to In Review.
 
 ## Reporting
