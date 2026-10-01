@@ -7,98 +7,50 @@ Keep your replies extremely concise and focus on conveying the key information. 
 Whenever working with any third-party library or something similar, you MUST look up the official documentation to ensure that you're working with up-to-date information.
 Use the DocsExplorer subagent for efficient documentation lookup.
 
-Project-level Claude Code config is checked in under `.claude/`: subagents in `.claude/agents/`, skills in `.claude/skills/`, shared settings in `.claude/settings.json`.
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Project-level Claude Code config is checked in under `.claude/`: subagents in `.claude/agents/`, skills in `.claude/skills/`, shared settings in `.claude/settings.json`. Use the `kan-task` skill for the task/ticket/branch/PR workflow and `verify-app` to check a change in the running app.
 
 ## Project overview
 
-PikotChat is a messaging app portfolio project. Auth is implemented on the backend — both email/password (KAN-5) and social login via Facebook/LinkedIn/Apple (KAN-7); the frontend is still an unstyled scaffold with no login/signup UI wired up yet, and conversations/messaging are not built at all.
+PikotChat is a messaging app portfolio project. Built so far: email/password and social login (Facebook, LinkedIn, Apple, Google), direct and group conversations, real-time messaging over Action Cable (typing, presence/status, read state), message edit/delete/reactions, and per-conversation settings (rename, theme, nicknames, members, mute). `backend/config/routes.rb` is the source of truth for what exists.
 
 - **Backend**: Ruby on Rails 8.1 (API-only), Ruby 4.0.6, PostgreSQL 18, RSpec + FactoryBot — `backend/`
-- **Frontend**: static HTML / CSS / vanilla JavaScript, no build step, no framework — `frontend/`
-- **Infra**: Docker Compose runs all four services (db, redis, backend, frontend) — Redis backs Action Cable
+- **Frontend**: static HTML / CSS / vanilla JavaScript, no build step, no framework, no frontend tests — `frontend/`
+- **Infra**: Docker Compose runs four services (db, redis, backend, frontend); Redis is there only as the Action Cable adapter
 
-Roadmap (tracked in Jira, not in this repo): conversations, real-time messaging via Action Cable + Redis, group chats, then a mobile client.
+Work is tracked in Jira (project `KAN`), not in this repo. Kamal deploy config exists (`backend/config/deploy.yml`) but is unexercised — no production infra.
 
-## Running the app
+## Running and checking
 
-Requires Docker Desktop only — no local Ruby/Postgres install needed.
-
-```bash
-docker compose up
-```
-
-- Backend API: http://localhost:3000 (health check at `/up`)
-- Frontend: http://localhost:8080
-
-First run creates the Postgres databases automatically via `db:prepare`.
-
-## Common commands
+Requires Docker Desktop only. `docker compose up` — backend at http://localhost:3000 (health check `/up`), frontend at http://localhost:8080, sent mail at http://localhost:3000/letter_opener (unless SMTP is configured). First run creates the databases via `db:prepare`.
 
 ```bash
-# Run the full RSpec suite
-docker compose run --rm backend bundle exec rspec
-
-# Run a single spec file / example
-docker compose run --rm backend bundle exec rspec spec/path/to/spec.rb
-docker compose run --rm backend bundle exec rspec spec/path/to/spec.rb:LINE
-
-# Rails console
-docker compose run --rm backend bin/rails console
-
-# Generate a model / controller
-docker compose run --rm backend bin/rails generate model ...
-
-# Run migrations
-docker compose run --rm backend bin/rails db:migrate
-
-# Install a new gem after editing the Gemfile
-docker compose run --rm backend bundle install
-docker compose build backend
-
-# Full CI pipeline (setup, rubocop, bundler-audit, brakeman) — see backend/config/ci.rb
-docker compose run --rm backend bin/ci
-
-# Individual checks
+docker compose run --rm backend bundle exec rspec [spec/path.rb[:LINE]]
 docker compose run --rm backend bin/rubocop
-docker compose run --rm backend bin/bundler-audit
-docker compose run --rm backend bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+docker compose run --rm backend bin/ci        # setup, rubocop, bundler-audit, brakeman
+docker compose run --rm backend bin/rails db:migrate
+docker compose run --rm backend bundle install && docker compose build backend   # after a Gemfile change
 ```
 
-Rubocop uses the `rubocop-rails-omakase` house style (`backend/.rubocop.yml`); don't fight it with custom rules unless there's a specific reason.
+Rubocop uses the `rubocop-rails-omakase` house style; don't fight it with custom rules.
 
 ## Architecture
 
-**Backend is API-only** (`ApplicationController < ActionController::API`, `backend/app/controllers/application_controller.rb`) — no view layer, no sessions/cookies by default. Routes are defined in `backend/config/routes.rb`: the Rails health check at `/up`, manual auth (`signup`, `login`, `me`, `email_verification[/resend]`), and social login (`auth/:provider/start`, `auth/:provider/callback`, `auth/failure`) — the `auth/:provider` request-phase route itself isn't a Rails route, it's handled by the `OmniAuth::Builder` middleware.
+**Backend is API-only** (`ActionController::API`) — no views, no cookie sessions. Sessions are stateless JWTs (`app/lib/json_web_token.rb`) read from `Authorization: Bearer <token>` by `ApplicationController#authenticate_request!`. CORS allows `ENV["FRONTEND_ORIGIN"]` (default `http://localhost:8080`).
 
-**CORS** is configured in a Rails initializer (`backend/config/initializers/cors.rb`, gem `rack-cors`) to allow the frontend origin, read from `ENV["FRONTEND_ORIGIN"]` (defaults to `http://localhost:8080`, set to that value in `docker-compose.yml` for the backend service).
+**Service objects** (`app/services/`): controllers only translate a service's return value into an HTTP response — no validation or business logic in controllers. Subclass `ApplicationService`, implement `#initialize`/`#call`, call via the class method (`Auth::SessionIssuer.call(user)`). Namespaced by domain (`Auth::`, `Conversations::`, `Messages::`, `Groupchats::`, `Reactions::`); serializers (`UserSerializer`, `ConversationSerializer`, `MessageSerializer`) are unnamespaced. Don't extract a service for a trivial one-liner action (see `EmailVerificationsController`).
 
-**Frontend talks to the backend only through `frontend/js/api.js`**, a plain object (`Api`) wrapping `fetch` calls against `window.API_BASE_URL`. That base URL is set in `frontend/js/config.js` and can be overridden by defining `window.API_BASE_URL` before `config.js` loads. When adding new API calls, add methods to `Api` rather than calling `fetch` directly from `app.js` or other frontend scripts.
+**Frontend talks to the backend only through `frontend/js/api.js`** (the `Api` object wrapping `fetch` against `window.API_BASE_URL`, set in `frontend/js/config.js`). Add methods to `Api` rather than calling `fetch` elsewhere. The token lives in `sessionStorage`, or `localStorage` with "remember me" (`frontend/js/session.js`).
 
-**Background jobs / cache** use Rails' Solid stack (`solid_queue`, `solid_cache`) — each has its own schema file in `backend/db/` (`queue_schema.rb`, `cache_schema.rb`) and, in production, its own database (see `backend/config/database.yml`). In development/test these run against the primary database. **Action Cable** deliberately does not use Solid Cable (KAN-9) — it's on the `redis` gem instead (`backend/config/cable.yml`, `REDIS_URL`, `redis` service in `docker-compose.yml`), so Redis is in the stack purely as the Action Cable adapter.
+**Real-time**: Action Cable on Redis, deliberately not Solid Cable (KAN-9) — `ConversationChannel` and `NotificationsChannel`, frontend side in `frontend/js/cable.js`. Jobs and cache use `solid_queue` / `solid_cache` (own schema files in `backend/db/`; primary database in dev/test).
 
-**Deployment** is set up for Kamal (`backend/config/deploy.yml`, `backend/.kamal/`) but not yet exercised — no production infra exists.
+**Auth**: `User` has `has_secure_password validations: false`; password is only required on create for non-OAuth users (`oauth_user?` is `provider.present?`). Email verification uses `generates_token_for(:email_verification)`; unverified users can't log in.
 
-**Database naming**: development/test databases are `pikot_messaging_app_development` / `_test` (see `backend/config/database.yml`); connection params come from `DATABASE_HOST`/`PORT`/`USERNAME`/`PASSWORD` env vars, set in `docker-compose.yml` for local dev.
+**Social login** (`omniauth-*` gems): `OmniauthCallbacksController#create` → `Auth::OmniauthAuthenticator` (matches on `[provider, uid]`) → redirect to `<FRONTEND_ORIGIN>/oauth-callback.html?token=...`. Credentials come from `backend/.env` (see `.env.example`); the app boots with them blank. Easy to forget:
+- The request phase must be a real `<form>` POST, not `fetch` (`omniauth-rails_csrf_protection`). The frontend navigates to `GET /auth/:provider/start` (`OauthStartsController`), which renders a same-origin auto-submitting form with the CSRF token. Don't have the frontend fetch a CSRF token cross-site — browsers drop the session cookie and the POST fails intermittently with `InvalidAuthenticityToken`.
+- `/auth/:provider` itself is handled by the OmniAuth middleware, not a Rails route.
+- Apple's callback arrives as a POST (`response_mode: "form_post"`), so the callback route accepts GET and POST.
+- Specs build an `OmniAuth::AuthHash` directly (`OmniAuth.config.test_mode = true` in `rails_helper.rb`).
 
-**Auth** (KAN-5/KAN-7): `User` has `has_secure_password validations: false`, with password presence/confirmation only required `on: :create, if: -> { !oauth_user? }` (`oauth_user?` is `provider.present?`) so social-login users don't need a password. It also uses Rails' `generates_token_for(:email_verification)` for expiring, purpose-scoped verification tokens tied to the user's email. Sessions are stateless JWTs (`app/lib/json_web_token.rb`), read from `Authorization: Bearer <token>` via `ApplicationController#authenticate_request!`.
-
-Social login (Facebook/Instagram via Facebook Login, LinkedIn, Apple) is implemented via `omniauth-*` gems (KAN-7): `OmniauthCallbacksController#create` → `Auth::OmniauthAuthenticator`, matching on `[provider, uid]`, then redirects to `<FRONTEND_ORIGIN>/oauth-callback.html?token=...` (that page doesn't exist in `frontend/` yet — see project overview). Provider credentials come from `ENV` (`backend/.env`, gitignored — see `backend/.env.example`); the app boots and the routes/controllers work with them blank, only initiating a real provider flow needs them. Two things are easy to forget when touching this flow:
-- The OAuth **request phase** (`GET /auth/:provider`) must be a real `<form>` POST, not `fetch`/XHR (a plain request can't navigate the browser to the provider's consent screen) — `omniauth-rails_csrf_protection` enforces this (`OmniAuth.config.allowed_request_methods = [:post]` in `backend/config/initializers/omniauth.rb`). The frontend gets there via a plain top-level navigation to `GET /auth/:provider/start` (`OauthStartsController`), which renders a same-origin auto-submitting form carrying the CSRF token, rather than the frontend fetching a token itself and submitting it cross-origin — when the frontend and backend are on different sites (e.g. different `*.onrender.com` subdomains, a public suffix), a token-issuing endpoint fetched from the frontend's own origin sets the session cookie via a cross-site background request, which browsers increasingly refuse to store, causing an intermittent `ActionController::InvalidAuthenticityToken` on the follow-up POST.
-- Apple requires `response_mode: "form_post"` when requesting `name`/`email` scopes, so unlike Facebook/LinkedIn its callback arrives as a POST, not a GET (routes.rb's `auth/:provider/callback` match accepts both).
-
-**Service objects** live under `app/services/`, one level below controllers: controllers translate a service's return value into an HTTP response and do nothing else — no validation or business logic in controllers. Convention: subclass `ApplicationService` and implement `#initialize`/`#call`; callers use the class method (`Auth::SessionIssuer.call(user)`), which just does `new(...).call`. Auth-specific services are namespaced under `Auth::` (`Auth::UserRegistrar`, `Auth::PasswordAuthenticator`, `Auth::SessionIssuer`); `UserSerializer` is shared/unnamespaced since it's not auth-specific. Don't reach for a service for trivial one-liner controller actions (see `EmailVerificationsController`, deliberately left as plain Active Record calls) — only extract when there's real logic or reuse across controllers.
-
-**Testing OmniAuth**: `OmniAuth.config.test_mode = true` is set globally in `backend/spec/rails_helper.rb`, so provider specs build an `OmniAuth::AuthHash` directly (see `backend/spec/services/auth/omniauth_authenticator_spec.rb`) rather than hitting a real provider or using `OmniAuth.config.mock_auth`.
-
-**Gotchas discovered while building the above** (both already fixed, but worth knowing if something similar resurfaces):
-- `docker-compose.yml`'s `backend` service must NOT set `RAILS_ENV` in its shared `environment:` block — that block is inherited by every `docker compose run backend ...`, including `bundle exec rspec`, which needs to fall back to Rails' own `test` default. `RAILS_ENV=development` for the server process is set inline in `command:` instead.
-- The `json` gem is pinned to `< 3` in the Gemfile — `json` 3.0 made `JSON.parse`'s 2nd positional arg keyword-only, which breaks `ActiveSupport::JSON.decode` (and therefore anything that round-trips through it, e.g. `generates_token_for`/`find_by_token_for`) on this Rails version.
-
-## Task/branch/PR naming convention
-
-Work is tracked in Jira (project `KAN`, team-managed — no Components field, so area is tagged via Labels).
-See the "Workflow conventions" section of `README.md` for the full rules; in short: tag every Jira
-issue/GitHub issue/PR with an area label (`frontend`, `backend`, or `infra`), branch as
-`<area>/<jira-key>-<kebab-summary>`, and title PRs `<JIRA-KEY> <summary>`.
+**Gotchas**:
+- `docker-compose.yml` must NOT set `RAILS_ENV` in the backend's `environment:` block — `docker compose run backend bundle exec rspec` inherits it and needs Rails' `test` default. It's set inline in `command:` instead, so `docker compose exec` needs `-e RAILS_ENV=development`.
+- The `json` gem is pinned `< 3`: 3.0 breaks `ActiveSupport::JSON.decode` (and so `generates_token_for`) on this Rails version.

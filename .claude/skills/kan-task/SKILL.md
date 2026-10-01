@@ -28,13 +28,19 @@ One thread per task, so each task has its own log.
 - `features` — any frontend or backend work, including tasks that touch both.
 - `infra` — infra/tooling-only work.
 
-Post the approved plan summary into the thread with the Discord `reply` tool
-(`chat_id` = thread ID). Carry on all task updates there: progress, decisions, PR link,
-final summary.
+Post into the thread with the Discord `reply` tool (`chat_id` = thread ID). Keep posts
+short — the Jira ticket holds the detail, the thread points at it:
+- after approval: the plan in two or three lines;
+- the ticket link, then the PR link, each as a one-liner;
+- decisions or blockers that came up, when they happen;
+- at the end: one closing line, plus anything that did not get done.
 
-The script reads the bot token and channel IDs from `~/.claude/channels/discord/`. If that
-directory doesn't exist (cloud session, another machine), skip the Discord steps and say
-so — don't fail the task over it.
+Don't restate the ticket description or the PR body in the thread.
+
+The script reads the bot token and channel IDs from `~/.claude/channels/discord/`. Skip
+every Discord step, and say so, when that directory doesn't exist or the Discord `reply`
+tool isn't available (cloud session, another machine, plugin disabled) — don't create a
+thread you can't post into, and don't fail the task over it.
 
 ## 3. Jira ticket
 
@@ -73,7 +79,8 @@ keep the screenshots.
 ## 6. Pull request
 
 - Title: `<JIRA-KEY> <summary>` (e.g. `KAN-12 Add login form`), same area label as the ticket.
-- Body: why, what changed, how it was tested, link to the ticket.
+- Body: a few lines — what changed, how it was tested (including anything not verified),
+  and the ticket link. The ticket carries the full detail; don't copy it into the PR.
 - Transition the ticket to **In Review**.
 - Post the PR link to the thread, and the verification screenshots to both the thread and
   the ticket (see `verify-app`).
