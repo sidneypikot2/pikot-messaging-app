@@ -289,7 +289,8 @@ body {
   cursor: pointer;
 }
 
-.conversation-list li:hover {
+.conversation-list li:hover,
+.conversation-list li.menu-open {
   background: var(--bg);
 }
 
@@ -1983,5 +1984,70 @@ body {
 
   .chat-info-close-mobile {
     display: inline-block;
+  }
+}
+
+/* The list's ⋯ button (KAN-41): floats over the right end of a conversation while it's
+   hovered (or its menu is open), taking the unread badge's place. */
+.conversation-list li {
+  position: relative;
+}
+
+.conversation-menu-trigger {
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(27, 37, 89, 0.15);
+  cursor: pointer;
+}
+
+.conversation-menu-trigger:hover {
+  background: var(--bg);
+}
+
+.conversation-list li:hover .conversation-menu-trigger,
+.conversation-list li.menu-open .conversation-menu-trigger,
+.conversation-menu-trigger:focus-visible {
+  display: flex;
+}
+
+.conversation-list li:hover .unread-badge,
+.conversation-list li.menu-open .unread-badge {
+  visibility: hidden;
+}
+
+/* Room for the button so the preview text doesn't run under it. */
+.conversation-list li:hover .conversation-text,
+.conversation-list li.menu-open .conversation-text {
+  padding-right: 2.25rem;
+}
+
+.conversation-menu {
+  z-index: 200;
+  min-width: 190px;
+}
+
+/* Touch screens have no hover: keep the button showing. */
+@media (hover: none) {
+  .conversation-menu-trigger {
+    display: flex;
+  }
+
+  .conversation-list li .conversation-text {
+    padding-right: 2.25rem;
+  }
+
+  .conversation-list li .unread-badge {
+    margin-right: 2.5rem;
   }
 }

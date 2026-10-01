@@ -98,6 +98,7 @@ function listNames(names) {
 function applyConversationUpdate(conversation) {
   const index = conversationsCache.findIndex((c) => c.id === conversation.id);
   if (index >= 0) conversationsCache[index] = conversation;
+  refreshConversationItem(conversation.id);
   if (conversation.id !== activeConversationId) return;
 
   activeConversation = conversation;
@@ -106,7 +107,6 @@ function applyConversationUpdate(conversation) {
   applyChatTheme(conversation);
   refreshThreadDecorations(); // sender names follow nicknames
   if (chatInfoOpen) renderChatInfo();
-  refreshConversationItem(conversation.id);
 }
 
 // --- The panel ---
@@ -203,7 +203,7 @@ function renderChatInfo() {
   const muted = isMuted(conversation);
   const quickMute = iconButton(muted ? "notifications_off" : "notifications", muted ? "Unmute" : "Mute", "chat-info-quick");
   quickMute.append(muted ? "Unmute" : "Mute");
-  quickMute.addEventListener("click", () => (muted ? unmuteConversation() : openMuteDialog()));
+  quickMute.addEventListener("click", () => (muted ? unmuteConversation(conversation.id) : openMuteDialog(conversation.id)));
 
   const top = document.createElement("div");
   top.className = "chat-info-top";
@@ -220,11 +220,11 @@ function renderChatInfo() {
 
   const privacy = [
     muted
-      ? buildInfoAction("notifications_off", "Unmute notifications", unmuteConversation, { detail: muteStatusText(conversation) })
-      : buildInfoAction("notifications", "Mute notifications", openMuteDialog),
-    buildInfoAction("delete", "Delete chat", openDeleteChatDialog, { danger: true }),
+      ? buildInfoAction("notifications_off", "Unmute notifications", () => unmuteConversation(conversation.id), { detail: muteStatusText(conversation) })
+      : buildInfoAction("notifications", "Mute notifications", () => openMuteDialog(conversation.id)),
+    buildInfoAction("delete", "Delete chat", () => openDeleteChatDialog(conversation.id), { danger: true }),
   ];
-  if (group) privacy.push(buildInfoAction("logout", "Leave group", openLeaveDialog, { danger: true }));
+  if (group) privacy.push(buildInfoAction("logout", "Leave group", () => openLeaveDialog(conversation.id), { danger: true }));
   sections.push(buildInfoSection("Privacy & notifications", privacy));
 
   chatInfoEl.replaceChildren(top, ...sections);
@@ -326,9 +326,9 @@ function textInput({ value = "", placeholder = "", maxLength }) {
 }
 
 // The settings requests answer with the updated conversation; apply it straight away
-// rather than wait for the broadcast.
-async function saveSetting(request) {
-  const conversationId = activeConversationId;
+// rather than wait for the broadcast. Mute, delete and leave can also come from the
+// list's ⋯ menu for a conversation that isn't open, so they pass its id.
+async function saveSetting(request, conversationId = activeConversationId) {
   const { conversation } = await request(conversationId);
   if (conversation) applyConversationUpdate(conversation);
 }
@@ -519,16 +519,21 @@ function openRemoveMemberDialog(member) {
   });
 }
 
-function openLeaveDialog() {
+// Leaving or deleting the open chat closes it; one picked from the list just drops out.
+function removedFromList(conversationId) {
+  if (conversationId === activeConversationId) closeConversation();
+  loadConversations();
+}
+
+function openLeaveDialog(conversationId) {
   openSettingsDialog({
     title: "Leave group chat?",
     body: dialogText("You'll stop receiving messages from this conversation and people will see that you left."),
     confirmLabel: "Leave group",
     danger: true,
     onConfirm: async () => {
-      await Api.removeMember(token, activeConversationId, currentUser.id);
-      closeConversation();
-      loadConversations();
+      await Api.removeMember(token, conversationId, currentUser.id);
+      removedFromList(conversationId);
     },
   });
 }
@@ -543,7 +548,7 @@ const MUTE_CHOICES = [
   [null, "Until I turn it back on"],
 ];
 
-function openMuteDialog() {
+function openMuteDialog(conversationId) {
   const options = MUTE_CHOICES.map(([minutes, label], index) => {
     const option = document.createElement("label");
     option.className = "unsend-option";
@@ -564,14 +569,14 @@ function openMuteDialog() {
     confirmLabel: "Mute",
     onConfirm: () => {
       const value = settingsFormEl.querySelector("input[name=mute-duration]:checked").value;
-      return saveSetting((id) => Api.muteConversation(token, id, value ? Number(value) : null));
+      return saveSetting((id) => Api.muteConversation(token, id, value ? Number(value) : null), conversationId);
     },
   });
 }
 
-async function unmuteConversation() {
+async function unmuteConversation(conversationId) {
   try {
-    await saveSetting((id) => Api.unmuteConversation(token, id));
+    await saveSetting((id) => Api.unmuteConversation(token, id), conversationId);
   } catch (err) {
     showComposerError(err.message);
   }
@@ -579,16 +584,93 @@ async function unmuteConversation() {
 
 // --- Delete chat ---
 
-function openDeleteChatDialog() {
+function openDeleteChatDialog(conversationId) {
   openSettingsDialog({
     title: "Delete chat?",
     body: dialogText("This will delete your copy of the conversation. Other people in the chat will still be able to see it."),
     confirmLabel: "Delete chat",
     danger: true,
     onConfirm: async () => {
-      await Api.deleteConversation(token, activeConversationId);
-      closeConversation();
-      loadConversations();
+      await Api.deleteConversation(token, conversationId);
+      removedFromList(conversationId);
     },
   });
 }
+
+// --- The list's ⋯ menu ---
+// Messenger-style: hovering a conversation in the list shows a ⋯ button with quick
+// settings for it, without opening it.
+
+let openListMenu = null;
+
+function buildConversationMenuTrigger(conversation) {
+  const trigger = iconButton("more_horiz", "Chat settings", "conversation-menu-trigger");
+  trigger.setAttribute("aria-haspopup", "menu");
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation(); // not a click on the conversation itself
+    const wasOpenHere = openListMenu?.dataset.conversationId === String(conversation.id);
+    closeListMenu();
+    if (!wasOpenHere) openListMenuFor(trigger, conversation);
+  });
+  return trigger;
+}
+
+function openListMenuFor(trigger, conversation) {
+  const menu = document.createElement("div");
+  menu.className = "message-menu conversation-menu";
+  menu.setAttribute("role", "menu");
+  menu.dataset.conversationId = conversation.id;
+
+  const items = [];
+  if (conversation.unread_count > 0) {
+    items.push(["Mark as read", "check", async () => {
+      await Api.markConversationRead(token, conversation.id);
+      loadConversations();
+    }]);
+  }
+  items.push(isMuted(conversation)
+    ? ["Unmute notifications", "notifications", () => unmuteConversation(conversation.id)]
+    : ["Mute notifications", "notifications_off", () => openMuteDialog(conversation.id)]);
+  items.push(["Delete chat", "delete", () => openDeleteChatDialog(conversation.id)]);
+  if (isGroup(conversation)) items.push(["Leave group", "logout", () => openLeaveDialog(conversation.id)]);
+
+  items.forEach(([label, icon, action]) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.setAttribute("role", "menuitem");
+    item.append(Icon.create(icon), label);
+    item.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeListMenu();
+      action();
+    });
+    menu.appendChild(item);
+  });
+
+  // On the body rather than inside the row, so the list's scrolling can't clip it and a
+  // list re-render (a new message, a typing ping) can't take it away.
+  document.body.appendChild(menu);
+  const anchor = trigger.getBoundingClientRect();
+  const height = menu.getBoundingClientRect().height;
+  const below = anchor.bottom + 4 + height <= window.innerHeight - 8;
+  menu.style.position = "fixed";
+  menu.style.top = `${below ? anchor.bottom + 4 : anchor.top - height - 4}px`;
+  menu.style.left = `${Math.max(8, anchor.right - menu.getBoundingClientRect().width)}px`;
+  openListMenu = menu;
+  trigger.closest("li").classList.add("menu-open");
+}
+
+function closeListMenu() {
+  if (!openListMenu) return;
+  conversationListEl.querySelector(`li[data-conversation-id="${openListMenu.dataset.conversationId}"]`)?.classList.remove("menu-open");
+  openListMenu.remove();
+  openListMenu = null;
+}
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".conversation-menu")) closeListMenu();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeListMenu();
+});
+conversationListEl.addEventListener("scroll", closeListMenu);

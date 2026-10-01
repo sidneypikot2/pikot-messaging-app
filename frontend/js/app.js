@@ -444,6 +444,10 @@ function buildConversationItem(conversation) {
     li.appendChild(badge);
   }
 
+  li.appendChild(buildConversationMenuTrigger(conversation)); // KAN-41
+  // A list re-render while its ⋯ menu is open keeps the row looking hovered.
+  if (openListMenu?.dataset.conversationId === String(conversation.id)) li.classList.add("menu-open");
+
   li.addEventListener("click", () => selectConversation(conversation));
   return li;
 }
