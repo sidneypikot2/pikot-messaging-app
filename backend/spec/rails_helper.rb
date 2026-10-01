@@ -83,6 +83,10 @@ RSpec.configure do |config|
     # real request to derive a host from (ApplicationController's ActiveStorage::SetCurrent
     # before_action only runs for request specs) — set it here so rails_blob_url works.
     ActiveStorage::Current.url_options = { host: "example.com" }
+
+    # Presence (KAN-39) lives in an in-process store in test — nobody is online until a
+    # spec says so.
+    Presence.store.clear
   end
 end
 

@@ -7,6 +7,14 @@ class User < ApplicationRecord
   has_many :message_hides, dependent: :destroy
   has_many :sent_messages, class_name: "Message", foreign_key: :sender_id, inverse_of: :sender, dependent: :destroy
 
+  # What the user picked from their status menu (KAN-39) — what others actually see also
+  # depends on whether they're connected (Presence.statuses). Never serialized for other
+  # users: "offline" here means "appear offline", and that has to stay a secret.
+  enum :chosen_status, Presence::STATUSES.index_by(&:itself), prefix: true, validate: true
+  # Do Not Disturb / Offline can be picked for a while (10 min … 24 h) instead of until
+  # turned off; once this passes they're back to Online.
+  validates :chosen_status_until, absence: true, unless: -> { chosen_status_dnd? || chosen_status_offline? }
+
   normalizes :email, with: ->(email) { email.strip.downcase }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },
@@ -30,6 +38,16 @@ class User < ApplicationRecord
 
   generates_token_for :email_verification, expires_in: 24.hours do
     email
+  end
+
+  # The chosen status with any expired timer applied — the NotificationsChannel
+  # heartbeat only gets round to resetting the column within 30s of it passing.
+  def current_chosen_status
+    chosen_status_expired? ? "online" : chosen_status
+  end
+
+  def chosen_status_expired?
+    chosen_status_until.present? && chosen_status_until <= Time.current
   end
 
   def verified?
