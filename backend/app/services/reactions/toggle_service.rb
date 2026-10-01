@@ -8,6 +8,7 @@ module Reactions
 
     def call
       raise NotAuthorizedError, "not a member of this conversation" unless member?
+      raise NotAuthorizedError, "system messages can't be reacted to" if @message.system?
 
       existing = @message.reactions.find_by(user: @user, emoji: @emoji)
 

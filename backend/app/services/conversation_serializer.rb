@@ -7,7 +7,8 @@ class ConversationSerializer < ApplicationService
 
   def call
     other = @conversation.direct? ? @conversation.members.where.not(id: @current_user.id).first : nil
-    { id: @conversation.id, kind: @conversation.kind, name: @conversation.name, members: members,
+    { id: @conversation.id, kind: @conversation.kind, name: @conversation.name, theme: @conversation.theme,
+      owner_id: @conversation.owner_id, members: members, muted: muted?, muted_until: muted_until,
       other_user: other && UserSerializer.call(other), created_at: @conversation.created_at,
       unread_count: @unread_count, last_activity: Conversations::LastActivityService.call(@conversation, user: @current_user),
       read_receipts: read_receipts, presence: presence }
@@ -16,9 +17,27 @@ class ConversationSerializer < ApplicationService
   private
 
   # Everyone in the conversation, the viewer included, in the order they joined — the
-  # group header counts them and the thread uses them for sender names/avatars (KAN-35).
+  # group header counts them and the thread uses them for sender names/avatars (KAN-35) —
+  # with the nickname they have in this chat, if any (KAN-41).
   def members
-    @conversation.conversation_memberships.includes(:user).order(:id).map { |membership| UserSerializer.call(membership.user) }
+    @conversation.conversation_memberships.includes(:user).order(:id).map do |membership|
+      UserSerializer.call(membership.user).merge(nickname: membership.nickname)
+    end
+  end
+
+  # The viewer's own mute (KAN-41); muted_until is nil while muted until turned back on.
+  def own_membership
+    return @own_membership if defined?(@own_membership)
+
+    @own_membership = @conversation.conversation_memberships.find_by(user_id: @current_user.id)
+  end
+
+  def muted?
+    own_membership&.muted? || false
+  end
+
+  def muted_until
+    muted? && !own_membership.muted_forever? ? own_membership.muted_until : nil
   end
 
   # The status each *other* member shows (online/idle/dnd/offline) and when they were

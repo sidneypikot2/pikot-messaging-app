@@ -64,6 +64,7 @@ const replyBarTextEl = document.getElementById("reply-bar-text");
 const logoutBtn = document.getElementById("logout-btn");
 const messengerEl = document.getElementById("messenger");
 const threadBackEl = document.getElementById("thread-back");
+const threadInfoBtnEl = document.getElementById("thread-info-btn");
 
 function displayName(user) {
   if (user.first_name || user.last_name) return `${user.first_name || ""} ${user.last_name || ""}`.trim();
@@ -86,23 +87,31 @@ function isGroup(conversation) {
   return conversation?.kind === "group";
 }
 
-function conversationTitle(conversation) {
-  if (isGroup(conversation)) return conversation.name;
-  return conversation.other_user ? displayName(conversation.other_user) : "Unknown";
+// The nickname a member has in this chat, if any (KAN-41).
+function nicknameOf(conversation, userId) {
+  return conversation?.members?.find((member) => member.id === userId)?.nickname || null;
 }
 
-// A group shows two of its other members' avatars overlapped, Messenger-style (KAN-35).
+function conversationTitle(conversation) {
+  if (isGroup(conversation)) return conversation.name;
+  if (!conversation.other_user) return "Unknown";
+  return nicknameOf(conversation, conversation.other_user.id) || displayName(conversation.other_user);
+}
+
+// A group shows two of its other members' avatars overlapped, Messenger-style (KAN-35) —
+// or just the one, once people leaving it (KAN-41) has left only one other member.
 function renderConversationAvatar(el, conversation) {
   el.style.background = "";
-  if (!isGroup(conversation)) {
+  const others = isGroup(conversation) ? conversation.members.filter((member) => member.id !== currentUser.id).slice(0, 2) : [];
+  if (others.length < 2) {
     el.className = "avatar";
-    if (conversation.other_user) Avatar.render(el, conversation.other_user);
+    const shown = isGroup(conversation) ? others[0] : conversation.other_user;
+    if (shown) Avatar.render(el, shown);
     else el.replaceChildren();
     return;
   }
 
   el.className = "avatar-stack";
-  const others = conversation.members.filter((member) => member.id !== currentUser.id).slice(0, 2);
   el.replaceChildren(...others.map((member) => {
     const avatar = document.createElement("div");
     avatar.className = "avatar";
@@ -292,9 +301,10 @@ function noteActivity() {
 });
 
 function activityPreviewText(activity, conversation) {
+  if (activity.kind === "system") return systemLineText(activity.system_event, activity.actor, conversation);
   const otherUser = conversation.other_user;
   const mine = activity.actor.id === currentUser.id;
-  const who = mine ? "You" : firstName(activity.actor);
+  const who = mine ? "You" : nicknameOf(conversation, activity.actor.id) || firstName(activity.actor);
 
   if (activity.type === "reaction") {
     let target = "a message";
@@ -344,6 +354,11 @@ async function loadConversations() {
     const { conversations } = await Api.conversations(token);
     conversationsCache = conversations;
     mergePresence(conversations);
+    // Keeps the open conversation's name, members, theme and mute current (KAN-41). A
+    // chat deleted for me isn't listed until someone writes in it again, so keep what
+    // was there.
+    const active = conversations.find((c) => c.id === activeConversationId);
+    if (active) applyConversationUpdate(active);
     conversationsStatusEl.hidden = conversations.length > 0;
     if (conversations.length === 0) conversationsStatusEl.textContent = "No conversations yet — search for someone to start one.";
 
@@ -373,7 +388,16 @@ function buildConversationItem(conversation) {
   const name = document.createElement("span");
   name.className = "conversation-name";
   name.textContent = conversationTitle(conversation);
-  text.appendChild(name);
+  const nameRow = document.createElement("div");
+  nameRow.className = "conversation-name-row";
+  nameRow.appendChild(name);
+  if (isMuted(conversation)) {
+    const muted = Icon.create("notifications_off");
+    muted.classList.add("conversation-muted");
+    muted.title = "Muted";
+    nameRow.appendChild(muted);
+  }
+  text.appendChild(nameRow);
 
   // Never for the currently-active conversation — the user can already see its content
   // directly, so a badge there would only ever be a stale/confusing flash regardless of
@@ -472,6 +496,8 @@ async function selectConversation(conversation) {
   threadActiveEl.hidden = false;
   messengerEl.classList.add("messenger--chat-open");
   renderThreadHeader(conversation);
+  applyChatTheme(conversation);
+  if (chatInfoOpen) renderChatInfo();
   messageListEl.innerHTML = "";
   resetPaginationState();
   clearComposerError();
@@ -501,6 +527,8 @@ function selectDraftConversation(user) {
   threadActiveEl.hidden = false;
   messengerEl.classList.add("messenger--chat-open");
   renderThreadHeader({ kind: "direct", other_user: user });
+  applyChatTheme(null);
+  closeChatInfo(); // nothing to set up until the first message creates the conversation
   messageListEl.innerHTML = "";
   resetPaginationState();
   clearComposerError();
@@ -519,6 +547,8 @@ function closeConversation() {
   resetTypingState();
   cancelReply();
   closeMessageMenu();
+  closeChatInfo();
+  closeSettingsDialog();
 
   document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
 
@@ -534,6 +564,7 @@ threadBackEl.addEventListener("click", closeConversation);
 // A group's header adds its member count under the name (KAN-35).
 function renderThreadHeader(conversation) {
   headerConversation = conversation;
+  threadInfoBtnEl.hidden = !conversation.id; // a draft has no settings yet (KAN-41)
   threadTitleEl.textContent = conversationTitle(conversation);
   renderConversationAvatar(threadAvatarEl, conversation);
   renderHeaderPresence();
@@ -632,7 +663,24 @@ messageListEl.addEventListener("scroll", () => {
   loadOlderMessages();
 });
 
+// A grey centered line such as "Alice named the group Trip" (KAN-41) — no bubble,
+// toolbar, reactions or replies.
+function buildSystemMessageEl(message) {
+  const row = document.createElement("div");
+  row.className = "message-row system";
+  row.id = `message-${message.id}`;
+  row.dataset.senderId = message.sender.id;
+  row.dataset.createdAt = message.created_at;
+  const text = document.createElement("div");
+  text.className = "system-line";
+  text.textContent = systemLineText(message.system_event, message.sender, activeConversation);
+  text.title = exactTime(new Date(message.created_at));
+  row.appendChild(text);
+  return row;
+}
+
 function buildMessageEl(message) {
+  if (message.kind === "system") return buildSystemMessageEl(message);
   const row = document.createElement("div");
   row.className = `message-row ${message.sender.id === currentUser.id ? "own" : "other"}`;
   row.id = `message-${message.id}`;
@@ -800,6 +848,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (!unsendDialogEl.hidden) closeUnsendDialog();
   else if (!newGroupDialogEl.hidden) closeNewGroupDialog();
+  else if (!settingsDialogEl.hidden) closeSettingsDialog();
   else closeMessageMenu();
 });
 
@@ -1072,10 +1121,11 @@ function decorateSenderRuns() {
   messageListEl.classList.toggle("message-list--group", isGroup(activeConversation));
   if (!isGroup(activeConversation)) return;
 
-  const rows = [...messageListEl.querySelectorAll(".message-row")];
-  // A time divider (KAN-37) between two messages breaks the run, as in Messenger.
+  const rows = [...messageListEl.querySelectorAll(".message-row:not(.system)")];
+  // A time divider (KAN-37) or system line (KAN-41) between two messages breaks the run,
+  // as in Messenger.
   const startsRun = (row, index) =>
-    rows[index - 1]?.dataset.senderId !== row.dataset.senderId || row.previousElementSibling?.classList.contains("time-divider");
+    rows[index - 1]?.dataset.senderId !== row.dataset.senderId || row.previousElementSibling?.matches(".time-divider, .message-row.system");
   rows.forEach((row, index) => {
     if (!row.classList.contains("other")) return;
     const sender = knownSenders.get(Number(row.dataset.senderId));
@@ -1084,7 +1134,7 @@ function decorateSenderRuns() {
     if (startsRun(row, index)) {
       const name = document.createElement("div");
       name.className = "message-sender-name";
-      name.textContent = firstName(sender);
+      name.textContent = nicknameOf(activeConversation, sender.id) || firstName(sender);
       row.prepend(name);
     }
     if (!rows[index + 1] || startsRun(rows[index + 1], index + 1)) {
@@ -1301,7 +1351,7 @@ function handleIncoming(data) {
   // replace-in-place branch above instead, so this can't double-play for one message.
   // Silent while the user is looking at this conversation — the message appearing is
   // notice enough — but still plays when the tab or window is in the background (KAN-33).
-  if (data.event === "message_created" && message.sender.id !== currentUser.id && !pageInForeground()) {
+  if (data.event === "message_created" && message.sender.id !== currentUser.id && !pageInForeground() && notifiable(message)) {
     playNotificationSound();
   }
 
@@ -1311,7 +1361,8 @@ function handleIncoming(data) {
   // server-side until the next time the conversation is opened.
   // Refetches once the marker has moved, so the list's cached unread_count for this
   // conversation can't lag behind and resurface as a badge after switching away.
-  if (data.event === "message_created") {
+  // Not for my own system lines: leaving a group (KAN-41) posts one just before I'm out.
+  if (data.event === "message_created" && !(message.kind === "system" && message.sender.id === currentUser.id)) {
     Api.markConversationRead(token, message.conversation_id).then(scheduleConversationsReload).catch(() => {});
   }
 }
@@ -1361,6 +1412,12 @@ function playNotificationSound() {
   notificationSound.play().catch(() => {});
 }
 
+// System lines ("Alice named the group …") and muted chats (KAN-41) make no sound.
+function notifiable(message) {
+  if (message.kind === "system") return false;
+  return !isMuted(conversationsCache.find((c) => c.id === message.conversation_id));
+}
+
 // Hidden covers a background tab or minimized window; hasFocus covers the tab being
 // visible while another window has focus.
 function pageInForeground() {
@@ -1386,9 +1443,10 @@ reactionToastEl.addEventListener("click", () => {
 
 function notifyReaction(data) {
   if (myStatus === "dnd") return; // Do Not Disturb: no sound or pop-up (KAN-39)
+  const conversation = conversationsCache.find((c) => c.id === data.conversation_id);
+  if (isMuted(conversation)) return; // muted chat (KAN-41)
   playNotificationSound();
 
-  const conversation = conversationsCache.find((c) => c.id === data.conversation_id);
   reactionToastTarget = conversation || { id: data.conversation_id, kind: "direct", other_user: data.user };
   reactionToastEl.textContent = `${displayName(data.user)} reacted ${data.reaction.emoji} to your message`;
   reactionToastEl.hidden = false;
@@ -1542,6 +1600,18 @@ function handleNotification(data) {
   // A group someone added me to (KAN-35) — the reload above is all it needs.
   if (data.event === "conversation_created") return;
 
+  // Renamed, re-themed, nicknamed, members changed or (un)muted (KAN-41).
+  if (data.event === "conversation_updated") {
+    if (data.conversation.id === activeConversationId) applyConversationUpdate(data.conversation);
+    return;
+  }
+
+  // I left or was removed from a group, or deleted the chat in another tab (KAN-41).
+  if (data.event === "conversation_removed" || data.event === "conversation_cleared") {
+    if (data.conversation_id === activeConversationId) closeConversation();
+    return;
+  }
+
   if (data.event === "message_hidden") {
     if (data.conversation_id === activeConversationId) removeHiddenMessage(data.message_id);
     return;
@@ -1563,7 +1633,7 @@ function handleNotification(data) {
   if (message.conversation_id === activeConversationId) {
     handleIncoming(data); // dedup-safe (existing-id check) if also delivered via ConversationChannel
   } else {
-    if (event === "message_created" && message.sender.id !== currentUser.id) playNotificationSound();
+    if (event === "message_created" && message.sender.id !== currentUser.id && notifiable(message)) playNotificationSound();
   }
 }
 

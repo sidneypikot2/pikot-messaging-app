@@ -50,6 +50,12 @@ class User < ApplicationRecord
     chosen_status_until.present? && chosen_status_until <= Time.current
   end
 
+  # "Alice Smith", or the username/email for OAuth users who never gave a name — same
+  # fallback as the frontend's displayName.
+  def display_name
+    "#{first_name} #{last_name}".strip.presence || username.presence || email
+  end
+
   def verified?
     verified_at.present?
   end

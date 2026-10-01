@@ -27,23 +27,30 @@ module Conversations
       MessageHide.where(user_id: @user.id).select(:message_id)
     end
 
-    def latest_message
-      @conversation.messages.where.not(id: hidden_message_ids).includes(:sender).order(id: :desc).first
+    # Messages left after "delete chat" (KAN-41), minus anything unsent for this viewer.
+    def visible_messages
+      cleared = @conversation.conversation_memberships.find_by(user_id: @user.id)&.cleared_message_id
+      scope = @conversation.messages.where.not(id: hidden_message_ids)
+      cleared ? scope.where("messages.id > ?", cleared) : scope
     end
 
-    # Reactions on unsent or hidden messages don't count — the viewer can't see what
+    def latest_message
+      visible_messages.includes(:sender).order(id: :desc).first
+    end
+
+    # Reactions on unsent, hidden or cleared messages don't count — the viewer can't see what
     # they'd be pointing at.
     def latest_reaction
       MessageReaction.joins(:message)
-        .where(messages: { conversation_id: @conversation.id, deleted_at: nil })
-        .where.not(message_id: hidden_message_ids)
+        .where(message_id: visible_messages.where(deleted_at: nil).select(:id))
         .includes(:user, :message)
         .order(created_at: :desc, id: :desc)
         .first
     end
 
     def message_activity(message)
-      { type: "message", actor: UserSerializer.call(message.sender), deleted: message.deleted?,
+      { type: "message", kind: message.kind, system_event: message.system_event,
+        actor: UserSerializer.call(message.sender), deleted: message.deleted?,
         body: message.deleted? ? nil : message.body.truncate(BODY_PREVIEW_LENGTH), at: message.created_at }
     end
 

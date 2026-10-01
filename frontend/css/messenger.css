@@ -1599,3 +1599,389 @@ body {
 .reaction-toast:hover {
   background: #26327a;
 }
+
+/* Conversation settings (KAN-41) */
+
+.thread-info-btn {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--orange-dark);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.thread-info-btn:hover {
+  background: var(--bg);
+}
+
+/* Beats ".thread-header span", which would make the icon bold navy text. */
+.thread-info-btn .icon {
+  color: inherit;
+  font-weight: normal;
+}
+
+.thread-info-btn.active .icon {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.messenger--info-open {
+  grid-template-columns: minmax(240px, 320px) 1fr minmax(260px, 320px);
+}
+
+.chat-info {
+  overflow-y: auto;
+  background: #fff;
+  border-left: 1px solid var(--border);
+  padding: 0 0.75rem 1.5rem;
+  min-width: 0;
+}
+
+.chat-info-top {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 0.5rem 1rem;
+  text-align: center;
+}
+
+.chat-info-close {
+  position: absolute;
+  top: 0.75rem;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.chat-info-close:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.chat-info-close-mobile {
+  display: none;
+}
+
+/* The conversation's avatar (or a group's two-avatar stack) at twice the list size. */
+.chat-info-avatar {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-info-avatar > .avatar,
+.chat-info-avatar > .avatar-stack {
+  transform: scale(2);
+}
+
+.chat-info-name {
+  margin: 0.9rem 0 0;
+  font-size: 1.1rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.chat-info-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.chat-info-quick {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.chat-info-quick .icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.chat-info-quick:hover .icon {
+  background: var(--border);
+}
+
+.chat-info-section {
+  border-top: 1px solid var(--border);
+  padding: 0.25rem 0;
+}
+
+.chat-info-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.chat-info-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.chat-info-section summary:hover {
+  background: var(--bg);
+}
+
+.chat-info-section summary .icon {
+  transition: transform 0.15s;
+}
+
+.chat-info-section:not([open]) summary .icon {
+  transform: rotate(-90deg);
+}
+
+.chat-info-action,
+.chat-info-member {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.chat-info-action {
+  cursor: pointer;
+}
+
+.chat-info-action:hover,
+.chat-info-member:hover {
+  background: var(--bg);
+}
+
+.chat-info-action-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.chat-info-action.danger {
+  color: var(--error);
+}
+
+.chat-info-action-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+
+.chat-info-action-text small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.chat-info-member .avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  font-size: 0.7rem;
+}
+
+.chat-info-member-remove {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.chat-info-member-remove:hover {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+/* The list row's name sits with a small muted bell beside it. */
+.conversation-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.conversation-muted {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* Grey centered "Alice named the group Trip" lines in the thread. */
+.message-row.system {
+  align-items: center;
+}
+
+.message-row.system > * {
+  max-width: 85%;
+}
+
+.system-line {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* The shared settings dialog. */
+
+.settings-text {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.settings-error {
+  margin: -0.5rem 1.25rem 1rem;
+  font-size: 0.85rem;
+  color: var(--error);
+}
+
+.modal-confirm.danger {
+  background: var(--error);
+}
+
+.modal-confirm.danger:hover {
+  background: #b93a3a;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.75rem;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.theme-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px transparent;
+}
+
+.theme-swatch .icon {
+  visibility: hidden;
+}
+
+.theme-option input:checked + .theme-swatch {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text);
+}
+
+.theme-option input:checked + .theme-swatch .icon {
+  visibility: visible;
+}
+
+.theme-option input:focus-visible + .theme-swatch {
+  outline: 2px solid var(--navy);
+  outline-offset: 4px;
+}
+
+.nickname-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nickname-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  /* The panel takes the whole screen, with a back arrow to the chat. */
+  .messenger--info-open {
+    grid-template-columns: 1fr;
+  }
+
+  .messenger--info-open .thread,
+  .messenger--info-open .sidebar {
+    display: none;
+  }
+
+  .chat-info {
+    border-left: none;
+  }
+
+  .chat-info-close-desktop {
+    display: none;
+  }
+
+  .chat-info-close-mobile {
+    display: inline-block;
+  }
+}

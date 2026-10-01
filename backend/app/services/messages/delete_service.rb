@@ -7,6 +7,7 @@ module Messages
 
     def call
       raise NotAuthorizedError, "not the sender of this message" unless @message.sender_id == @sender.id
+      raise NotAuthorizedError, "system messages can't be changed" if @message.system?
 
       @message.update!(deleted_at: Time.current)
       payload = { event: "message_deleted", message: MessageSerializer.call(@message, current_user: @sender) }

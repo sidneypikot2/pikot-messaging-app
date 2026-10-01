@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -43,10 +43,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_100000) do
   end
 
   create_table "conversation_memberships", force: :cascade do |t|
+    t.bigint "cleared_message_id"
     t.bigint "conversation_id", null: false
     t.datetime "created_at", null: false
     t.datetime "last_read_at"
     t.bigint "last_read_message_id"
+    t.datetime "muted_until"
+    t.string "nickname"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["conversation_id", "user_id"], name: "index_conversation_memberships_on_conversation_id_and_user_id", unique: true
@@ -60,6 +63,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_100000) do
     t.integer "kind", default: 0, null: false
     t.string "name"
     t.bigint "owner_id"
+    t.string "theme"
     t.datetime "updated_at", null: false
     t.index ["owner_id"], name: "index_conversations_on_owner_id"
   end
@@ -91,8 +95,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_100000) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.datetime "edited_at"
+    t.integer "kind", default: 0, null: false
     t.bigint "reply_to_message_id"
     t.bigint "sender_id", null: false
+    t.jsonb "system_event"
     t.datetime "updated_at", null: false
     t.index ["conversation_id", "id"], name: "index_messages_on_conversation_id_and_id"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
