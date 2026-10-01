@@ -1408,11 +1408,33 @@ function applyReactionUpdate(data) {
 
 const notificationSound = new Audio("sounds/notification.mp3");
 
+// Browsers reject audio.play() from an async/WebSocket-triggered call until the page has
+// had some user gesture (confirmed live: NotAllowedError, "play() failed because the
+// user didn't interact with the document first") — with no gesture yet, every
+// notification silently fails via playNotificationSound's own catch below, which reads
+// as "the sound only plays after opening a conversation," since that's usually the
+// user's first click. Priming playback on the very first interaction anywhere unlocks it
+// for the rest of the page's lifetime, regardless of what that first interaction was or
+// what's currently selected. The very first notification with truly zero interaction
+// since page load can never play — that's a hard browser restriction, not something
+// application code can work around — but nothing beyond that unavoidable gap.
+function unlockNotificationSound() {
+  notificationSound
+    .play()
+    .then(() => {
+      notificationSound.pause();
+      notificationSound.currentTime = 0;
+    })
+    .catch(() => {});
+}
+document.addEventListener("pointerdown", unlockNotificationSound, { once: true });
+document.addEventListener("keydown", unlockNotificationSound, { once: true });
+
 function playNotificationSound() {
   if (myStatus === "dnd") return; // Do Not Disturb (KAN-39)
   notificationSound.currentTime = 0;
-  // Autoplay can be rejected before any user gesture on the page; ignore that case
-  // rather than surface an unhandled rejection.
+  // Still guards the truly-first-ever notification (no gesture at all yet); ignore that
+  // case rather than surface an unhandled rejection.
   notificationSound.play().catch(() => {});
 }
 
