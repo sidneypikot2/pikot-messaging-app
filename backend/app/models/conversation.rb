@@ -1,5 +1,7 @@
 class Conversation < ApplicationRecord
   NAME_MAX_LENGTH = 100
+  # Chat theme presets (KAN-41); nil is the app's own orange.
+  THEMES = %w[orange blue purple pink green red teal].freeze
 
   # Direct (1:1) and group chats share one table (SPEC.md §5) so messages, reactions,
   # read markers and the Action Cable channel work the same for both (KAN-35).
@@ -14,4 +16,13 @@ class Conversation < ApplicationRecord
   normalizes :name, with: ->(name) { name.strip }
 
   validates :name, presence: true, length: { maximum: NAME_MAX_LENGTH }, if: :group?
+  validates :theme, inclusion: { in: THEMES }, allow_nil: true
+
+  def membership_for(user)
+    conversation_memberships.find_by(user_id: user.id)
+  end
+
+  def member?(user)
+    conversation_memberships.exists?(user_id: user.id)
+  end
 end

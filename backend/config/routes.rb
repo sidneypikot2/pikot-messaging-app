@@ -28,9 +28,14 @@ Rails.application.routes.draw do
   # 4 message actions under /conversations/:id/messages (see SPEC.md Section 7).
   get "users/search", to: "users#search"
 
-  resources :conversations, only: [ :index, :show, :create ] do
+  # Conversation settings (KAN-41): update = rename / theme, destroy = "delete chat" for
+  # the current user only; members = add people, nickname, remove / leave; mute = the
+  # current user's own notifications for this chat.
+  resources :conversations, only: [ :index, :show, :create, :update, :destroy ] do
     member { post :read }
     resources :messages, only: [ :index, :create ]
+    resources :members, only: [ :create, :update, :destroy ], controller: "conversation_members"
+    resource :mute, only: [ :update, :destroy ], controller: "conversation_mutes"
   end
   # Group chats (KAN-35) — creation only for now; they're Conversation records, so
   # reading and messaging go through the conversation routes above.

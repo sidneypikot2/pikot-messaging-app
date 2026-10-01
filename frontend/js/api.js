@@ -200,6 +200,54 @@ const Api = {
     if (!res.ok) throw new Error(`Failed to mark conversation as read (${res.status})`);
   },
 
+  // --- Conversation settings (KAN-41) ---
+  // Each returns { conversation } with the changes applied, except the two that take the
+  // conversation away from the current user (removeMember on yourself, deleteConversation).
+
+  // Any of { name (groups only), theme }; theme "" goes back to the default.
+  async updateConversation(token, conversationId, changes) {
+    return this._settingsRequest(token, "PATCH", `/conversations/${conversationId}`, changes);
+  },
+
+  async setNickname(token, conversationId, userId, nickname) {
+    return this._settingsRequest(token, "PATCH", `/conversations/${conversationId}/members/${userId}`, { nickname });
+  },
+
+  async addMembers(token, conversationId, memberIds) {
+    return this._settingsRequest(token, "POST", `/conversations/${conversationId}/members`, { member_ids: memberIds });
+  },
+
+  // Removing yourself is leaving the group.
+  async removeMember(token, conversationId, userId) {
+    return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}/members/${userId}`);
+  },
+
+  // durationMinutes: 15, 60, 480 or 1440; null = until turned back on.
+  async muteConversation(token, conversationId, durationMinutes) {
+    return this._settingsRequest(token, "PUT", `/conversations/${conversationId}/mute`, { duration_minutes: durationMinutes });
+  },
+
+  async unmuteConversation(token, conversationId) {
+    return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}/mute`);
+  },
+
+  // "Delete chat" — for the current user only.
+  async deleteConversation(token, conversationId) {
+    return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}`);
+  },
+
+  async _settingsRequest(token, method, path, body) {
+    const res = await fetch(`${window.API_BASE_URL}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.errors || [])[0] || data.error || `Something went wrong (${res.status})`);
+    return data;
+  },
+
   async searchUsers(token, query) {
     const url = new URL(`${window.API_BASE_URL}/users/search`);
     url.searchParams.set("q", query);

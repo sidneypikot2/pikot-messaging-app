@@ -8,6 +8,8 @@ class MessageSerializer < ApplicationService
     {
       id: @message.id,
       conversation_id: @message.conversation_id,
+      kind: @message.kind,
+      system_event: @message.system_event,
       sender: UserSerializer.call(@message.sender),
       body: @message.deleted? ? nil : @message.body,
       deleted: @message.deleted?,

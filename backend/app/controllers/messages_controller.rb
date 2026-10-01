@@ -10,6 +10,8 @@ class MessagesController < ApplicationController
     scope = conversation.messages.includes(:sender, reply_to_message: :sender).order(id: :desc).limit(limit + 1)
     scope = scope.where("messages.id < ?", params[:before]) if params[:before].present?
     scope = scope.where.not(id: current_user.message_hides.select(:message_id))
+    cleared = conversation.membership_for(current_user).cleared_message_id
+    scope = scope.where("messages.id > ?", cleared) if cleared # "delete chat" (KAN-41)
 
     page = scope.to_a
     has_more = page.size > limit
