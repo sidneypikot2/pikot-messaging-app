@@ -7,6 +7,11 @@ class User < ApplicationRecord
   has_many :message_hides, dependent: :destroy
   has_many :sent_messages, class_name: "Message", foreign_key: :sender_id, inverse_of: :sender, dependent: :destroy
 
+  # What the user picked from their status menu (KAN-39) — what others actually see also
+  # depends on whether they're connected (Presence.statuses). Never serialized for other
+  # users: "offline" here means "appear offline", and that has to stay a secret.
+  enum :chosen_status, Presence::STATUSES.index_by(&:itself), prefix: true, validate: true
+
   normalizes :email, with: ->(email) { email.strip.downcase }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },

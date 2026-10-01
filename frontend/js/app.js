@@ -32,11 +32,14 @@ const readReceipts = new Map();
 // Every sender seen in this page's lifetime, keyed by id — group chats label runs of
 // someone's messages with their name and avatar (KAN-35), and rows only carry the id.
 const knownSenders = new Map();
-// Who's online and when they were last seen, keyed by user id (KAN-39) — seeded from the
-// conversation list, then kept current by NotificationsChannel "presence" events. Per
-// user rather than per conversation, since one person can be in several chats.
+// Each user's status ("online" | "idle" | "dnd" | "offline") and when they were last
+// seen, keyed by user id (KAN-39) — seeded from the conversation list, then kept current
+// by NotificationsChannel "presence" events. Per user rather than per conversation, since
+// one person can be in several chats.
 const presenceByUser = new Map();
 let headerConversation = null; // what the thread header is currently showing
+let myStatus = "online"; // what I picked (or auto-idle), shown on my own avatar (KAN-39)
+let notificationsSubscription = null; // to tell the server this tab is away (auto-idle)
 
 const conversationListEl = document.getElementById("conversation-list");
 const conversationsStatusEl = document.getElementById("conversations-status");
@@ -108,45 +111,53 @@ function renderConversationAvatar(el, conversation) {
 
 // --- Presence (KAN-39) ---
 
+const STATUS_LABELS = { online: "Active now", idle: "Idle", dnd: "Do not disturb", offline: "Offline" };
+const STATUS_RANK = { online: 3, idle: 2, dnd: 1, offline: 0 };
+
 function otherMembers(conversation) {
   if (!isGroup(conversation)) return conversation.other_user ? [conversation.other_user] : [];
   return conversation.members.filter((member) => member.id !== currentUser.id);
 }
 
-// A group counts as online when anyone else in it is, Messenger-style; otherwise it was
-// last active when its most recently seen other member was.
+// A group shows its most available other member (online beats idle beats do-not-disturb),
+// Messenger-style; when nobody is around it was last active when its most recently seen
+// other member was.
 function conversationPresence(conversation) {
   const others = otherMembers(conversation).map((user) => presenceByUser.get(user.id)).filter(Boolean);
-  if (others.some((presence) => presence.online)) return { online: true, lastSeenAt: null };
+  const status = others.map((presence) => presence.status).reduce((best, s) => (STATUS_RANK[s] > STATUS_RANK[best] ? s : best), "offline");
+  if (status !== "offline") return { status, lastSeenAt: null };
 
   const lastSeen = others.map((presence) => presence.last_seen_at).filter(Boolean).sort().at(-1);
-  return { online: false, lastSeenAt: lastSeen || null };
+  return { status, lastSeenAt: lastSeen || null };
+}
+
+function buildStatusDot(status) {
+  const dot = document.createElement("span");
+  dot.className = `presence-dot status-${status}`;
+  dot.title = STATUS_LABELS[status];
+  return dot;
 }
 
 function minutesSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 }
 
-// "Active now" / "Active 5m ago" / "Active 3h ago" / "Active 2d ago", or nothing once
-// it's been a week — Messenger stops saying after a while too.
+// "Active now" / "Idle" / "Do not disturb", or "Active 5m ago" / "3h ago" / "2d ago"
+// once they've left, then nothing after a week — Messenger stops saying after a while.
 function presenceText(conversation) {
-  const { online, lastSeenAt } = conversationPresence(conversation);
-  if (online) return "Active now";
+  const { status, lastSeenAt } = conversationPresence(conversation);
+  if (status !== "offline") return STATUS_LABELS[status];
   if (!lastSeenAt || minutesSince(lastSeenAt) >= 7 * 24 * 60) return "";
   const ago = shortTimeAgo(lastSeenAt);
   return ago === "now" ? "Active just now" : `Active ${ago} ago`;
 }
 
-// The green dot on an online avatar; in the list, someone who left within the hour gets
-// a small "5m" pill there instead, like Messenger. Nothing after that.
+// A green (online), yellow-moon (idle) or red (do not disturb) dot on the avatar; in the
+// list, someone who left within the hour gets a small "5m" pill there instead, like
+// Messenger. Nothing after that.
 function buildPresenceBadge(conversation, { withAgo }) {
-  const { online, lastSeenAt } = conversationPresence(conversation);
-  if (online) {
-    const dot = document.createElement("span");
-    dot.className = "presence-dot";
-    dot.title = "Active now";
-    return dot;
-  }
+  const { status, lastSeenAt } = conversationPresence(conversation);
+  if (status !== "offline") return buildStatusDot(status);
   if (!withAgo || !lastSeenAt || minutesSince(lastSeenAt) >= 60) return null;
 
   const pill = document.createElement("span");
@@ -163,10 +174,80 @@ function mergePresence(conversations) {
 }
 
 function handlePresence(data) {
-  presenceByUser.set(data.user_id, { user_id: data.user_id, online: data.online, last_seen_at: data.last_seen_at });
+  // My own status changed — from another tab, or auto-idle (KAN-39).
+  if (data.user_id === currentUser.id) {
+    setMyStatus(data.status);
+    return;
+  }
+  presenceByUser.set(data.user_id, { user_id: data.user_id, status: data.status, last_seen_at: data.last_seen_at });
   if (conversationsCache.length > 0) renderList(conversationListEl, conversationsCache, buildConversationItem);
   renderHeaderPresence();
 }
+
+// --- My status picker (KAN-39) ---
+
+const statusBtnEl = document.getElementById("status-btn");
+const statusMenuEl = document.getElementById("status-menu");
+const myAvatarEl = document.getElementById("my-avatar");
+
+function setMyStatus(status) {
+  myStatus = status;
+  const wrap = myAvatarEl.parentElement;
+  wrap.querySelector(".presence-dot")?.remove();
+  wrap.appendChild(buildStatusDot(status));
+  statusBtnEl.title = `Status: ${status === "dnd" ? "Do Not Disturb" : status[0].toUpperCase() + status.slice(1)}`;
+  statusMenuEl.querySelectorAll("li").forEach((li) => li.setAttribute("aria-checked", String(li.dataset.status === status)));
+}
+
+function toggleStatusMenu(open = statusMenuEl.hidden) {
+  statusMenuEl.hidden = !open;
+  statusBtnEl.setAttribute("aria-expanded", String(open));
+}
+
+statusBtnEl.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleStatusMenu();
+});
+
+statusMenuEl.addEventListener("click", async (event) => {
+  const item = event.target.closest("li[data-status]");
+  if (!item) return;
+  toggleStatusMenu(false);
+  const previous = myStatus;
+  setMyStatus(item.dataset.status);
+  try {
+    await Api.updateStatus(token, item.dataset.status);
+  } catch {
+    setMyStatus(previous);
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!statusMenuEl.hidden && !event.target.closest(".status-picker")) toggleStatusMenu(false);
+});
+
+// Auto-idle: after 10 minutes with no mouse, keyboard, touch or scroll activity in this
+// tab, tell the server it's away; the next activity says it's back. The server only
+// shows "Idle" once every one of my tabs is away (KAN-39).
+const AWAY_AFTER_MS = 10 * 60 * 1000;
+let awayTimer = null;
+let tabAway = false;
+
+function noteActivity() {
+  if (tabAway) {
+    tabAway = false;
+    notificationsSubscription?.perform("away", { away: false });
+  }
+  clearTimeout(awayTimer);
+  awayTimer = setTimeout(() => {
+    tabAway = true;
+    notificationsSubscription?.perform("away", { away: true });
+  }, AWAY_AFTER_MS);
+}
+
+["pointerdown", "pointermove", "keydown", "wheel", "touchstart", "focus"].forEach((type) => {
+  window.addEventListener(type, noteActivity, { passive: true });
+});
 
 function activityPreviewText(activity, conversation) {
   const otherUser = conversation.other_user;
@@ -1229,6 +1310,7 @@ function applyReactionUpdate(data) {
 const notificationSound = new Audio("sounds/notification.mp3");
 
 function playNotificationSound() {
+  if (myStatus === "dnd") return; // Do Not Disturb (KAN-39)
   notificationSound.currentTime = 0;
   // Autoplay can be rejected before any user gesture on the page; ignore that case
   // rather than surface an unhandled rejection.
@@ -1259,6 +1341,7 @@ reactionToastEl.addEventListener("click", () => {
 });
 
 function notifyReaction(data) {
+  if (myStatus === "dnd") return; // Do Not Disturb: no sound or pop-up (KAN-39)
   playNotificationSound();
 
   const conversation = conversationsCache.find((c) => c.id === data.conversation_id);
@@ -1709,8 +1792,10 @@ logoutBtn.addEventListener("click", () => {
 
 async function init() {
   try {
-    const { user } = await Api.me(token);
+    const { user, status } = await Api.me(token);
     currentUser = user;
+    Avatar.render(myAvatarEl, user);
+    setMyStatus(status || "online");
   } catch {
     Session.clear();
     window.location.href = "login.html";
@@ -1718,7 +1803,8 @@ async function init() {
   }
 
   cable = Cable.create(token);
-  cable.subscribeToNotifications(handleNotification);
+  notificationsSubscription = cable.subscribeToNotifications(handleNotification);
+  noteActivity();
   await loadConversations();
 }
 

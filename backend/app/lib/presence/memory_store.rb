@@ -2,37 +2,41 @@ module Presence
   # Same interface as RedisStore, held in this process — only used in test.
   class MemoryStore
     def initialize
-      @entries = Hash.new { |hash, user_id| hash[user_id] = {} }
+      @expiries = Hash.new { |hash, user_id| hash[user_id] = {} }
+      @away = Hash.new { |hash, user_id| hash[user_id] = Set.new }
       @lock = Mutex.new
     end
 
     def add(user_id, connection_id, expires_at)
-      @lock.synchronize do
-        @entries[user_id][connection_id] = expires_at
-        live_count(user_id)
-      end
+      @lock.synchronize { @expiries[user_id][connection_id] = expires_at }
     end
 
     def remove(user_id, connection_id)
       @lock.synchronize do
-        @entries[user_id].delete(connection_id)
-        live_count(user_id)
+        @expiries[user_id].delete(connection_id)
+        @away[user_id].delete(connection_id)
       end
     end
 
-    def online_ids(user_ids)
-      @lock.synchronize { user_ids.select { |id| live_count(id).positive? } }
+    def set_away(user_id, connection_id, away)
+      @lock.synchronize { away ? @away[user_id].add(connection_id) : @away[user_id].delete(connection_id) }
+    end
+
+    def connections(user_ids)
+      now = Time.current
+      @lock.synchronize do
+        user_ids.to_h do |id|
+          live = @expiries[id].select { |_connection_id, expires_at| expires_at > now }.keys
+          [ id, [ live.size, (live - @away[id].to_a).size ] ]
+        end
+      end
     end
 
     def clear
-      @lock.synchronize { @entries.clear }
-    end
-
-    private
-
-    def live_count(user_id)
-      now = Time.current
-      @entries[user_id].count { |_connection_id, expires_at| expires_at > now }
+      @lock.synchronize do
+        @expiries.clear
+        @away.clear
+      end
     end
   end
 end

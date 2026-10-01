@@ -10,7 +10,20 @@
   <div id="messenger" class="messenger">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>PikotChat</h1>
+        <div class="sidebar-brand">
+          <div class="status-picker">
+            <button type="button" id="status-btn" class="status-btn" aria-haspopup="menu" aria-expanded="false" title="Set your status">
+              <div class="avatar-wrap"><div id="my-avatar" class="avatar"></div></div>
+            </button>
+            <ul id="status-menu" class="status-menu" role="menu" hidden>
+              <li role="menuitemradio" data-status="online"><span class="presence-dot status-online"></span><span class="status-menu-text"><strong>Online</strong></span></li>
+              <li role="menuitemradio" data-status="idle"><span class="presence-dot status-idle"></span><span class="status-menu-text"><strong>Idle</strong></span></li>
+              <li role="menuitemradio" data-status="dnd"><span class="presence-dot status-dnd"></span><span class="status-menu-text"><strong>Do Not Disturb</strong><small>You won't get notification sounds or pop-ups</small></span></li>
+              <li role="menuitemradio" data-status="offline"><span class="presence-dot status-offline"></span><span class="status-menu-text"><strong>Offline</strong><small>You'll appear offline, but can still chat</small></span></li>
+            </ul>
+          </div>
+          <h1>PikotChat</h1>
+        </div>
         <button type="button" id="logout-btn" class="logout-btn">Log out</button>
       </div>
 

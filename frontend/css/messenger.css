@@ -60,6 +60,91 @@ body {
   color: var(--navy);
 }
 
+/* My avatar + status menu (KAN-39) */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.status-picker {
+  position: relative;
+}
+
+.status-btn {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.status-btn .avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  font-size: 0.75rem;
+}
+
+.status-btn .presence-dot {
+  width: 13px;
+  height: 13px;
+}
+
+.status-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: 250px;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(27, 37, 89, 0.15);
+}
+
+.status-menu li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.status-menu li:hover {
+  background: var(--bg);
+}
+
+.status-menu li[aria-checked="true"] {
+  background: rgba(242, 153, 74, 0.15);
+}
+
+.status-menu .presence-dot {
+  position: relative;
+  flex-shrink: 0;
+  right: auto;
+  bottom: auto;
+  margin-top: 2px;
+  border-color: transparent;
+}
+
+.status-menu-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.status-menu-text small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .logout-btn {
   border: 1px solid var(--border);
   background: #fff;
@@ -299,6 +384,45 @@ body {
   border-radius: 50%;
   background: #31a24c;
   border: 2.5px solid #fff;
+}
+
+/* Idle: a yellow crescent moon; Do Not Disturb: red with a white bar; Offline (only on
+   my own avatar and in the status menu): a grey ring. */
+.presence-dot.status-idle {
+  background: #f0b232;
+  overflow: hidden;
+}
+
+.presence-dot.status-idle::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.presence-dot.status-dnd {
+  background: #e5484d;
+}
+
+.presence-dot.status-dnd::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.presence-dot.status-offline {
+  background: #fff;
+  box-shadow: inset 0 0 0 3px #9aa0a6;
 }
 
 /* Left within the hour: a "5m" pill where the dot would be, Messenger-style. */

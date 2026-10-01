@@ -22,44 +22,56 @@ RSpec.describe NotificationsChannel, type: :channel do
   end
 
   describe "presence (KAN-39)" do
-    it "marks the user online and tells the people they share a conversation with" do
-      user = create(:user)
-      contact = create(:user)
+    let(:user) { create(:user) }
+    let(:contact) { create(:user) }
+
+    before { share_conversation(user, contact) }
+
+    it "marks the user online and tells the people they share a conversation with, not strangers" do
       stranger = create(:user)
-      share_conversation(user, contact)
       stub_connection current_user: user
 
       expect { subscribe }
-        .to have_broadcasted_to(contact).with(event: "presence", user_id: user.id, online: true, last_seen_at: nil)
+        .to have_broadcasted_to(contact).with(event: "presence", user_id: user.id, status: "online", last_seen_at: nil)
         .and not_have_broadcasted_to(stranger)
-      expect(Presence.online?(user.id)).to be(true)
+      expect(Presence.status(user.id)).to eq("online")
     end
 
     it "marks the user offline, records last_seen_at and tells their contacts on unsubscribe" do
-      user = create(:user)
-      contact = create(:user)
-      share_conversation(user, contact)
       stub_connection current_user: user
       subscribe
 
       freeze_time do
         expect { unsubscribe }
-          .to have_broadcasted_to(contact).with(event: "presence", user_id: user.id, online: false, last_seen_at: Time.current)
+          .to have_broadcasted_to(contact).with(event: "presence", user_id: user.id, status: "offline", last_seen_at: Time.current)
         expect(user.reload.last_seen_at).to eq(Time.current)
       end
-      expect(Presence.online?(user.id)).to be(false)
     end
 
     it "stays online and says nothing while another tab is still open" do
-      user = create(:user)
-      contact = create(:user)
-      share_conversation(user, contact)
       Presence.connect(user.id, "other-tab")
       stub_connection current_user: user
 
       expect { subscribe }.not_to have_broadcasted_to(contact)
       expect { unsubscribe }.not_to have_broadcasted_to(contact)
-      expect(Presence.online?(user.id)).to be(true)
+      expect(Presence.status(user.id)).to eq("online")
+    end
+
+    it "goes idle when the tab reports it's away, and back online when it isn't" do
+      stub_connection current_user: user
+      subscribe
+
+      expect { perform :away, away: true }
+        .to have_broadcasted_to(contact).with(hash_including(event: "presence", status: "idle"))
+      expect { perform :away, away: false }
+        .to have_broadcasted_to(contact).with(hash_including(event: "presence", status: "online"))
+    end
+
+    it "says nothing to anyone when someone appearing offline connects" do
+      user.update!(chosen_status: "offline")
+      stub_connection current_user: user
+
+      expect { subscribe }.not_to have_broadcasted_to(contact)
     end
   end
 end

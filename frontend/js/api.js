@@ -28,7 +28,20 @@ const Api = {
 
     if (!res.ok) throw new Error(`Session check failed (${res.status})`);
 
-    return res.json(); // { user }
+    return res.json(); // { user, status } — status is the user's own chosen status (KAN-39)
+  },
+
+  // Online / Idle / Do Not Disturb / Offline ("online" | "idle" | "dnd" | "offline") (KAN-39)
+  async updateStatus(token, status) {
+    const res = await fetch(`${window.API_BASE_URL}/status`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.errors || [])[0] || `Failed to update status (${res.status})`);
+    return data; // { status }
   },
 
   async signup({ email, password, passwordConfirmation, firstName, lastName, username, avatarFile }) {
