@@ -5,12 +5,32 @@
   --navy: #1b2559;
   --orange: #f2994a;
   --orange-dark: #e07f2b;
+  /* Text-safe partners of the accent: --accent-ink is the accent as text on a light
+     surface, --on-accent is text on an accent fill. Themes override both (applyChatTheme). */
+  --accent-ink: #a25818;
+  --on-accent: var(--navy);
   --text: #1f2430;
-  --muted: #6b7280;
+  --muted: #5f6673;
   --border: #d8dce3;
   --bg: #f4f5f8;
-  --error: #d64545;
+  --error: #c53030;
   --error-bg: #fdecec;
+  /* Floating surfaces (menus, pickers) lift with shadow alone — no hairline as well. */
+  --shadow-pop: 0 1px 2px rgba(27, 37, 89, 0.1), 0 8px 24px rgba(27, 37, 89, 0.16);
+  accent-color: var(--orange);
+  caret-color: var(--accent-ink);
+  scrollbar-color: #c3c8d2 transparent;
+  scrollbar-width: thin;
+}
+
+::selection {
+  background: rgba(242, 153, 74, 0.35);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
 }
 
 * {
@@ -35,6 +55,7 @@ body {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
   height: 100vh;
+  height: 100dvh;
 }
 
 /* Sidebar */
@@ -102,9 +123,8 @@ body {
   padding: 0.35rem;
   list-style: none;
   background: #fff;
-  border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(27, 37, 89, 0.15);
+  box-shadow: var(--shadow-pop);
 }
 
 .status-menu li {
@@ -142,11 +162,11 @@ body {
 
 .status-menu-text small {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .status-menu-text .status-until {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -164,7 +184,7 @@ body {
 }
 
 .status-durations span {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -174,13 +194,13 @@ body {
   color: var(--text);
   border-radius: 999px;
   padding: 0.2rem 0.55rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
 .status-durations button:hover {
   border-color: var(--orange);
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 .logout-btn {
@@ -198,7 +218,7 @@ body {
 }
 
 .logout-btn:hover {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 .search-box {
@@ -225,7 +245,7 @@ body {
 
 .search-box input:focus {
   outline: none;
-  border-color: var(--orange);
+  border-color: var(--accent-ink);
   box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
 }
 
@@ -239,9 +259,8 @@ body {
   padding: 0.4rem;
   list-style: none;
   background: #fff;
-  border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 12px 30px -12px rgba(27, 37, 89, 0.25);
+  box-shadow: var(--shadow-pop);
   max-height: 260px;
   overflow-y: auto;
 }
@@ -319,7 +338,7 @@ body {
 }
 
 .conversation-preview.typing {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -351,8 +370,8 @@ body {
   padding: 0 6px;
   border-radius: 10px;
   background: var(--orange);
-  color: #fff;
-  font-size: 0.72rem;
+  color: var(--on-accent);
+  font-size: 0.75rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -501,7 +520,7 @@ body {
 }
 
 .new-group-btn:hover {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 .new-group-input {
@@ -515,7 +534,7 @@ body {
 
 .new-group-input:focus {
   outline: none;
-  border-color: var(--orange);
+  border-color: var(--accent-ink);
   box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
 }
 
@@ -558,7 +577,7 @@ body {
 }
 
 .new-group-chip button:hover {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 .new-group-search {
@@ -603,7 +622,13 @@ body {
   justify-content: center;
   color: var(--muted);
   text-align: center;
+  text-wrap: balance;
   padding: 2rem;
+}
+
+.thread-empty p {
+  max-width: 34ch;
+  margin: 0;
 }
 
 .thread-active {
@@ -631,6 +656,9 @@ body {
 .thread-header span {
   font-weight: 700;
   color: var(--navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .thread-header .thread-subtitle {
@@ -718,7 +746,7 @@ body {
 
 .message-row.own .message-bubble {
   background: var(--orange);
-  color: #fff;
+  color: var(--on-accent);
   border-bottom-right-radius: 4px;
 }
 
@@ -760,7 +788,7 @@ body {
 
 .message-edit button:first-of-type {
   background: var(--orange);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .message-edit button:last-of-type {
@@ -779,13 +807,13 @@ body {
 .time-divider {
   align-self: center;
   margin: 0.4rem 0 0.1rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted);
 }
 
 .message-edited {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--muted);
   margin: 0 0.6rem 0.15rem;
 }
@@ -802,7 +830,7 @@ body {
   bottom: calc(100% + 6px);
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--navy);
   color: #fff;
   font-size: 0.75rem;
   font-style: normal;
@@ -838,7 +866,7 @@ body {
 
 .seen-text {
   position: relative;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -881,7 +909,7 @@ body {
   bottom: calc(100% + 6px);
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--navy);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 400;
@@ -908,7 +936,7 @@ body {
 
 .message-sender-name {
   margin: 0 0 0.15rem 0.6rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -931,8 +959,7 @@ body {
   max-width: 100%;
   margin-bottom: 0.2rem;
   padding: 0.35rem 0.7rem;
-  border: none;
-  border-left: 3px solid var(--orange);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   color: var(--muted);
@@ -958,10 +985,6 @@ body {
   white-space: nowrap;
 }
 
-.message-quote.deleted {
-  border-left-color: var(--border);
-}
-
 .message-quote.deleted .message-quote-body {
   font-style: italic;
 }
@@ -981,15 +1004,10 @@ body {
   gap: 0.75rem;
   margin: 0 1.5rem;
   padding: 0.45rem 0.8rem;
-  border-left: 3px solid var(--orange);
   border-radius: 8px;
   background: var(--bg);
   font-size: 0.82rem;
   color: var(--muted);
-}
-
-.reply-bar[hidden] {
-  display: none;
 }
 
 .reply-bar-text {
@@ -1015,7 +1033,7 @@ body {
 }
 
 .reply-bar-cancel:hover {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 /* Reactions */
@@ -1107,9 +1125,8 @@ body {
   flex-direction: column;
   padding: 0.25rem;
   background: #fff;
-  border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(27, 37, 89, 0.12);
+  box-shadow: var(--shadow-pop);
 }
 
 .message-menu button {
@@ -1238,12 +1255,12 @@ body {
 
 .modal-cancel {
   background: none;
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 .modal-confirm {
   background: var(--orange);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .modal-confirm:hover {
@@ -1274,7 +1291,7 @@ body {
 .reaction-pill.mine {
   background: rgba(242, 153, 74, 0.15);
   border-color: var(--orange);
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 /* Emoji picker panel — shared by the per-message react-trigger and the composer's emoji
@@ -1285,10 +1302,9 @@ body {
 .emoji-picker {
   width: 300px;
   background: #fff;
-  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.5rem;
-  box-shadow: 0 12px 30px -12px rgba(27, 37, 89, 0.25);
+  box-shadow: var(--shadow-pop);
   z-index: 20;
   box-sizing: border-box;
 }
@@ -1332,7 +1348,7 @@ body {
 }
 
 .emoji-picker-tabs button.active {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 .emoji-picker-grid {
@@ -1380,7 +1396,7 @@ body {
 /* :not(:disabled) matches the specificity of ".composer button:hover:not(:disabled)". */
 .composer-input-wrap .emoji-picker-btn:hover:not(:disabled) {
   background: var(--bg);
-  color: var(--orange-dark);
+  color: var(--accent-ink);
 }
 
 /* Smiley buttons fill in on hover, Messenger-style (KAN-40). */
@@ -1444,7 +1460,7 @@ body {
   height: 7px;
   border-radius: 50%;
   background: var(--muted);
-  animation: typing-bounce 1.2s infinite ease-in-out;
+  animation: typing-wave 1.2s infinite ease-in-out;
 }
 
 .typing-bubble span:nth-child(2) {
@@ -1455,13 +1471,11 @@ body {
   animation-delay: 0.3s;
 }
 
-@keyframes typing-bounce {
+@keyframes typing-wave {
   0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.45;
+    opacity: 0.3;
   }
   30% {
-    transform: translateY(-4px);
     opacity: 1;
   }
 }
@@ -1510,7 +1524,7 @@ body {
 
 .composer textarea:focus {
   outline: none;
-  border-color: var(--orange);
+  border-color: var(--accent-ink);
   box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
 }
 
@@ -1518,7 +1532,7 @@ body {
   border: none;
   border-radius: 10px;
   background: var(--orange);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 700;
   font-size: 1rem;
   padding: 0 0.9rem;
@@ -1530,7 +1544,7 @@ body {
 }
 
 .composer button:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -1614,7 +1628,7 @@ body {
   border: none;
   border-radius: 50%;
   background: none;
-  color: var(--orange-dark);
+  color: var(--accent-ink);
   font-size: 1.15rem;
   cursor: pointer;
 }
@@ -1825,7 +1839,7 @@ body {
   width: 32px;
   height: 32px;
   min-width: 32px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .chat-info-member-remove {
@@ -1892,10 +1906,11 @@ body {
 
 .modal-confirm.danger {
   background: var(--error);
+  color: #fff;
 }
 
 .modal-confirm.danger:hover {
-  background: #b93a3a;
+  background: #a82828;
 }
 
 .theme-grid {
@@ -2007,7 +2022,6 @@ body {
   border-radius: 50%;
   background: #fff;
   color: var(--text);
-  box-shadow: 0 2px 8px rgba(27, 37, 89, 0.15);
   cursor: pointer;
 }
 
@@ -2049,5 +2063,128 @@ body {
 
   .conversation-list li .unread-badge {
     margin-right: 2.5rem;
+  }
+}
+
+/* Entrances for things that pop up. They run whenever the element starts rendering
+   ([hidden] removed, or inserted into the page), so no JS is involved; closing stays
+   instant. Menus grow out of the control that opened them; the emoji picker and the
+   chat list's ⋯ menu only fade and slide, because JS measures them as they open and a
+   scale would skew getBoundingClientRect. */
+.status-menu,
+.search-results,
+.message-menu {
+  transform-origin: top left;
+  animation: pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The message ⋮ menu is small, so it gets a deeper scale and a longer, gentler curve
+   to read as one smooth unfold rather than a snap. */
+.message-menu {
+  animation: pop-in-deep 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.emoji-picker,
+.message-menu.conversation-menu {
+  animation: fade-drop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.status-durations {
+  animation: fade-drop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-backdrop {
+  animation: fade-in 0.18s ease-out;
+}
+
+.modal {
+  animation: modal-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reaction-toast {
+  animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+}
+
+@keyframes pop-in-deep {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.92);
+  }
+}
+
+@keyframes fade-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* Expandable sections of the conversation panel (Customize chat, Privacy &
+   notifications, …) slide open and shut. Transitions rather than keyframes, so a
+   re-render of the panel doesn't replay them; browsers without interpolate-size just
+   snap as before. */
+@supports (interpolate-size: allow-keywords) {
+  .chat-info-section {
+    interpolate-size: allow-keywords;
+  }
+
+  .chat-info-section::details-content {
+    height: 0;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      height 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.2s ease-out,
+      content-visibility 0.26s allow-discrete;
+  }
+
+  .chat-info-section[open]::details-content {
+    height: auto;
+    opacity: 1;
+  }
+}
+
+/* Reduced motion: keep the fade, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .status-menu,
+  .search-results,
+  .message-menu,
+  .message-menu.conversation-menu,
+  .emoji-picker,
+  .status-durations,
+  .modal,
+  .reaction-toast {
+    animation: fade-in 0.12s ease-out;
+  }
+
+  .chat-info-section::details-content {
+    transition: opacity 0.12s ease-out, content-visibility 0.12s allow-discrete;
   }
 }

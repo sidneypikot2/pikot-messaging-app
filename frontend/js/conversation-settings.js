@@ -15,16 +15,17 @@ const settingsConfirmEl = document.getElementById("settings-confirm");
 
 // --- Themes ---
 
-// Same keys as Conversation::THEMES; null is the app's own orange. Each sets the two
-// colors the thread is drawn with (own bubbles, Send, accents).
+// Same keys as Conversation::THEMES; null is the app's own orange. Each sets the
+// colors the thread is drawn with (own bubbles, Send, accents): ink is the accent as
+// text on a light surface, on is the text color on an accent fill.
 const CHAT_THEMES = {
-  orange: { label: "Orange", color: "#f2994a", dark: "#e07f2b" },
-  blue: { label: "Blue", color: "#3b82f6", dark: "#2563eb" },
-  purple: { label: "Purple", color: "#9b51e0", dark: "#8240c4" },
-  pink: { label: "Pink", color: "#e84393", dark: "#cf2d7c" },
-  green: { label: "Green", color: "#27ae60", dark: "#1e9150" },
-  red: { label: "Red", color: "#eb5757", dark: "#d64545" },
-  teal: { label: "Teal", color: "#14a3a3", dark: "#0f8a8a" },
+  orange: { label: "Orange", color: "#f2994a", dark: "#e07f2b", ink: "#a25818", on: "#1b2559" },
+  blue: { label: "Blue", color: "#3b82f6", dark: "#2563eb", ink: "#1c5cea", on: "#fff" },
+  purple: { label: "Purple", color: "#9b51e0", dark: "#8240c4", ink: "#8240c4", on: "#fff" },
+  pink: { label: "Pink", color: "#e84393", dark: "#cf2d7c", ink: "#be2972", on: "#fff" },
+  green: { label: "Green", color: "#27ae60", dark: "#1e9150", ink: "#197842", on: "#1b2559" },
+  red: { label: "Red", color: "#eb5757", dark: "#d64545", ink: "#c62c2c", on: "#fff" },
+  teal: { label: "Teal", color: "#14a3a3", dark: "#0f8a8a", ink: "#0d7373", on: "#1b2559" },
 };
 
 // Overrides the accent variables on the thread, the panel and its dialog only, so the sidebar keeps
@@ -35,9 +36,13 @@ function applyChatTheme(conversation) {
     if (theme) {
       el.style.setProperty("--orange", theme.color);
       el.style.setProperty("--orange-dark", theme.dark);
+      el.style.setProperty("--accent-ink", theme.ink);
+      el.style.setProperty("--on-accent", theme.on);
     } else {
       el.style.removeProperty("--orange");
       el.style.removeProperty("--orange-dark");
+      el.style.removeProperty("--accent-ink");
+      el.style.removeProperty("--on-accent");
     }
   });
 }
