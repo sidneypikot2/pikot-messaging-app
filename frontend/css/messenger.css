@@ -61,17 +61,20 @@ body {
 }
 
 .logout-btn {
-  border: 1px solid var(--border);
-  background: #fff;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
   color: var(--muted);
-  border-radius: 8px;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.8rem;
+  font-size: 1rem;
   cursor: pointer;
 }
 
 .logout-btn:hover {
-  border-color: var(--orange);
   color: var(--orange-dark);
 }
 
@@ -295,6 +298,7 @@ body {
   border-radius: 50%;
   background: var(--bg);
   color: var(--navy);
+  font-size: 1.1rem;
   cursor: pointer;
 }
 
@@ -346,11 +350,17 @@ body {
 }
 
 .new-group-chip button {
+  display: flex;
+  padding: 0;
   border: none;
   background: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.new-group-chip button:hover {
+  color: var(--orange-dark);
 }
 
 .new-group-search {
@@ -797,6 +807,8 @@ body {
 }
 
 .reply-bar-cancel {
+  display: flex;
+  padding: 0.15rem;
   border: none;
   background: none;
   color: var(--muted);
@@ -866,9 +878,13 @@ body {
   border-radius: 50%;
   background: none;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .message-toolbar > button:hover,
@@ -899,6 +915,9 @@ body {
 }
 
 .message-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   border: none;
   background: none;
   text-align: left;
@@ -959,7 +978,15 @@ body {
   border-radius: 50%;
   background: var(--bg);
   color: var(--muted);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--text);
 }
 
 .modal-body {
@@ -1089,9 +1116,11 @@ body {
 }
 
 .emoji-picker-tabs button {
+  display: flex;
   border: none;
   background: none;
-  font-size: 1.05rem;
+  color: var(--muted);
+  font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
   padding: 0.25rem;
@@ -1102,6 +1131,10 @@ body {
 .emoji-picker-tabs button.active,
 .emoji-picker-tabs button:hover {
   background: var(--bg);
+}
+
+.emoji-picker-tabs button.active {
+  color: var(--orange-dark);
 }
 
 .emoji-picker-grid {
@@ -1137,16 +1170,26 @@ body {
   transform: translateY(-50%);
   border: none;
   background: none;
+  display: flex;
   color: var(--muted);
-  font-size: 1.15rem;
+  font-size: 1rem;
   line-height: 1;
   padding: 0.2rem;
   border-radius: 6px;
   cursor: pointer;
 }
 
-.composer-input-wrap .emoji-picker-btn:hover {
+/* :not(:disabled) matches the specificity of ".composer button:hover:not(:disabled)". */
+.composer-input-wrap .emoji-picker-btn:hover:not(:disabled) {
   background: var(--bg);
+  color: var(--orange-dark);
+}
+
+/* Smiley buttons fill in on hover, Messenger-style (KAN-40). */
+.composer-input-wrap .emoji-picker-btn:hover .icon,
+.react-trigger:hover .icon,
+.emoji-picker-tabs button.active .icon {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
 /* Typing indicator (KAN-38): the typers' avatars beside a bubble of bouncing dots, as
@@ -1279,7 +1322,8 @@ body {
   background: var(--orange);
   color: #fff;
   font-weight: 700;
-  padding: 0 1.25rem;
+  font-size: 1rem;
+  padding: 0 0.9rem;
   cursor: pointer;
 }
 
@@ -1301,7 +1345,7 @@ body {
   background: none;
   color: var(--navy);
   font: inherit;
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -1331,7 +1375,7 @@ body {
   }
 
   .thread-back {
-    display: block;
+    display: flex;
   }
 }
 
