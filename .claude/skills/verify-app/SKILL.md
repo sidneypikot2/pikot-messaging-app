@@ -61,6 +61,23 @@ in `command:`, not in `environment:`, so exec'd processes don't inherit it.
 4. Read the browser console in each tab — a feature that renders but logs errors is not
    verified.
 
+### Screenshot budget
+
+Screenshots are the most expensive part of a verification run. Keep them few and small:
+
+- **Working screenshots at half scale** (`scale: 0.5`), and only when you need to see the
+  page to decide the next action. Aim for five or fewer per run.
+- **Full-size, saved to disk only for proof** — one per thing being proven, normally one
+  or two per task (`save_to_disk: true`).
+- **Prefer text over pixels**: use `find` / `read_page` to locate elements and confirm
+  text, and `read_console_messages` for errors, instead of taking a screenshot to look.
+- **Batch actions** (`browser_batch`) with a single screenshot at the end, not one after
+  every click.
+- **Check backend behaviour through the API**, not the browser: `curl` the endpoint with a
+  token from `POST /login`. Use the browser only for what the user actually sees.
+- **Stop after two failed attempts** at the same click or step. Don't keep re-screenshotting;
+  switch approach (element ref, actor/observer swap, API check) or report it as unverified.
+
 ## 4. Capture and post proof
 
 - Save screenshots to disk with descriptive names: `KAN-<n>-<what>.jpg`
