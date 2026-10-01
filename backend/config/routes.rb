@@ -12,6 +12,8 @@ Rails.application.routes.draw do
   post "signup", to: "registrations#create"
   post "login", to: "sessions#create"
   get "me", to: "sessions#show"
+  # Online / Idle / Do Not Disturb / Offline (KAN-39)
+  resource :status, only: [ :update ]
   post "email_verification", to: "email_verifications#create"
   post "email_verification/resend", to: "email_verifications#resend"
 

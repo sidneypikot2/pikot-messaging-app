@@ -11,7 +11,20 @@
   <div id="messenger" class="messenger">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>PikotChat</h1>
+        <div class="sidebar-brand">
+          <div class="status-picker">
+            <button type="button" id="status-btn" class="status-btn" aria-haspopup="menu" aria-expanded="false" title="Set your status">
+              <div class="avatar-wrap"><div id="my-avatar" class="avatar"></div></div>
+            </button>
+            <ul id="status-menu" class="status-menu" role="menu" hidden>
+              <li role="menuitemradio" data-status="online"><span class="presence-dot status-online"></span><span class="status-menu-text"><strong>Online</strong></span></li>
+              <li role="menuitemradio" data-status="idle"><span class="presence-dot status-idle"></span><span class="status-menu-text"><strong>Idle</strong></span></li>
+              <li role="menuitemradio" data-status="dnd" data-timed><span class="presence-dot status-dnd"></span><span class="status-menu-text"><strong>Do Not Disturb</strong><small>You won't get notification sounds or pop-ups</small><small class="status-until"></small><div class="status-durations" hidden><span>For</span><button type="button" data-minutes="10">10 min</button><button type="button" data-minutes="30">30 min</button><button type="button" data-minutes="60">1 hour</button><button type="button" data-minutes="360">6 hours</button><button type="button" data-minutes="1440">24 hours</button><button type="button" data-minutes="">Until I turn it off</button></div></span></li>
+              <li role="menuitemradio" data-status="offline" data-timed><span class="presence-dot status-offline"></span><span class="status-menu-text"><strong>Offline</strong><small>You'll appear offline, but can still chat</small><small class="status-until"></small><div class="status-durations" hidden><span>For</span><button type="button" data-minutes="10">10 min</button><button type="button" data-minutes="30">30 min</button><button type="button" data-minutes="60">1 hour</button><button type="button" data-minutes="360">6 hours</button><button type="button" data-minutes="1440">24 hours</button><button type="button" data-minutes="">Until I turn it off</button></div></span></li>
+            </ul>
+          </div>
+          <h1>PikotChat</h1>
+        </div>
         <button type="button" id="logout-btn" class="logout-btn" aria-label="Log out" title="Log out"><span class="icon" aria-hidden="true">logout</span></button>
       </div>
 
@@ -37,7 +50,7 @@
       <div id="thread-active" class="thread-active" hidden>
         <header class="thread-header">
           <button type="button" id="thread-back" class="thread-back" aria-label="Back to conversations"><span class="icon" aria-hidden="true">arrow_back</span></button>
-          <div id="thread-avatar" class="avatar"></div>
+          <div id="thread-avatar-wrap" class="avatar-wrap"><div id="thread-avatar" class="avatar"></div></div>
           <div class="thread-heading">
             <span id="thread-title"></span>
             <span id="thread-subtitle" class="thread-subtitle" hidden></span>

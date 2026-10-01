@@ -64,4 +64,20 @@ RSpec.describe ConversationSerializer do
 
     expect(described_class.call(conversation, current_user: alice)).to include(kind: "direct", name: nil)
   end
+
+  it "includes each other member's status and when they were last seen (KAN-39)" do
+    alice = create(:user)
+    bob = create(:user, last_seen_at: 5.minutes.ago.change(usec: 0))
+    carol = create(:user, chosen_status: "dnd")
+    conversation = create(:conversation)
+    [ alice, bob, carol ].each { |user| create(:conversation_membership, conversation: conversation, user: user) }
+    Presence.connect(carol.id, "tab")
+
+    result = described_class.call(conversation, current_user: alice)
+
+    expect(result[:presence]).to contain_exactly(
+      { user_id: bob.id, status: "offline", last_seen_at: bob.last_seen_at },
+      { user_id: carol.id, status: "dnd", last_seen_at: nil }
+    )
+  end
 end
