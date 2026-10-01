@@ -32,16 +32,17 @@ const Api = {
   },
 
   // Online / Idle / Do Not Disturb / Offline ("online" | "idle" | "dnd" | "offline") (KAN-39)
-  async updateStatus(token, status) {
+  // durationMinutes (Do Not Disturb / Offline only): 10, 30, 60, 360 or 1440; null = until turned off.
+  async updateStatus(token, status, durationMinutes = null) {
     const res = await fetch(`${window.API_BASE_URL}/status`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, duration_minutes: durationMinutes }),
     });
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((data.errors || [])[0] || `Failed to update status (${res.status})`);
-    return data; // { status }
+    return data; // { status, status_until }
   },
 
   async signup({ email, password, passwordConfirmation, firstName, lastName, username, avatarFile }) {

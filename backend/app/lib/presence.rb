@@ -32,9 +32,10 @@ module Presence
 
   # What other people see for each user id: "online", "idle", "dnd" or "offline".
   # Not connected, or chose to appear offline → "offline"; chose idle/dnd → that;
-  # otherwise "idle" when every open tab is away, else "online".
+  # otherwise "idle" when every open tab is away, else "online". A chosen status whose
+  # timer has run out counts as "online".
   def statuses(user_ids)
-    chosen = User.where(id: user_ids).pluck(:id, :chosen_status).to_h
+    chosen = User.where(id: user_ids).to_h { |user| [ user.id, user.current_chosen_status ] }
     store.connections(user_ids).to_h do |user_id, (live, active)|
       status = if live.zero? || chosen[user_id] == "offline" then "offline"
       elsif chosen[user_id] != "online" then chosen[user_id]

@@ -60,6 +60,13 @@ RSpec.describe Presence do
     expect(described_class.status(user.id)).to eq("offline")
   end
 
+  it "treats a chosen status whose timer has run out as Online" do
+    described_class.connect(user.id, "tab-a")
+    user.update!(chosen_status: "offline", chosen_status_until: 1.minute.ago)
+
+    expect(described_class.status(user.id)).to eq("online")
+  end
+
   it "reports several users at once" do
     other = create(:user)
     described_class.connect(user.id, "tab-a")

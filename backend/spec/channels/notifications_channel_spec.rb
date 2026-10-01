@@ -67,6 +67,19 @@ RSpec.describe NotificationsChannel, type: :channel do
         .to have_broadcasted_to(contact).with(hash_including(event: "presence", status: "online"))
     end
 
+    it "puts a timed status that has run out back to Online on the next heartbeat, and says so" do
+      user.update!(chosen_status: "dnd", chosen_status_until: 10.minutes.from_now)
+      stub_connection current_user: user
+      subscribe
+
+      travel 11.minutes do
+        expect { subscription.send(:heartbeat) }
+          .to have_broadcasted_to(contact).with(hash_including(event: "presence", status: "online"))
+          .and have_broadcasted_to(user).with(hash_including(event: "presence", status: "online"))
+        expect(user.reload).to have_attributes(chosen_status: "online", chosen_status_until: nil)
+      end
+    end
+
     it "says nothing to anyone when someone appearing offline connects" do
       user.update!(chosen_status: "offline")
       stub_connection current_user: user

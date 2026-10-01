@@ -12,6 +12,7 @@ class NotificationsChannel < ApplicationCable::Channel
     stream_for current_user
     @presence_id = SecureRandom.uuid
     Presence.track(current_user) { Presence.connect(current_user.id, @presence_id) }
+    expire_chosen_status
   end
 
   def unsubscribed
@@ -33,5 +34,19 @@ class NotificationsChannel < ApplicationCable::Channel
   def heartbeat
     Presence.heartbeat(current_user.id, @presence_id)
     current_user.update_column(:last_seen_at, Time.current) unless Presence.status(current_user.id) == "offline"
+    expire_chosen_status
+  end
+
+  # A timed Do Not Disturb / Offline that has run out goes back to Online, and everyone —
+  # the user's own tabs included — hears about it. Always broadcasts rather than going
+  # through Presence.track: statuses already read an expired timer as Online, so track
+  # would see no change, but whoever saw "Do not disturb" before still needs telling.
+  # Reloads first: current_user is the object loaded when this connection opened, and
+  # the status may have changed since.
+  def expire_chosen_status
+    return unless current_user.reload.chosen_status_expired?
+
+    current_user.update!(chosen_status: "online", chosen_status_until: nil)
+    Users::PresenceBroadcaster.call(current_user, status: Presence.status(current_user.id))
   end
 end

@@ -39,6 +39,8 @@ const knownSenders = new Map();
 const presenceByUser = new Map();
 let headerConversation = null; // what the thread header is currently showing
 let myStatus = "online"; // what I picked (or auto-idle), shown on my own avatar (KAN-39)
+let myStatusUntil = null; // when a timed Do Not Disturb / Offline runs out, if it does
+let myStatusExpiryTimer = null;
 let notificationsSubscription = null; // to tell the server this tab is away (auto-idle)
 
 const conversationListEl = document.getElementById("conversation-list");
@@ -174,9 +176,12 @@ function mergePresence(conversations) {
 }
 
 function handlePresence(data) {
-  // My own status changed — from another tab, or auto-idle (KAN-39).
+  // My own status changed — from another tab, auto-idle, or a timed one running out
+  // (KAN-39). The event doesn't say until when (nobody else should know), so ask.
   if (data.user_id === currentUser.id) {
-    setMyStatus(data.status);
+    Api.me(token)
+      .then(({ status_until }) => setMyStatus(data.status, status_until))
+      .catch(() => setMyStatus(data.status));
     return;
   }
   presenceByUser.set(data.user_id, { user_id: data.user_id, status: data.status, last_seen_at: data.last_seen_at });
@@ -190,17 +195,41 @@ const statusBtnEl = document.getElementById("status-btn");
 const statusMenuEl = document.getElementById("status-menu");
 const myAvatarEl = document.getElementById("my-avatar");
 
-function setMyStatus(status) {
+// "until 3:45 PM", or "until tomorrow, 3:45 PM" for a 24-hour one.
+function untilText(iso) {
+  const date = new Date(iso);
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return date.toDateString() === new Date().toDateString() ? `until ${time}` : `until tomorrow, ${time}`;
+}
+
+function setMyStatus(status, until = null) {
   myStatus = status;
+  myStatusUntil = until;
   const wrap = myAvatarEl.parentElement;
   wrap.querySelector(".presence-dot")?.remove();
   wrap.appendChild(buildStatusDot(status));
-  statusBtnEl.title = `Status: ${status === "dnd" ? "Do Not Disturb" : status[0].toUpperCase() + status.slice(1)}`;
-  statusMenuEl.querySelectorAll("li").forEach((li) => li.setAttribute("aria-checked", String(li.dataset.status === status)));
+  const label = status === "dnd" ? "Do Not Disturb" : status[0].toUpperCase() + status.slice(1);
+  statusBtnEl.title = `Status: ${label}${until ? ` ${untilText(until)}` : ""}`;
+  statusMenuEl.querySelectorAll("li").forEach((li) => {
+    const checked = li.dataset.status === status;
+    li.setAttribute("aria-checked", String(checked));
+    const untilEl = li.querySelector(".status-until");
+    if (untilEl) untilEl.textContent = checked && until ? `On ${untilText(until)}` : "";
+  });
+
+  // The server puts it back to Online within 30s of running out and tells every tab;
+  // this just makes my own view (and Do Not Disturb's muting) end right on time.
+  clearTimeout(myStatusExpiryTimer);
+  if (until) myStatusExpiryTimer = setTimeout(() => setMyStatus("online"), Math.max(0, new Date(until) - Date.now()));
+}
+
+function collapseStatusDurations() {
+  statusMenuEl.querySelectorAll(".status-durations").forEach((el) => { el.hidden = true; });
 }
 
 function toggleStatusMenu(open = statusMenuEl.hidden) {
   statusMenuEl.hidden = !open;
+  collapseStatusDurations();
   statusBtnEl.setAttribute("aria-expanded", String(open));
 }
 
@@ -209,16 +238,29 @@ statusBtnEl.addEventListener("click", (event) => {
   toggleStatusMenu();
 });
 
+// Online / Idle apply straight away; Do Not Disturb / Offline first open a row of
+// "for how long" choices (10 min … 24 hours, or until turned off).
 statusMenuEl.addEventListener("click", async (event) => {
   const item = event.target.closest("li[data-status]");
   if (!item) return;
+  const durationBtn = event.target.closest("button[data-minutes]");
+  if (item.hasAttribute("data-timed") && !durationBtn) {
+    const durations = item.querySelector(".status-durations");
+    const wasOpen = !durations.hidden;
+    collapseStatusDurations();
+    durations.hidden = wasOpen;
+    return;
+  }
+
+  const minutes = durationBtn?.dataset.minutes ? Number(durationBtn.dataset.minutes) : null;
   toggleStatusMenu(false);
-  const previous = myStatus;
-  setMyStatus(item.dataset.status);
+  const [previous, previousUntil] = [myStatus, myStatusUntil];
+  setMyStatus(item.dataset.status, minutes ? new Date(Date.now() + minutes * 60000).toISOString() : null);
   try {
-    await Api.updateStatus(token, item.dataset.status);
+    const { status, status_until } = await Api.updateStatus(token, item.dataset.status, minutes);
+    setMyStatus(status, status_until);
   } catch {
-    setMyStatus(previous);
+    setMyStatus(previous, previousUntil);
   }
 });
 
@@ -1792,10 +1834,10 @@ logoutBtn.addEventListener("click", () => {
 
 async function init() {
   try {
-    const { user, status } = await Api.me(token);
+    const { user, status, status_until } = await Api.me(token);
     currentUser = user;
     Avatar.render(myAvatarEl, user);
-    setMyStatus(status || "online");
+    setMyStatus(status || "online", status_until);
   } catch {
     Session.clear();
     window.location.href = "login.html";

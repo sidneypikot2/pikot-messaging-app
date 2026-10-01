@@ -15,6 +15,7 @@ class SessionsController < ApplicationController
   end
 
   def show
-    render json: { user: UserSerializer.call(current_user), status: current_user.chosen_status }, status: :ok
+    render json: { user: UserSerializer.call(current_user), status: current_user.current_chosen_status,
+                   status_until: current_user.chosen_status_expired? ? nil : current_user.chosen_status_until }, status: :ok
   end
 end

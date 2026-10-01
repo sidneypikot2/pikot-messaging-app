@@ -145,6 +145,44 @@ body {
   font-size: 0.72rem;
 }
 
+.status-menu-text .status-until {
+  color: var(--orange-dark);
+  font-weight: 600;
+}
+
+.status-menu-text .status-until:empty {
+  display: none;
+}
+
+/* "For how long" choices under Do Not Disturb / Offline */
+.status-durations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.status-durations span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.status-durations button {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.status-durations button:hover {
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+
 .logout-btn {
   border: 1px solid var(--border);
   background: #fff;
