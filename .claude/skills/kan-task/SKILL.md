@@ -21,8 +21,15 @@ git status --short
 git worktree list
 ```
 
-Jira: project `KAN`, cloudId `ca2c20d7-9b28-45c4-a475-81e449242242`, site
-`https://sidneypikot2.atlassian.net`. Statuses: To Do → In Progress → In Review → Done.
+The Jira project, site, cloudId and statuses are in `CLAUDE.md` (Project overview).
+
+**Cloud session** (`CLAUDE_CODE_REMOTE=true`): the same workflow with three differences.
+Skip step 2 — there is no Discord there. In step 3, use the Atlassian tools if the session
+has them; if it doesn't, ask the user for an existing `KAN-<n>` and don't start without
+one. In step 4 there is no worktree: rename the session's branch
+(`git branch -m <area>/kan-<n>-<kebab-summary>`) before the first push — the proxy lets a
+cloud session push any branch name, and CI rejects a PR from a `claude/...` branch. Skip
+step 7; the user tests from the PR.
 
 **Resuming**: if the task names an existing `KAN-<n>`, read the ticket first — its
 description ends with the state lines written in step 3 (`Discord thread:`, `Branch:`,
@@ -86,16 +93,17 @@ Then:
   loaded; don't guess).
 - `discord-thread.sh rename <threadId> "<KAN-key> <summary>"` and post the ticket link.
 
-If the Atlassian tools aren't available (cloud session without the connector), stop and
-say so — the branch name needs the ticket key.
+If the Atlassian tools aren't available, ask the user for the ticket key and write the
+state lines into the PR body instead — the branch name needs the key, so don't start
+without one.
 
 ## 4. Worktree and branch
 
 Each task gets its own git worktree, so parallel sessions and the user's own checkout
 never fight over one working tree. Leave the main checkout on whatever branch it is on.
 
-1. Enter a worktree named `kan-<n>-<kebab-summary>` (`EnterWorktree`). It starts from an
-   up-to-date `origin/main`.
+1. `git fetch origin`, then enter a worktree named `kan-<n>-<kebab-summary>`
+   (`EnterWorktree`). It starts from `origin/main` as last fetched.
 2. Rename its branch to the convention: `git branch -m <area>/kan-<n>-<kebab-summary>`.
 3. Record the branch in the ticket's state lines.
 
@@ -104,7 +112,7 @@ Exceptions — say which applies:
   (`git switch -c <branch>`) instead of creating a worktree, and stage only the task's files.
 - The task builds on an unmerged PR: create the worktree from that branch
   (`git worktree add .claude/worktrees/<name> -b <branch> <base-branch>`) and say so in the PR.
-- Cloud session: the VM is already an isolated checkout; just create the branch.
+- Cloud session: the VM is already an isolated checkout; rename its branch (see above).
 
 ## 5. Implement and check
 

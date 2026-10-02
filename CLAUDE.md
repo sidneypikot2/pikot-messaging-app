@@ -30,7 +30,9 @@ PikotChat is a messaging app portfolio project. Built so far: email/password and
 - **Frontend**: static HTML / CSS / vanilla JavaScript, no build step, no framework, no frontend tests — `frontend/`
 - **Infra**: Docker Compose runs four services (db, redis, backend, frontend); Redis is there only as the Action Cable adapter
 
-Work is tracked in Jira (project `KAN`), not in this repo. Kamal deploy config exists (`backend/config/deploy.yml`) but is unexercised — no production infra.
+Work is tracked in Jira, not in this repo: project `KAN`, site `https://sidneypikot2.atlassian.net`, cloudId `ca2c20d7-9b28-45c4-a475-81e449242242`. Statuses: To Do → In Progress → In Review → Done.
+
+**Production exists.** The backend runs on Render at `https://pikot-messaging-app-backend.onrender.com`, and `frontend/js/config.js` sends every non-localhost page there. The service is set up in Render's dashboard — nothing in this repo describes it or shows what triggers a deploy, so assume a merge to `main` can reach it. Changes to `backend/config/environments/production.rb`, CORS / `FRONTEND_ORIGIN`, `frontend/js/config.js`, migrations and environment variables are production changes: say so in the PR. The Kamal config (`backend/config/deploy.yml`) is unused scaffolding.
 
 ## Running and checking
 
@@ -49,7 +51,7 @@ script/smoke                  # browser smoke test (Playwright container) agains
 script/worktree-env           # in a worktree, once: own ports (8080+N / 3000+N) and project name
 ```
 
-In a cloud session the VM's own Ruby and PostgreSQL are the wrong versions — use `docker compose` there too (`.claude/hooks/cloud-start.sh` starts db and redis).
+In a cloud session the VM's own Ruby and PostgreSQL are the wrong versions — use `docker compose` there too (`.claude/hooks/cloud-start.sh` starts db and redis). The conventions above hold there as well: rename the session's branch to `<area>/kan-<n>-<kebab-summary>` before pushing (CI rejects any other name), and ask for the ticket key if the task didn't come with one. There is no worktree, Discord or `/verify-app` in the cloud.
 
 `docker-compose.yml` must NOT set `RAILS_ENV` in the backend's `environment:` block — `docker compose run backend bundle exec rspec` inherits it and needs Rails' `test` default. It's set inline in `command:` instead, so `docker compose exec` needs `-e RAILS_ENV=development`.
 
