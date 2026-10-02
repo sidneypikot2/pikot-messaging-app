@@ -5,7 +5,7 @@
 #   script/check              everything
 #   script/check frontend     structure, lint, event contract
 #   script/check backend      rubocop, full rspec suite, event contract
-#   script/check tooling      shellcheck, guard and git-hook tests, instruction-file checks
+#   script/check tooling      shellcheck, guard and git-hook tests, instruction files, secret scan
 #
 # Needs Docker and jq. CI runs the same scripts (backend natively, for speed); the
 # security scans (`bin/ci`: bundler-audit, brakeman) stay CI-only.
@@ -40,6 +40,7 @@ if [[ "$area" == all || "$area" == tooling ]]; then
   step "shell lint" script/lint-shell
   step "guards and git hooks" script/test-hooks
   step "instruction files" script/check-docs
+  step "secret scan" script/scan-secrets
 fi
 
 if (( ${#failed[@]} > 0 )); then

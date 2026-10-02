@@ -1,6 +1,6 @@
 ---
 name: kan-finish
-description: Close out a PikotChat task after its PR has merged - ticket to Done, tear down the task's worktree and Docker stack, update main, delete the merged branch, post the closing note, and propose a rule for anything the task had to be corrected on. Run when the user says a KAN task's PR is merged.
+description: Close out a PikotChat task after its PR has merged - ticket to Done, tear down the task's worktree and Docker stack, update staging, delete the merged branch, post the closing note, and propose a rule for anything the task had to be corrected on. Run when the user says a KAN task's PR is merged.
 argument-hint: "<KAN-n>"
 disable-model-invocation: true
 ---
@@ -28,6 +28,8 @@ say so — nothing below runs on an open PR.
 
 Transition the ticket to **Done** (look the transition ID up for that issue; don't guess).
 If the implementation ended up different from the description, fix the description now.
+Done means merged into `staging`. It is not in production until the next `/release` —
+say so in the report when the task changed something users would notice.
 
 ## 3. Tear down the worktree
 
@@ -47,19 +49,20 @@ Then run `script/docker-sweep` and report what it lists: stacks whose worktree i
 gone, and other worktrees with a merged branch. Delete orphaned stacks
 (`script/docker-sweep --apply`) only when the user says so.
 
-## 4. Main and branch
+## 4. Staging and branch
 
-In this order — `git branch -d` judges "merged" against the local `main`, so a stale
-`main` makes it refuse a branch that is merged:
+In this order — `git branch -d` judges "merged" against the branch that is checked out,
+so a stale local `staging` makes it refuse a branch that is merged:
 
 1. `git fetch --prune` (the remote branch is deleted by GitHub on merge; this clears the
    stale ref).
-2. Update `main` in the main checkout only if it is on `main` with a clean tree:
+2. Update the main checkout only if it is on `staging` with a clean tree:
    `git pull --ff-only`. If it's on another branch or has changes, leave it alone and say
-   so — the user or another session is working there.
+   so — the user or another session is working there. (The session hooks and guards run
+   from this checkout, so it should normally sit on an up-to-date `staging`.)
 3. Delete the merged local branch: `git branch -d <branch>` (`-d`, not `-D`). If git still
-   says it isn't merged, stop and report; when `main` couldn't be updated in step 2, leave
-   the branch and say so.
+   says it isn't merged, stop and report; when the checkout couldn't be updated in
+   step 2, leave the branch and say so.
 
 ## 5. Closing note
 

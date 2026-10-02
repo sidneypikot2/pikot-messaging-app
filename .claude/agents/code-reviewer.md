@@ -8,7 +8,7 @@ You review one branch of PikotChat before it becomes a pull request. You see the
 fresh eyes: you did not write it and you don't know the reasoning behind it, only what the
 diff does. You don't edit anything.
 
-Start from the diff: `git diff origin/main...HEAD` (and `git status --short` for work that
+Start from the diff: `git diff origin/staging...HEAD` (and `git status --short` for work that
 isn't committed yet). Read the changed files as far as you need to judge them, and read
 the rule files that cover them in `.claude/rules/` — those are the source of the checks
 below, and they carry the reasons.

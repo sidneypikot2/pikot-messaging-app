@@ -11,20 +11,21 @@ Use context7 directly for a single lookup; use the DocsExplorer subagent only wh
 
 A repeated mistake or a recurring review comment is an edit to a `.claude/rules/` file (or a hook, if it must always hold), proposed as a PR — not a correction that stays in chat. `/kan-finish` asks for these at the end of every task.
 
-Claude Code config is checked in under `.claude/`: subagents in `agents/`, skills in `skills/` (`/kan-task`, `/kan-finish`, `/verify-app` — user-invoked only), shared settings and hooks in `settings.json` / `hooks/`, MCP servers in `.mcp.json`, and conventions in `rules/`, which load automatically when matching files are read. Put new conventions in a rule file scoped by `paths:` to the files they concern — a new topic gets its own file — not in this file.
+Claude Code config is checked in under `.claude/`: subagents in `agents/`, skills in `skills/` (`/kan-task`, `/kan-finish`, `/release`, `/verify-app` — user-invoked only), shared settings and hooks in `settings.json` / `hooks/`, MCP servers in `.mcp.json`, and conventions in `rules/`, which load automatically when matching files are read. Put new conventions in a rule file scoped by `paths:` to the files they concern — a new topic gets its own file — not in this file.
 
 ## Conventions
 
 These apply to every task, whether or not `/kan-task` was run:
 
 - **Area**: `frontend`, `backend` or `infra` — one per task, used as the Jira label, GitHub label and branch prefix.
-- **Branch**: `<area>/kan-<n>-<kebab-summary>` from an up-to-date `origin/main`. Never commit on `main`.
-- **Commit subject and PR title**: `KAN-<n> <summary>`. CI checks the branch name, PR title and area label (`.github/workflows/pr-conventions.yml`).
+- **Two protected branches**: `staging` (the default branch) is where task PRs merge; `main` is what production runs and only ever receives `staging`, as a release (`/release`). Never commit on either, and never open a task PR against `main`.
+- **Branch**: `<area>/kan-<n>-<kebab-summary>` from an up-to-date `origin/staging`.
+- **Commit subject and PR title**: `KAN-<n> <summary>`, PR base `staging`. CI checks the branch name, PR title and area label, and that a PR into `main` comes from `staging` (`.github/workflows/pr-conventions.yml`).
 - **Done** means `script/check <area>` passes — it runs what CI runs. For backend changes run only the affected specs while iterating (`script/test spec/...`) and `script/check backend` once before the PR. For frontend changes, and backend changes to login, messaging or the channels, also run `script/smoke` — it drives the real app in a browser (login, a message between two users in real time). It covers that one path only: beyond it, say plainly that the change was not verified in the running app unless `/verify-app` was run.
 
 ## Git safety
 
-Do task work in a git worktree (`.claude/worktrees/<name>`), not by switching the main checkout's branch — the user and other sessions work there. Never stash, reset or discard existing work to make room; if something is in the way, stop and report it. Stage only the files that belong to the task. `.githooks/` refuses commits and pushes on `main` (enabled by `core.hooksPath`, set on session start); `.claude/hooks/guard-bash.sh` and `guard-edit.sh` block the destructive commands and edits to generated files. Don't work around either — when one blocks something that should be allowed, fix the guard and add the case to `script/test-hooks`.
+Do task work in a git worktree (`.claude/worktrees/<name>`), not by switching the main checkout's branch — the user and other sessions work there. Never stash, reset or discard existing work to make room; if something is in the way, stop and report it. Stage only the files that belong to the task. `.githooks/` refuses commits and pushes on `main` and `staging` (enabled by `core.hooksPath`, set on session start); `.claude/hooks/guard-bash.sh` and `guard-edit.sh` block the destructive commands and edits to generated files. Don't work around either — when one blocks something that should be allowed, fix the guard and add the case to `script/test-hooks`.
 
 ## Project overview
 
@@ -36,7 +37,7 @@ PikotChat is a messaging app portfolio project. Built so far: email/password and
 
 Work is tracked in Jira, not in this repo: project `KAN`, site `https://sidneypikot2.atlassian.net`, cloudId `ca2c20d7-9b28-45c4-a475-81e449242242`. Statuses: To Do → In Progress → In Review → Done.
 
-**Production exists.** The backend runs on Render at `https://pikot-messaging-app-backend.onrender.com`, and `frontend/js/config.js` sends every non-localhost page there. The service is set up in Render's dashboard, not in this repo, and **everything merged to `main` can reach production**. Changes to `backend/config/environments/production.rb`, CORS / `FRONTEND_ORIGIN`, `frontend/js/config.js`, migrations and environment variables are production changes: say so in the PR. The Kamal config (`backend/config/deploy.yml`) is unused scaffolding.
+**Production exists.** The backend runs on Render at `https://pikot-messaging-app-backend.onrender.com`, and `frontend/js/config.js` sends every non-localhost page there. The service is set up in Render's dashboard, not in this repo, and **everything merged to `main` can reach production**. Merging a task into `staging` deploys nothing; a release (`staging` → `main`) does. Changes to `backend/config/environments/production.rb`, CORS / `FRONTEND_ORIGIN`, `frontend/js/config.js`, migrations and environment variables are production changes: say so in the PR. The Kamal config (`backend/config/deploy.yml`) is unused scaffolding.
 
 ## Running and checking
 

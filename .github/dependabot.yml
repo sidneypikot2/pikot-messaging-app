@@ -1,7 +1,9 @@
 version: 2
+# Everything targets staging: main only receives releases (staging -> main).
 updates:
 - package-ecosystem: bundler
   directory: "/backend"
+  target-branch: staging
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
@@ -14,6 +16,7 @@ updates:
 # The frontend lint's own dependencies (ESLint) — tooling, not shipped.
 - package-ecosystem: npm
   directory: "/tools/frontend-lint"
+  target-branch: staging
   schedule:
     interval: monthly
   open-pull-requests-limit: 5
@@ -22,6 +25,7 @@ updates:
 # pinned to tools/smoke/package.json — neither is proposed.
 - package-ecosystem: docker-compose
   directory: "/"
+  target-branch: staging
   schedule:
     interval: monthly
   open-pull-requests-limit: 5
@@ -31,6 +35,7 @@ updates:
   - dependency-name: "mcr.microsoft.com/playwright"
 - package-ecosystem: github-actions
   directory: "/"
+  target-branch: staging
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
