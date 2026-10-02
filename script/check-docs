@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Keeps the instruction files honest. CLAUDE.md, the rules, the skills and the agents
+# describe the repository; nothing else notices when the repository moves on. Fails when:
+#   1. a path or script they name no longer exists;
+#   2. a rule's `paths:` pattern matches no file (such a rule never loads);
+#   3. CLAUDE.md outgrows 100 lines (it loads into every session);
+#   4. SPEC.md still describes as "not built" a route that config/routes.rb now has.
+# Plain bash + git. Run from anywhere; exits 1 and lists every problem. Used by CI.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+errors=0
+fail() { echo "check-docs: $1" >&2; errors=$((errors + 1)); }
+
+docs=(CLAUDE.md .claude/rules/*.md .claude/skills/*/SKILL.md .claude/agents/*.md)
+
+# 1. Paths in `backticks`. Only text that is clearly a path in this repository counts:
+#    it has a slash, no spaces or placeholders, and isn't a route, a URL, a git ref or a
+#    home-directory path. The files write paths relative to backend/, frontend/ or
+#    .claude/, so those are tried too. Gitignored paths (backend/.env, node_modules) can't be checked.
+exists() {
+  local p="${1%/}" base
+  for base in "" backend/ frontend/ .claude/; do
+    [[ -e "$base$p" ]] && return 0
+  done
+  git check-ignore -q -- "$p" "backend/$p" 2>/dev/null
+}
+for doc in "${docs[@]}"; do
+  [[ -f "$doc" ]] || continue
+  while IFS= read -r ref; do
+    [[ "$ref" == script/* ]] && ref="${ref%% *}"          # `script/check frontend` -> script/check
+    [[ "$ref" =~ ^[A-Za-z0-9_.][A-Za-z0-9_./-]*$ && "$ref" == */* ]] || continue
+    case "$ref" in origin/*|claude/*|refs/*|*...*) continue ;; esac
+    exists "$ref" || fail "$doc names \`$ref\`, which doesn't exist"
+  done < <(grep -oE '`[^`]+`' "$doc" | tr -d '`' | sort -u)
+done
+
+# 2. Every `paths:` pattern of a rule matches a tracked file. Braces are expanded here
+#    (git pathspecs don't know them); globbing is left to git.
+for rule in .claude/rules/*.md; do
+  while IFS= read -r pattern; do
+    [[ -n "$pattern" ]] || continue
+    matched=0
+    set -f
+    # shellcheck disable=SC2086  # brace expansion is the point; the patterns are ours
+    for expanded in $(eval "printf '%s\n' $pattern"); do
+      [[ -n "$(git ls-files -- ":(glob)$expanded" | head -n1)" ]] && matched=1
+    done
+    set +f
+    (( matched )) || fail "$rule: paths pattern \"$pattern\" matches no file, so the rule never loads for it"
+  done < <(awk '/^---$/ { n++; next } n == 1 && /^[[:space:]]*-[[:space:]]*"/ { sub(/^[^"]*"/, ""); sub(/".*$/, ""); print }' "$rule")
+done
+
+# 3. CLAUDE.md stays small.
+lines="$(wc -l < CLAUDE.md | tr -d ' ')"
+(( lines <= 100 )) || fail "CLAUDE.md is $lines lines (limit 100) — move area-specific text into a .claude/rules/ file"
+
+# 4. SPEC.md's "Not built" sections don't describe routes that exist. Only the route
+#    tables count (prose there also mentions today's routes). A route counts as built
+#    when its last literal segment appears as a word in routes.rb.
+while IFS= read -r route; do
+  segment="$(tr '/' '\n' <<<"$route" | grep -v '^:' | grep -v '^$' | tail -n1)"
+  [[ -n "$segment" ]] || continue
+  if grep -Eq "(^|[^a-z_])${segment}([^a-z_]|$)" backend/config/routes.rb; then
+    fail "SPEC.md lists \`$route\` under \"Not built\", but routes.rb has \"$segment\" — delete that section of SPEC.md"
+  fi
+done < <(awk '/^## / { unbuilt = /[Nn]ot built/ } unbuilt && /^\|/' SPEC.md | grep -oE '`/[a-z_/:]+`' | tr -d '`' | sort -u)
+
+if (( errors > 0 )); then
+  echo "check-docs: $errors problem(s)" >&2
+  exit 1
+fi
+echo "check-docs: ok (${#docs[@]} files)"

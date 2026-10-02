@@ -129,6 +129,19 @@ if matches "(rails|rake)[[:space:]]+(${SEG}[[:space:]])?db:(drop|reset|purge)" &
   block "db:drop / db:reset / db:purge on the main checkout's database. A worktree stack has its own throwaway database."
 fi
 
+# --- Secret files, named in a shell command ---------------------------------------------
+# The Read deny rules in settings.json cover the Read tool and a few commands Claude Code
+# recognises (cat, head); grep, source, cp and the rest get through. Nothing a session
+# does needs these files' contents, so any command that names one is refused.
+# `.env.example` is documentation, and a worktree's root `.env` only holds port numbers.
+
+named="$(sed -E 's/\.env\.example//g' <<<"$cmd")"
+SECRET='(^|[^A-Za-z0-9_])backend/\.env|\.env\.(local|development|production|test)|master\.key|config/[A-Za-z0-9_]+\.key|\.kamal/secrets'
+if grep -Eq -- "$SECRET" <<<"$named" \
+  || { [[ "$cd_dir" == backend || "$cd_dir" == */backend ]] && grep -Eq -- '(^|[[:space:]"'"'"'=<])\.env([[:space:]"'"'"';|&)]|$)' <<<"$named"; }; then
+  block "this command names a secret file (backend/.env, a *.key file or .kamal/secrets). Sessions don't read or copy secrets; see backend/.env.example for the variable names."
+fi
+
 # --- Generated and secret files, written from the shell ---------------------------------
 # guard-edit.sh covers the Edit and Write tools; this covers redirects, tee and sed -i.
 
@@ -154,7 +167,12 @@ if matches "${GIT}(commit|push)([[:space:]]|$)"; then
 
   root="$(git -C "$target" rev-parse --show-toplevel 2>/dev/null || true)"
   hooks_path="$(git -C "$target" config --get core.hooksPath 2>/dev/null || true)"
-  if [[ "$hooks_path" != ".githooks" || ! -x "$root/.githooks/pre-commit" || ! -x "$root/.githooks/pre-push" ]]; then
+  # Relative (`.githooks`, each worktree's own copy) or absolute (Claude Code rewrites it
+  # to the main checkout's copy when it creates a worktree) — either way it must be a
+  # .githooks directory with the two hooks in it.
+  hooks_dir="$hooks_path"
+  [[ "$hooks_dir" == /* ]] || hooks_dir="$root/$hooks_dir"
+  if [[ -z "$hooks_path" || "${hooks_dir##*/}" != ".githooks" || ! -x "$hooks_dir/pre-commit" || ! -x "$hooks_dir/pre-push" ]]; then
     # The git hooks aren't active in this checkout (older branch, or core.hooksPath not
     # set yet), so judge by the branch the command starts on.
     if ! matches "${GIT}(checkout[[:space:]]+-b|switch[[:space:]]+-c)[[:space:]]"; then

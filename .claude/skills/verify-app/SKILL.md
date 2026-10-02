@@ -56,9 +56,9 @@ in `command:`, not in `environment:`, so exec'd processes don't inherit it.
    ticked the token goes to `localStorage` and both tabs become the same user.
    Sign in one tab at a time and confirm each landed on the chat before starting the next —
    keystrokes batched across two tabs get dropped.
-   Clicks and Enter sent to the second tab through the Chrome tool often don't register
-   (observed in KAN-46: the click handler never fired, no console error, and the same
-   request succeeded via the API). Don't report that as an app bug. Use one tab as the
+   Clicks and Enter sent to the second tab through the Chrome tool often don't register:
+   the click handler never fires, there is no console error, and the same request
+   succeeds via the API. Don't report that as an app bug. Use one tab as the
    actor and the other as the observer — live updates (typing indicator, message preview,
    unread count) and screenshots work fine in the observer tab — and swap which user is
    signed in to the actor tab if both sides need driving. Click the send button rather

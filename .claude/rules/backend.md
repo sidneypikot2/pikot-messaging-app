@@ -15,9 +15,9 @@ Topic rules load on top of this one when their files are read: `backend-auth.md`
 
 **Jobs and cache** use `solid_queue` / `solid_cache` (own schema files in `backend/db/`; primary database in dev/test). There is no Sidekiq. Redis is only the Action Cable adapter and the presence store.
 
-**Specs**: for a behaviour change write the spec first — one failing request or service spec, watch it fail for the right reason, then implement. Test through the public interface (the endpoint, `Service.call`, the channel), not private methods. Skip test-first for migrations, config and pure refactors already covered. While iterating run only the affected spec files; run the full suite once before the PR.
+**Specs**: for a behaviour change write the spec first — one failing request or service spec, watch it fail for the right reason, then implement. Test through the public interface (the endpoint, `Service.call`, the channel), not private methods. Skip test-first for migrations, config and pure refactors already covered. While iterating run only the affected spec files (`script/test spec/...`); run the full suite once before the PR (`script/check backend`).
 
-**Docker**: run every Rails command through `docker compose run --rm backend ...`, never on the host. Never edit `db/schema.rb` or `Gemfile.lock` by hand (a hook blocks it) — write a migration / edit the `Gemfile` and run the command.
+**Docker**: run every Rails command through `docker compose run --rm backend ...`, never on the host. Specs and rubocop go through `script/test` and `script/lint backend`; rubocop also runs on each Ruby file you edit while the stack is up, fixing what it safely can — when it says it corrected a file, read the file again before editing it. Never edit `db/schema.rb` or `Gemfile.lock` by hand (a hook blocks it) — write a migration / edit the `Gemfile` and run the command.
 
 **Style**: Rubocop uses the `rubocop-rails-omakase` house style; don't fight it with custom rules.
 

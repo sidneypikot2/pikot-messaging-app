@@ -1,6 +1,6 @@
 ---
 name: kan-finish
-description: Close out a PikotChat task after its PR has merged - ticket to Done, tear down the task's worktree and Docker stack, delete the merged branch, update main, post the closing note. Run when the user says a KAN task's PR is merged.
+description: Close out a PikotChat task after its PR has merged - ticket to Done, tear down the task's worktree and Docker stack, update main, delete the merged branch, post the closing note, and propose a rule for anything the task had to be corrected on. Run when the user says a KAN task's PR is merged.
 argument-hint: "<KAN-n>"
 disable-model-invocation: true
 ---
@@ -43,6 +43,10 @@ force it — list what's there and ask. If this session is itself inside that wo
 leave it first (`ExitWorktree` with `keep`; `remove` would need to discard the branch's
 commits, and plain `git worktree remove` checks properly).
 
+Then run `script/docker-sweep` and report what it lists: stacks whose worktree is already
+gone, and other worktrees with a merged branch. Delete orphaned stacks
+(`script/docker-sweep --apply`) only when the user says so.
+
 ## 4. Main and branch
 
 In this order — `git branch -d` judges "merged" against the local `main`, so a stale
@@ -62,5 +66,19 @@ In this order — `git branch -d` judges "merged" against the local `main`, so a
 Post one closing line in the task's Discord thread with the Discord `reply` tool
 (`chat_id` = the thread ID from the ticket), plus anything that did not get done. Skip it,
 and say so, when the thread is "none" or the Discord tool isn't available.
+
+## 6. Lessons
+
+What did CI, a reviewer or the user have to correct during this task? Look at the PR's
+failed checks and review comments, and at what the user corrected in this session if it
+is the session that did the work. For anything that could happen again on another task,
+propose the smallest fix that would have prevented it: a line in the `.claude/rules/` file
+that covers those files, a case in a guard or a check if it must always hold, or a change
+to a skill. Check your auto memory for this project the same way — a note there that is a
+fact about the project belongs in a rule, where every machine and session gets it.
+
+Show the proposed edit and wait: rules, hooks and skills change only through a PR the
+user has agreed to (its own `infra` task). One correction that was particular to this
+task is not a lesson. If there is nothing, say "no lessons".
 
 Report what was closed and anything left behind.

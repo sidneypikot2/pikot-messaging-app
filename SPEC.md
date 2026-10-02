@@ -26,8 +26,8 @@
 | Service results | Services return the natural value or raise; no `ServiceResult` wrapper | Controllers rescue a small set of errors centrally. Introduce a result type only if a controller needs to branch on several distinct failure reasons. |
 | Routes | Flat and unversioned; messages `update`/`destroy` are top-level, not nested under conversations | A message id is globally unique, so the conversation in the path would be redundant. Versioning is deferred — see section 2. |
 | Web frontend | Static HTML + vanilla JS, no framework, no build step; every backend call goes through `frontend/js/api.js` | One place knows how to talk to the API — the model for a mobile client's API layer. Revisit "no framework" only if hand-rolled DOM code becomes the bottleneck. |
-| Testing | RSpec request/service/channel specs; no browser-driven suite | There are no server-rendered views to drive. The frontend is checked structurally (`script/check-frontend`) and by hand (`/verify-app`). |
-| Deployment | Docker Compose for local development only | Kamal scaffolding exists (`backend/config/deploy.yml`) but is unexercised; there is no production infrastructure. |
+| Testing | RSpec request/service/channel specs; one browser smoke test, no frontend unit tests | There are no server-rendered views to drive. The frontend is checked statically (`script/check frontend`), by a Playwright smoke test of login and live messaging (`script/smoke`), and by hand (`/verify-app`). |
+| Deployment | Docker Compose locally; the backend runs on Render, set up in Render's dashboard | Nothing in the repo describes the Render service, and everything merged to `main` can reach it. Kamal scaffolding exists (`backend/config/deploy.yml`) but is unused. |
 
 ---
 

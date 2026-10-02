@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Runs the backend specs. The one place the rspec command lives.
+#
+#   script/test                              the full suite
+#   script/test spec/requests/messages_spec.rb[:LINE] ...     some of it (any rspec arguments)
+#
+# Paths are relative to backend/ (a leading backend/ is accepted). Uses the running
+# backend container when the stack is up, a one-off container otherwise; in a worktree it
+# sets up the worktree's own stack first. Needs Docker only.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+# shellcheck source=script/lib.sh
+source script/lib.sh
+ensure_worktree_env
+
+args=()
+for arg in "$@"; do args+=("${arg#backend/}"); done
+
+# A fresh stack (a new worktree, a cloud session) has no test database yet.
+backend_do test bin/rails db:prepare >/dev/null
+backend_do test bundle exec rspec ${args[@]+"${args[@]}"}
