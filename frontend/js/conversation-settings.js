@@ -1,7 +1,7 @@
 // Conversation settings (KAN-41): the Messenger-style info panel beside the open chat —
 // theme, nicknames, group name and members, mute, delete chat, leave group — plus the
-// grey system lines those changes post in the thread. Loaded after app.js and shares its
-// globals (token, currentUser, activeConversation, …).
+// grey system lines those changes post in the thread. Loaded after app.js and the
+// chat scripts before it, and shares their globals (token, currentUser, activeConversation, …).
 
 let chatInfoOpen = false;
 

@@ -1,3 +1,6 @@
+// The only place that calls fetch(): the Api object, one method per backend endpoint,
+// used by every page. No UI.
+
 const Api = {
   async healthCheck() {
     const res = await fetch(`${window.API_BASE_URL}/up`);

@@ -1,3 +1,6 @@
+// The social-login landing page (oauth-callback.html): reads the token the backend
+// redirected with, stores the session and moves on to the chat page.
+
 const statusEl = document.getElementById("oauth-status");
 
 function setStatus(message, variant) {

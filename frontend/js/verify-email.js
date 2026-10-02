@@ -1,3 +1,6 @@
+// The email verification page (verify-email.html): submits the token from the emailed
+// link and shows the result.
+
 const statusEl = document.getElementById("verify-status");
 
 function setStatus(message, variant) {

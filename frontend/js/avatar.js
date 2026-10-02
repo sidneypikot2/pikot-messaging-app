@@ -1,3 +1,6 @@
+// Avatar helper used across the chat page: renders a user's photo or coloured initials
+// into an element.
+
 const Avatar = {
   initials(firstName, lastName) {
     const first = (firstName || "?").charAt(0);
