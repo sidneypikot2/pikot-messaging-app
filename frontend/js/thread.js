@@ -62,6 +62,7 @@ async function selectConversation(conversation) {
   playThreadEntrance();
   renderThreadHeader(conversation);
   applyChatTheme(conversation);
+  resetPinnedNote(conversation);
   if (chatInfoOpen) renderChatInfo();
   messageListEl.innerHTML = "";
   resetPaginationState();
@@ -94,6 +95,7 @@ function selectDraftConversation(user) {
   playThreadEntrance();
   renderThreadHeader({ kind: "direct", other_user: user });
   applyChatTheme(null);
+  resetPinnedNote(null);
   closeChatInfo(); // nothing to set up until the first message creates the conversation
   messageListEl.innerHTML = "";
   resetPaginationState();
@@ -115,6 +117,7 @@ function closeConversation() {
   closeMessageMenu();
   closeChatInfo();
   closeSettingsDialog();
+  resetPinnedNote(null);
 
   document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
 

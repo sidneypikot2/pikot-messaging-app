@@ -1,4 +1,4 @@
-/* messenger/conversation-settings.css — 6 of 7. Needs every file above it.
+/* messenger/conversation-settings.css — 6 of 8. Needs every file above it.
    Per-conversation settings (KAN-41): the info panel, its dialogs, and the chat
    list's ⋯ menu. Loaded late on purpose — several rules here override earlier files
    (e.g. .thread-info-btn beats ".thread-header span" from thread.css).
