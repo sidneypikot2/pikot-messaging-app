@@ -1,0 +1,72 @@
+/* messenger/base.css — 1 of 7, loaded first.
+   Foundation for the chat page (index.html): everything later files build on.
+   Sections, in order:
+     - :root design tokens (--navy, --orange, --accent-ink, --on-accent, --text, --muted,
+       --border, --bg, --error, --shadow-pop). Conversation themes override the accent
+       tokens at runtime (applyChatTheme).
+     - ::selection and :focus-visible defaults
+     - reset (* box-sizing), [hidden], body
+     - .messenger — the page's two-column grid (sidebar | thread)
+   No media queries. Add a new token here, never in a section file. */
+
+/* Reuses login.css's color scheme (same values, kept self-contained here — each page
+   family in this app has its own standalone stylesheet, matching style.css/login.css). */
+:root {
+  color-scheme: light;
+  --navy: #1b2559;
+  --orange: #f2994a;
+  --orange-dark: #e07f2b;
+  /* Text-safe partners of the accent: --accent-ink is the accent as text on a light
+     surface, --on-accent is text on an accent fill. Themes override both (applyChatTheme). */
+  --accent-ink: #a25818;
+  --on-accent: var(--navy);
+  --text: #1f2430;
+  --muted: #5f6673;
+  --border: #d8dce3;
+  --bg: #f4f5f8;
+  --error: #c53030;
+  --error-bg: #fdecec;
+  /* Floating surfaces (menus, pickers) lift with shadow alone — no hairline as well. */
+  --shadow-pop: 0 1px 2px rgba(27, 37, 89, 0.1), 0 8px 24px rgba(27, 37, 89, 0.16);
+  accent-color: var(--orange);
+  caret-color: var(--accent-ink);
+  scrollbar-color: #c3c8d2 transparent;
+  scrollbar-width: thin;
+}
+
+::selection {
+  background: rgba(242, 153, 74, 0.35);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Several elements below set display:flex on their class, which otherwise beats the
+   browser's default [hidden]{display:none} rule (author styles win over UA styles
+   regardless of selector specificity/order) — this keeps hiding actually work. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.messenger {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  height: 100vh;
+  height: 100dvh;
+  overflow: clip; /* the info panel slides in from beyond the right edge */
+}
+

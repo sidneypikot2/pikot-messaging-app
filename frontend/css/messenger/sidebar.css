@@ -1,0 +1,565 @@
+/* messenger/sidebar.css — 2 of 7. Needs base.css.
+   The left column: everything from the brand row down to the conversation list.
+   Sections, in order:
+     - Sidebar shell and header (.sidebar, .sidebar-header, .sidebar-brand)
+     - My avatar + status menu (KAN-39): .status-picker, .status-btn, .status-menu,
+       and the "for how long" choices (.status-durations)
+     - Logout button
+     - Search box and results dropdown (.search-box, .search-results)
+     - Conversation list rows: name, preview text/time, unread badge
+     - Avatars: .avatar, the group two-avatar stack (.avatar-stack, KAN-35),
+       .presence-dot and the "5m" .presence-ago pill
+     - New group button + dialog contents (KAN-35): .new-group-*
+   Driven by conversation-list.js, presence.js, search.js and avatar.js.
+   No media queries here — the narrow-screen rules for the sidebar are in composer.css
+   (one-pane layout), and the list row's ⋯ menu is in conversation-settings.css.
+   The shared .modal shell the new-group dialog sits in is in message-actions.css. */
+
+/* Sidebar */
+
+.sidebar {
+  background: #fff;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0.75rem;
+}
+
+.sidebar-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--navy);
+}
+
+/* My avatar + status menu (KAN-39) */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.status-picker {
+  position: relative;
+}
+
+.status-btn {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.status-btn .avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  font-size: 0.75rem;
+}
+
+.status-btn .presence-dot {
+  width: 13px;
+  height: 13px;
+}
+
+.status-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: 250px;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--shadow-pop);
+}
+
+.status-menu li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.status-menu li:hover {
+  background: var(--bg);
+}
+
+.status-menu li[aria-checked="true"] {
+  background: rgba(242, 153, 74, 0.15);
+}
+
+.status-menu .presence-dot {
+  position: relative;
+  flex-shrink: 0;
+  right: auto;
+  bottom: auto;
+  margin-top: 2px;
+  border-color: transparent;
+}
+
+.status-menu-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.status-menu-text small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.status-menu-text .status-until {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.status-menu-text .status-until:empty {
+  display: none;
+}
+
+/* "For how long" choices under Do Not Disturb / Offline */
+.status-durations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.status-durations span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.status-durations button {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.status-durations button:hover {
+  border-color: var(--orange);
+  color: var(--accent-ink);
+}
+
+.logout-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  color: var(--accent-ink);
+}
+
+.search-box {
+  position: relative;
+  padding: 0 1.25rem 0.75rem;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.search-box input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
+}
+
+.search-results {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  top: 100%;
+  z-index: 10;
+  margin: 0.25rem 0 0;
+  padding: 0.4rem;
+  list-style: none;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--shadow-pop);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.search-results li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.search-results li:hover {
+  background: var(--bg);
+}
+
+.search-results .search-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  cursor: default;
+}
+
+.sidebar-status {
+  padding: 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.conversation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.conversation-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.conversation-list li:hover,
+.conversation-list li.menu-open {
+  background: var(--bg);
+}
+
+.conversation-list li.active {
+  background: rgba(242, 153, 74, 0.15);
+}
+
+.conversation-text {
+  flex: 1;
+  min-width: 0; /* lets text-overflow ellipsis actually kick in inside the flex row */
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.conversation-preview {
+  display: flex;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.conversation-preview.unread {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.conversation-preview.typing {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.conversation-preview-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-preview-time {
+  flex-shrink: 0;
+  white-space: pre;
+}
+
+.conversation-name {
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unread-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--orange);
+  color: var(--on-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Avatars */
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A group's picture (KAN-35): two members' avatars overlapped in a 40px square. */
+.avatar-stack {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+}
+
+.avatar-stack .avatar {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  font-size: 0.6rem;
+  border: 2px solid #fff;
+}
+
+.avatar-stack .avatar:first-child {
+  top: 0;
+  right: 0;
+}
+
+.avatar-stack .avatar:last-child {
+  bottom: 0;
+  left: 0;
+}
+
+/* Online indicator (KAN-39): the avatar's own overflow:hidden would clip a badge, so
+   avatars that can carry one sit in this wrapper instead. */
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #31a24c;
+  border: 2.5px solid #fff;
+}
+
+/* Idle: a yellow crescent moon; Do Not Disturb: red with a white bar; Offline (only on
+   my own avatar and in the status menu): a grey ring. */
+.presence-dot.status-idle {
+  background: #f0b232;
+  overflow: hidden;
+}
+
+.presence-dot.status-idle::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.presence-dot.status-dnd {
+  background: #e5484d;
+}
+
+.presence-dot.status-dnd::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.presence-dot.status-offline {
+  background: #fff;
+  box-shadow: inset 0 0 0 3px #9aa0a6;
+}
+
+/* Left within the hour: a "5m" pill where the dot would be, Messenger-style. */
+.presence-ago {
+  position: absolute;
+  right: -6px;
+  bottom: -3px;
+  padding: 0 4px;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  background: #ddf3e1;
+  color: #1f7a35;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+/* New group button + dialog (KAN-35) */
+
+.new-group-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--navy);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.new-group-btn:hover {
+  color: var(--accent-ink);
+}
+
+.new-group-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.new-group-input:focus {
+  outline: none;
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 3px rgba(242, 153, 74, 0.2);
+}
+
+.new-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.new-group-chips:empty {
+  display: none;
+}
+
+.new-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.new-group-chip .avatar {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  font-size: 0.55rem;
+}
+
+.new-group-chip button {
+  display: flex;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.new-group-chip button:hover {
+  color: var(--accent-ink);
+}
+
+.new-group-search {
+  position: relative;
+}
+
+.new-group-results {
+  left: 0;
+  right: 0;
+}
+
+.new-group-hint {
+  margin: -0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.new-group-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--error);
+}
+
+.modal-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

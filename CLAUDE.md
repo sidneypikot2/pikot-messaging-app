@@ -7,7 +7,9 @@ Keep your replies extremely concise and focus on conveying the key information. 
 When adding a gem or library, or using a third-party API not already used in this repo, look up the official documentation first. Follow existing in-repo usage otherwise.
 Use context7 directly for a single lookup; use the DocsExplorer subagent only when several technologies need looking up at once.
 
-Don't read large files whole — `frontend/css/messenger.css` and `frontend/js/conversation-settings.js` in particular. Grep for the selector, function or section comment (`/* Sidebar */`, `/* Thread */`, …) and read only that range.
+Don't read large files whole — `frontend/js/conversation-settings.js` in particular. Grep for the function or section comment and read only that range.
+
+The chat page's CSS is split by section under `frontend/css/messenger/`, linked in this order by `frontend/index.html`: `base.css` (tokens, reset, grid), `sidebar.css`, `thread.css`, `message-actions.css` (toolbar, modal shell, reactions, emoji picker), `composer.css` (typing, composer, main mobile block, toast), `conversation-settings.css`, `motion.css` (entrances, skeletons, reduced motion). Link order is cascade order — later files override earlier ones. Each file's header comment lists its sections; read only the file you need.
 
 The chat page's JS is plain classic scripts sharing globals, split by section and loaded in this order by `frontend/index.html`: `chat-core.js` (state, DOM refs, helpers), `presence.js`, `conversation-list.js`, `thread.js`, `message-actions.js`, `thread-meta.js` (time dividers, seen, sender runs), `message-events.js` (edit, incoming), `notifications.js` (sound, toast, typing), `composer.js`, `search.js` (search, new group), `app.js` (logout, init), `conversation-settings.js`. Top-level code may only use names from its own or an earlier file.
 
