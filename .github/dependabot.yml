@@ -11,6 +11,12 @@ updates:
     versions: [ ">= 3" ]
   - dependency-name: redis
     versions: [ ">= 6" ]
+# The frontend lint's own dependencies (ESLint) — tooling, not shipped.
+- package-ecosystem: npm
+  directory: "/tools/frontend-lint"
+  schedule:
+    interval: monthly
+  open-pull-requests-limit: 5
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

@@ -7,6 +7,8 @@ paths:
 
 Static HTML / CSS / vanilla JS — no build step, no bundler, no `package.json`, no tests.
 
+**Checks**: `script/check frontend` — structural rules (`script/check-frontend`), a lint that reads each page's scripts in load order and catches syntax errors, undefined names and top-level use of something a later script defines (`script/lint-frontend`; its ESLint lives in `tools/frontend-lint/`, not in `frontend/`), and the real-time event contract (`script/check-events`). The first runs after every edit; run the whole thing before calling a change done. None of it executes the app. To publish a global without a declaration, write `window.Name = ...` at the start of a line — the lint recognises that form.
+
 **API access**: talk to the backend only through `frontend/js/api.js` (the `Api` object wrapping `fetch` against `window.API_BASE_URL`, set in `frontend/js/config.js`). Add methods to `Api` rather than calling `fetch` elsewhere. The token lives in `sessionStorage`, or `localStorage` with "remember me" (`frontend/js/session.js`).
 
 **Chat page JS**: plain classic scripts sharing globals (no ES modules, no `import`/`export`), split by section. `frontend/index.html` is the source of truth for the load order — check its `<script>` tags. Top-level code may only use names from its own or an earlier file. Each file opens with a purpose header; add a new file to `index.html` at the right position.

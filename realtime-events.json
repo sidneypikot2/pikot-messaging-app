@@ -1,0 +1,18 @@
+{
+  "about": "Every Action Cable event the backend broadcasts, and how the frontend handles it. script/check-events fails when the backend, the frontend and this list disagree, so adding or renaming an event means changing all three in one PR. 'explicit': matched by name (event === \"...\") in frontend/js/message-events.js or notifications.js. 'message': carries a `message` key and is handled by the fall-through at the end of handleIncoming / handleNotification, which re-renders that message.",
+  "events": {
+    "typing": "explicit",
+    "presence": "explicit",
+    "read": "explicit",
+    "reaction_added": "explicit",
+    "reaction_removed": "explicit",
+    "message_hidden": "explicit",
+    "conversation_created": "explicit",
+    "conversation_updated": "explicit",
+    "conversation_removed": "explicit",
+    "conversation_cleared": "explicit",
+    "message_created": "message",
+    "message_updated": "message",
+    "message_deleted": "message"
+  }
+}

@@ -63,27 +63,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # The frontend has no test suite; this checks its structural rules (only api.js
-      # calls fetch, no ES modules, every script is loaded and every reference resolves).
-      - name: Check frontend structure
+      # The frontend has no test suite. This runs its static checks — structural rules,
+      # the lint that reads each page's scripts in load order (in a Node container), and
+      # the real-time event contract with the backend. Same command as locally.
+      - name: Check frontend
         working-directory: .
-        run: script/check-frontend
+        run: script/check frontend
 
   tooling:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # The Claude Code guards and the git hooks are shell: lint them, then run the table
-      # of commands they must block and allow (script/test-hooks).
-      - name: Lint shell scripts
+      # of commands they must block and allow. Same command as locally.
+      - name: Check tooling
         working-directory: .
-        run: shellcheck --severity=warning .claude/hooks/*.sh .claude/cloud-setup.sh .claude/skills/*/scripts/*.sh .githooks/* script/*
-
-      - name: Test guards and git hooks
-        working-directory: .
-        run: script/test-hooks
+        run: script/check tooling
 
   test:
     runs-on: ubuntu-latest

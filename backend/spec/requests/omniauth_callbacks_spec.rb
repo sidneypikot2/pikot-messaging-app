@@ -5,6 +5,9 @@ RSpec.describe "OmniAuth callbacks", type: :request do
     OmniAuth.config.mock_auth[:facebook] = nil
   end
 
+  # Not a literal: a worktree stack runs its frontend on another port (script/worktree-env).
+  let(:frontend_origin) { Regexp.escape(ENV.fetch("FRONTEND_ORIGIN", "http://localhost:8080")) }
+
   # The request phase (POST /auth/:provider) is CSRF-protected (omniauth-rails_csrf_protection),
   # matching what the real frontend flow has to do: load the same-origin start page, then
   # submit its embedded token. In test mode, hitting the request phase 302s to the callback
@@ -29,7 +32,7 @@ RSpec.describe "OmniAuth callbacks", type: :request do
       start_oauth("facebook")
     }.to change(User, :count).by(1)
 
-    expect(response).to redirect_to(%r{\Ahttp://localhost:8080/oauth-callback\.html\?token=.+})
+    expect(response).to redirect_to(%r{\A#{frontend_origin}/oauth-callback\.html\?token=.+})
 
     user = User.find_by(provider: "facebook", uid: "abc123")
     expect(user.email).to eq("new-oauth-user@example.com")
@@ -61,7 +64,7 @@ RSpec.describe "OmniAuth callbacks", type: :request do
 
     start_oauth("facebook")
 
-    expect(response).to redirect_to(%r{\Ahttp://localhost:8080/login\.html\?oauth_error=.+})
+    expect(response).to redirect_to(%r{\A#{frontend_origin}/login\.html\?oauth_error=.+})
   end
 end
 

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Checks the real-time event contract (realtime-events.json) against both sides:
+#   - every event the backend broadcasts is listed, and every listed event is broadcast;
+#   - every event name the frontend matches is listed, and every event listed as
+#     "explicit" is matched by name in the frontend;
+#   - an event listed as "message" is broadcast with a `message:` key, which is what the
+#     frontend's fall-through handler reads.
+# Event names are plain string literals on both sides (.claude/rules/backend-realtime.md),
+# so this is grep + jq. Run from anywhere; exits 1 and lists every disagreement. Used by CI.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+contract="realtime-events.json"
+handlers=(frontend/js/message-events.js frontend/js/notifications.js)
+
+command -v jq >/dev/null || { echo "check-events: jq is not installed" >&2; exit 1; }
+
+errors=0
+fail() { echo "check-events: $1" >&2; errors=$((errors + 1)); }
+
+listed="$(jq -r '.events | keys[]' "$contract")" || exit 1
+kind_of() { jq -r --arg name "$1" '.events[$name] // empty' "$contract"; }
+is_listed() { grep -qx -- "$1" <<<"$listed"; }
+
+# What the backend broadcasts: `event: "name"` in a payload, or a name handed to a
+# local `broadcast("name", ...)` helper.
+emitted="$(grep -rhoE '(event: |broadcast\()"[a-z_]+"' backend/app | grep -oE '"[a-z_]+"' | tr -d '"' | sort -u)"
+# What the frontend matches by name.
+matched="$(grep -hoE 'event === "[a-z_]+"' "${handlers[@]}" | grep -oE '"[a-z_]+"' | tr -d '"' | sort -u)"
+
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  is_listed "$name" || fail "the backend broadcasts \"$name\" but $contract doesn't list it — add it there and handle it in the frontend"
+done <<<"$emitted"
+
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  is_listed "$name" || fail "the frontend matches \"$name\" but $contract doesn't list it — a renamed or removed event leaves a dead handler"
+done <<<"$matched"
+
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  kind="$(kind_of "$name")"
+  grep -qx -- "$name" <<<"$emitted" || fail "\"$name\" is listed but nothing in backend/app broadcasts it"
+  case "$kind" in
+    explicit)
+      grep -qx -- "$name" <<<"$matched" \
+        || fail "\"$name\" is listed as explicit but neither ${handlers[0]} nor ${handlers[1]} matches it by name" ;;
+    message)
+      # Every place that builds this event's payload must put a message in it.
+      while IFS= read -r hit; do
+        [[ "$hit" == *"message:"* ]] \
+          || fail "\"$name\" is listed as message, but this payload has no message: key — ${hit%%:*}"
+      done < <(grep -rnE "event: \"$name\"" backend/app | sed -E 's/^([^:]+:[0-9]+):(.*)$/\1: \2/') ;;
+    *) fail "\"$name\" has kind \"$kind\" in $contract; expected explicit or message" ;;
+  esac
+done <<<"$listed"
+
+if (( errors > 0 )); then
+  echo "check-events: $errors problem(s)" >&2
+  exit 1
+fi
+echo "check-events: ok ($(wc -l <<<"$listed" | tr -d ' ') events)"

@@ -9,6 +9,13 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+
+# `gh pr create --label` fires "opened" and "labeled" in the same second; only the newest
+# run for a pull request should stand.
+concurrency:
+  group: pr-conventions-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   conventions:
@@ -21,9 +28,15 @@ jobs:
         # a PR title is untrusted input.
         env:
           BRANCH: ${{ github.head_ref }}
-          TITLE: ${{ github.event.pull_request.title }}
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
+          # Read the title and labels as they are now, not as they were in the event
+          # that started this run: the "opened" event is sent before its labels are on.
+          TITLE="$(gh pr view "$PR" --json title --jq .title)"
+          LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name] | join(" ")')"
+
           errors=0
           fail() { echo "::error::$1"; errors=$((errors + 1)); }
 
