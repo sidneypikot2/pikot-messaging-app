@@ -15,7 +15,7 @@ class ConversationChannel < ApplicationCable::Channel
     stop_all_streams
   end
 
-  # Ephemeral, no persistence (SPEC.md) — re-broadcasts to everyone else with this
+  # Ephemeral, no persistence — re-broadcasts to everyone else with this
   # conversation open. No "stopped typing" counterpart; the receiver just lets its own
   # indicator expire a few seconds after the last ping it received. Also goes to the other
   # members' NotificationsChannel so their conversation list can show "typing…" for a

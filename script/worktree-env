@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Gives a git worktree its own Docker Compose stack: picks a free port offset N and
+# writes <worktree>/.env (which Compose reads automatically) so that
+#   frontend = 8080+N, backend = 3000+N, db = 5432+N, redis = 6379+N
+# and the project name is unique, so containers and volumes don't mix with the main
+# checkout's. Idempotent: an existing .env is kept and its ports printed again.
+#
+#   script/worktree-env          # then: docker compose up -d
+#
+# Refuses to run in the main checkout, which always uses the default ports.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+if [[ "$(git rev-parse --path-format=absolute --git-dir)" == "$(git rev-parse --path-format=absolute --git-common-dir)" ]]; then
+  echo "worktree-env: this is the main checkout — it uses the default ports (8080 / 3000)." >&2
+  exit 1
+fi
+
+env_file="$root/.env"
+
+in_use() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
+
+# Frontend ports other worktrees have already claimed in their .env, running or not.
+claimed="$(git worktree list --porcelain | sed -n 's/^worktree //p' | while IFS= read -r wt; do
+  [[ -f "$wt/.env" ]] && sed -n 's/^FRONTEND_PORT=//p' "$wt/.env"
+done || true)"
+is_claimed() { grep -qx "$1" <<<"$claimed"; }
+
+if [[ ! -f "$env_file" ]]; then
+  offset=""
+  for n in $(seq 1 30); do
+    if ! is_claimed $((8080 + n)) && ! in_use $((8080 + n)) && ! in_use $((3000 + n)) && ! in_use $((5432 + n)) && ! in_use $((6379 + n)); then
+      offset="$n"; break
+    fi
+  done
+  [[ -n "$offset" ]] || { echo "worktree-env: no free port offset in 1..30" >&2; exit 1; }
+
+  name="$(basename "$root" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_-' '-' | sed 's/-*$//')"
+  cat > "$env_file" <<EOF
+# Written by script/worktree-env — ports for this worktree's Compose stack.
+COMPOSE_PROJECT_NAME=pikot-$name
+FRONTEND_PORT=$((8080 + offset))
+BACKEND_PORT=$((3000 + offset))
+DB_PORT=$((5432 + offset))
+REDIS_PORT=$((6379 + offset))
+EOF
+fi
+
+# Print without sourcing, so nothing else in the file is evaluated.
+get() { sed -n "s/^$1=//p" "$env_file" | head -n1; }
+echo "project:  $(get COMPOSE_PROJECT_NAME)"
+echo "frontend: http://localhost:$(get FRONTEND_PORT)"
+echo "backend:  http://localhost:$(get BACKEND_PORT)"
+echo "db:       localhost:$(get DB_PORT)   redis: localhost:$(get REDIS_PORT)"

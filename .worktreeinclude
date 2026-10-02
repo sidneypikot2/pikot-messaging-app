@@ -1,0 +1,2 @@
+# Gitignored files copied into every new Claude Code worktree (.gitignore syntax).
+backend/.env

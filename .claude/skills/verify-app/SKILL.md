@@ -22,6 +22,10 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/up   # expect 200
 | Backend API | http://localhost:3000 |
 | Sent emails (verification etc.) | http://localhost:3000/letter_opener |
 
+**In a git worktree** the stack runs on its own ports: run `script/worktree-env` first (it
+prints the URLs — frontend `8080+N`, backend `3000+N`) and use those everywhere this skill
+says 8080 / 3000. Social login can't complete there; provider redirect URIs point at 3000.
+
 After backend changes or a branch switch: `docker compose restart backend` (re-runs
 `db:prepare`, so pending migrations apply). The frontend is static files served by nginx —
 a browser reload is enough, but hard-reload if CSS/JS looks stale.
@@ -44,7 +48,7 @@ in `command:`, not in `environment:`, so exec'd processes don't inherit it.
 
 1. Open `http://localhost:8080/login.html` in a new tab, sign in as alice. Leave
    **"remember me" unticked**.
-2. For anything real-time (messages, typing, presence, read state, notes): open a second
+2. For anything real-time (messages, typing, presence, read state): open a second
    tab and sign in as bob. With "remember me" off the token is in `sessionStorage`
    (`frontend/js/session.js`), which is per-tab, so each tab is a different user. With it
    ticked the token goes to `localStorage` and both tabs become the same user.

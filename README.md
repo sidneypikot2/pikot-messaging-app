@@ -32,6 +32,17 @@ First run creates the Postgres databases automatically (`db:prepare`).
 
 ```bash
 docker compose run --rm backend bundle exec rspec
+script/check-frontend     # structural checks for the static frontend (it has no test suite)
+```
+
+## Running a second stack (git worktrees)
+
+A git worktree can run its own stack next to the main one. Inside the worktree:
+
+```bash
+script/worktree-env       # once: picks free ports (frontend 8080+N, backend 3000+N) into .env
+docker compose up -d
+script/worktree-down      # when done: stops it and deletes its throwaway database
 ```
 
 ## Common tasks

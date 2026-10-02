@@ -7,6 +7,9 @@
 /.claude/worktrees/
 /CLAUDE.local.md
 
+# Per-worktree Compose ports, written by script/worktree-env
+/.env
+
 # --- Rails backend ---
 /backend/.bundle
 /backend/.env*

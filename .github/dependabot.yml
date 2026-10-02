@@ -5,6 +5,12 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  # Deliberately pinned in the Gemfile (see the comments there) — don't propose these.
+  ignore:
+  - dependency-name: json
+    versions: [ ">= 3" ]
+  - dependency-name: redis
+    versions: [ ">= 6" ]
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

@@ -1,3 +1,7 @@
+# Host ports are overridable so a second checkout (a git worktree) can run its own stack
+# next to this one: `script/worktree-env` writes a root .env with a free set, which
+# Compose reads automatically. Without a .env the defaults below apply. The frontend
+# finds its backend by the same offset (frontend/js/config.js): 8080+N talks to 3000+N.
 services:
   db:
     image: postgres:18-alpine
@@ -7,7 +11,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -19,7 +23,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -36,7 +40,7 @@ services:
       - ./backend:/app
       - bundle_cache:/usr/local/bundle
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     # Social login (KAN-7) credentials — see backend/.env.example. Optional: the app
     # runs fine without a backend/.env file, social login just won't work yet.
     env_file:
@@ -47,7 +51,7 @@ services:
       DATABASE_PORT: 5432
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: postgres
-      FRONTEND_ORIGIN: http://localhost:8080
+      FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT:-8080}
       REDIS_URL: redis://redis:6379/1
     depends_on:
       db:
@@ -60,7 +64,7 @@ services:
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
 

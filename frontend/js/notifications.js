@@ -62,7 +62,7 @@ function hideReactionToast() {
 }
 
 // --- Typing indicator ---
-// Ephemeral, no "stopped typing" round trip (SPEC.md) — the sender throttles pings to
+// Ephemeral, no "stopped typing" round trip — the sender throttles pings to
 // ~1 per 3s of continuous typing, and the receiver lets each typer expire a few seconds
 // after the last ping it got from them, or as soon as their message arrives. Pings come
 // in on ConversationChannel for the open conversation and on NotificationsChannel for

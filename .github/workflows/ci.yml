@@ -57,6 +57,18 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # The frontend has no test suite; this checks its structural rules (only api.js
+      # calls fetch, no ES modules, every script is loaded and every reference resolves).
+      - name: Check frontend structure
+        working-directory: .
+        run: script/check-frontend
+
   test:
     runs-on: ubuntu-latest
     # Postgres only: Action Cable uses the `test` adapter in the test environment, so no Redis.

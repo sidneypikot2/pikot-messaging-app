@@ -3,7 +3,7 @@ class Conversation < ApplicationRecord
   # Chat theme presets (KAN-41); nil is the app's own orange.
   THEMES = %w[orange blue purple pink green red teal].freeze
 
-  # Direct (1:1) and group chats share one table (SPEC.md §5) so messages, reactions,
+  # Direct (1:1) and group chats share one table (SPEC.md section 1) so messages, reactions,
   # read markers and the Action Cable channel work the same for both (KAN-35).
   # No scopes: a `group` scope would clash with ActiveRecord's own `.group`.
   enum :kind, { direct: 0, group: 1 }, scopes: false
