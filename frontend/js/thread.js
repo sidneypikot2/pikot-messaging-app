@@ -49,6 +49,8 @@ async function selectConversation(conversation) {
   document.querySelectorAll("#conversation-list li").forEach((li) => {
     const isActive = Number(li.dataset.conversationId) === conversationId;
     li.classList.toggle("active", isActive);
+    if (isActive) li.setAttribute("aria-current", "true");
+    else li.removeAttribute("aria-current");
     // buildConversationItem's "never for the active conversation" guard only applies at
     // build time — selectConversation never rebuilds the list, just toggles classes on
     // the existing elements, so a badge built before this selection would otherwise
@@ -87,7 +89,10 @@ function selectDraftConversation(user) {
   oldestLoadedMessageId = null;
   resetTypingState();
 
-  document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
+  document.querySelectorAll("#conversation-list li").forEach((li) => {
+    li.classList.remove("active");
+    li.removeAttribute("aria-current");
+  });
 
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
@@ -119,7 +124,10 @@ function closeConversation() {
   closeSettingsDialog();
   resetPinnedNote(null);
 
-  document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
+  document.querySelectorAll("#conversation-list li").forEach((li) => {
+    li.classList.remove("active");
+    li.removeAttribute("aria-current");
+  });
 
   threadActiveEl.hidden = true;
   threadEmptyEl.hidden = false;
@@ -158,9 +166,18 @@ function renderHeaderPresence() {
 
 // --- Messages ---
 
+// Once the oldest message is loaded, the top of the thread says whose chat this is
+// rather than "no more messages", which read like an error on every short chat (KAN-62).
 function updatePaginationStatus() {
   paginationStatusEl.hidden = hasMoreOlder;
-  paginationStatusEl.textContent = hasMoreOlder ? "" : "No more messages to display";
+  if (hasMoreOlder || !headerConversation) {
+    paginationStatusEl.textContent = "";
+    return;
+  }
+  const title = conversationTitle(headerConversation);
+  paginationStatusEl.textContent = isGroup(headerConversation)
+    ? `This is the start of ${title}`
+    : `This is the start of your chat with ${title}`;
 }
 
 // textContent above clears this spinner's markup outright once the fetch resolves, so
