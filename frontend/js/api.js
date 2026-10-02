@@ -234,6 +234,11 @@ const Api = {
     return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}/mute`);
   },
 
+  // Pinned note (KAN-44): any member can set it; a blank body removes it.
+  async updateConversationNote(token, conversationId, body) {
+    return this._settingsRequest(token, "PUT", `/conversations/${conversationId}/note`, { body });
+  },
+
   // "Delete chat" — for the current user only.
   async deleteConversation(token, conversationId) {
     return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}`);

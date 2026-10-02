@@ -32,6 +32,7 @@ module Conversations
       when "added" then "added #{@event['targets'].map { |t| t['name'] }.to_sentence}"
       when "removed" then "removed #{@event.dig('target', 'name')} from the group"
       when "left" then "left the group"
+      when "note" then @event["cleared"] ? "removed the pinned note" : "updated the pinned note"
       end
     end
 

@@ -11,10 +11,19 @@ class ConversationSerializer < ApplicationService
       owner_id: @conversation.owner_id, members: members, muted: muted?, muted_until: muted_until,
       other_user: other && UserSerializer.call(other), created_at: @conversation.created_at,
       unread_count: @unread_count, last_activity: Conversations::LastActivityService.call(@conversation, user: @current_user),
-      read_receipts: read_receipts, presence: presence }
+      read_receipts: read_receipts, presence: presence, note: note }
   end
 
   private
+
+  # The chat's pinned note (KAN-44), with who last edited it and when; nil when none.
+  def note
+    return nil if @conversation.note.blank?
+
+    editor = @conversation.note_updated_by
+    { body: @conversation.note, updated_at: @conversation.note_updated_at,
+      updated_by: editor && { id: editor.id, name: editor.display_name } }
+  end
 
   # Everyone in the conversation, the viewer included, in the order they joined — the
   # group header counts them and the thread uses them for sender names/avatars (KAN-35) —

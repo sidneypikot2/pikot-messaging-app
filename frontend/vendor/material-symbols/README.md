@@ -7,7 +7,7 @@ Only the icons the app uses are in `material-symbols-rounded.woff2`, so the file
 Icons in the subset:
 
 ```
-arrow_back,badge,check,chevron_right,close,delete,edit,emoji_emotions,emoji_events,emoji_food_beverage,emoji_nature,emoji_symbols,expand_more,favorite,group,group_add,info,logout,mood,more_horiz,more_vert,notifications,notifications_off,palette,person_add,person_remove,reply,schedule,send,sentiment_dissatisfied,thumb_up,undo
+arrow_back,badge,check,chevron_right,close,delete,edit,emoji_emotions,emoji_events,emoji_food_beverage,emoji_nature,emoji_symbols,expand_more,favorite,group,group_add,info,logout,mood,more_horiz,more_vert,notifications,notifications_off,palette,person_add,person_remove,push_pin,reply,schedule,send,sentiment_dissatisfied,thumb_up,undo
 ```
 
 ## Adding an icon
