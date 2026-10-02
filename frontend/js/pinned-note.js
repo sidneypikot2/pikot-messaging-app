@@ -18,7 +18,89 @@ function resetPinnedNote(conversation) {
   noteExpanded = false;
   noteEditing = false;
   noteSaving = false;
-  renderPinnedNote(conversation);
+  // No slide here: the whole thread is already playing its entrance (playThreadEntrance).
+  stopNoteSlide();
+  drawPinnedNote(conversation);
+}
+
+// --- Slide ---
+// The note is pinned under the thread header, so it moves like something kept behind
+// it: every change of height slides the bottom edge down or up from the header, and
+// what's inside drops in with it. Run from JS rather than motion.css because the
+// heights aren't known until the note is drawn. Closing is quicker than opening.
+
+const NOTE_SLIDE_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
+const NOTE_SLIDE_OPEN_MS = 280;
+const NOTE_SLIDE_CLOSE_MS = 180;
+
+let noteSlide = null; // { animation, closingAway } for the height animation in flight
+
+// The note's box as the slide needs it. Padding travels with the height: the box can't
+// be shorter than its own padding, so a slide from nothing would start with a jump.
+function noteBox() {
+  if (pinnedNoteEl.hidden) return { height: 0, paddingTop: "0px", paddingBottom: "0px" };
+  const { paddingTop, paddingBottom } = getComputedStyle(pinnedNoteEl);
+  return { height: pinnedNoteEl.getBoundingClientRect().height, paddingTop, paddingBottom };
+}
+
+// Ends the slide in flight where it stands. Synchronous on purpose: a cancel event
+// arrives after the next draw and would undo it.
+function stopNoteSlide() {
+  if (!noteSlide) return;
+  const { animation, closingAway } = noteSlide;
+  noteSlide = null;
+  animation.cancel();
+  pinnedNoteEl.style.overflow = "";
+  if (closingAway) pinnedNoteEl.hidden = true;
+}
+
+// Draws the note with `draw`, then slides from the height it had to the one it has now.
+function slidePinnedNote(draw) {
+  const from = noteBox(); // mid-slide, this is where the edge currently is
+  stopNoteSlide();
+  draw();
+  const to = noteBox();
+  if (Math.abs(to.height - from.height) < 1) return;
+
+  // With reduced motion the edge doesn't travel; the new content just fades in.
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    for (const child of pinnedNoteEl.children) child.animate({ opacity: [0, 1] }, { duration: 120, easing: "ease-out" });
+    return;
+  }
+
+  const opening = to.height > from.height;
+  const closingAway = pinnedNoteEl.hidden; // the note was removed: slide the empty bar shut, then hide it
+  if (closingAway) pinnedNoteEl.hidden = false;
+  pinnedNoteEl.style.overflow = "hidden";
+
+  const animation = pinnedNoteEl.animate(
+    {
+      height: [`${from.height}px`, `${to.height}px`],
+      paddingTop: [from.paddingTop, to.paddingTop],
+      paddingBottom: [from.paddingBottom, to.paddingBottom],
+    },
+    { duration: opening ? NOTE_SLIDE_OPEN_MS : NOTE_SLIDE_CLOSE_MS, easing: NOTE_SLIDE_EASING },
+  );
+  noteSlide = { animation, closingAway };
+  animation.addEventListener("finish", () => {
+    if (noteSlide?.animation === animation) stopNoteSlide();
+  });
+
+  if (!opening) return;
+  for (const child of pinnedNoteEl.children) {
+    child.animate(
+      { opacity: [0, 1], transform: ["translateY(-10px)", "none"] },
+      { duration: NOTE_SLIDE_OPEN_MS, easing: NOTE_SLIDE_EASING },
+    );
+  }
+}
+
+function renderPinnedNote(conversation = activeConversation) {
+  slidePinnedNote(() => drawPinnedNote(conversation));
+}
+
+function renderNoteEditor() {
+  slidePinnedNote(drawNoteEditor);
 }
 
 // First non-blank line, shortened — the collapsed strip and the settings panel row.
@@ -84,7 +166,7 @@ function noteButton(label, className, onClick) {
   return button;
 }
 
-function renderPinnedNote(conversation = activeConversation) {
+function drawPinnedNote(conversation) {
   // A draft has no note yet. Set here, not only on reset: a draft becomes a real chat
   // on its first message without being selected again.
   threadNoteBtnEl.hidden = !activeConversationId;
@@ -151,7 +233,7 @@ function renderPinnedNote(conversation = activeConversation) {
   pinnedNoteEl.replaceChildren(head, body, meta);
 }
 
-function renderNoteEditor() {
+function drawNoteEditor() {
   const note = activeConversation.note;
   pinnedNoteEl.hidden = false;
   pinnedNoteEl.classList.add("pinned-note--open", "pinned-note--editing");
