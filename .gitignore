@@ -33,6 +33,8 @@
 
 # --- Tooling ---
 /tools/frontend-lint/node_modules
+/tools/smoke/node_modules
+/tools/smoke/test-results
 
 # --- Node / frontend (if a build step is added later) ---
 /frontend/node_modules

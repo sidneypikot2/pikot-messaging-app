@@ -35,7 +35,13 @@ script/check              # everything CI runs (needs Docker and jq)
 script/check frontend     # static checks: structure, lint in page load order, event contract
 script/check backend      # rubocop, the full rspec suite, event contract
 script/check tooling      # shellcheck, the Claude Code guards and git hooks
+script/smoke              # browser smoke test: starts the stack, logs two users in, sends a message live
 ```
+
+`script/smoke` runs Playwright in its own container (`tools/smoke/`) against the Compose
+stack. It creates two accounts, `smoke-alice@example.com` and `smoke-bob@example.com`, in
+the development database. On failure, traces and screenshots are in
+`tools/smoke/test-results/`.
 
 The frontend has no test suite; its lint runs ESLint from `tools/frontend-lint/` in a Node
 container. `realtime-events.json` lists the Action Cable events both sides must agree on.

@@ -14,6 +14,7 @@
       "Bash(script/lint-frontend)",
       "Bash(script/lint-shell)",
       "Bash(script/check-events)",
+      "Bash(script/smoke)",
       "Bash(script/check-frontend)",
       "Bash(script/test-hooks)",
       "Bash(script/worktree-env)",

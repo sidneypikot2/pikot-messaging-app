@@ -16,7 +16,7 @@ These apply to every task, whether or not `/kan-task` was run:
 - **Area**: `frontend`, `backend` or `infra` — one per task, used as the Jira label, GitHub label and branch prefix.
 - **Branch**: `<area>/kan-<n>-<kebab-summary>` from an up-to-date `origin/main`. Never commit on `main`.
 - **Commit subject and PR title**: `KAN-<n> <summary>`. CI checks the branch name, PR title and area label (`.github/workflows/pr-conventions.yml`).
-- **Done** means `script/check <area>` passes — it runs what CI runs. For backend changes run only the affected specs while iterating and `script/check backend` once before the PR. For frontend changes `script/check frontend` is static analysis only: say plainly that the change was not verified in the running app unless `/verify-app` was run.
+- **Done** means `script/check <area>` passes — it runs what CI runs. For backend changes run only the affected specs while iterating and `script/check backend` once before the PR. For frontend changes, and backend changes to login, messaging or the channels, also run `script/smoke` — it drives the real app in a browser (login, a message between two users in real time). It covers that one path only: beyond it, say plainly that the change was not verified in the running app unless `/verify-app` was run.
 
 ## Git safety
 
@@ -45,6 +45,7 @@ docker compose run --rm backend bundle install && docker compose build backend  
 script/check [frontend|backend|tooling]   # everything CI runs for that area (no argument: all of it)
 script/lint-frontend          # one piece of `check frontend`: syntax, undefined names, load order
 script/check-events           # the real-time event contract (realtime-events.json) vs both sides
+script/smoke                  # browser smoke test (Playwright container) against this checkout's stack
 script/worktree-env           # in a worktree, once: own ports (8080+N / 3000+N) and project name
 ```
 

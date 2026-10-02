@@ -1,0 +1,9 @@
+{
+  "name": "pikot-smoke",
+  "private": true,
+  "description": "Browser smoke test for the chat app. Tooling only; run through script/smoke. The @playwright/test version must match the Playwright image tag in docker-compose.yml.",
+  "type": "module",
+  "dependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

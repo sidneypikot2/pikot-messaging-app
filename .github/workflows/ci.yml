@@ -82,6 +82,32 @@ jobs:
         working-directory: .
         run: script/check tooling
 
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # The only check that runs the app: builds and starts the Compose stack, then drives
+      # it in the Playwright container (login, a message between two users in real time).
+      - name: Browser smoke test
+        working-directory: .
+        run: script/smoke
+
+      - name: Backend logs
+        if: failure()
+        working-directory: .
+        run: docker compose logs --tail 200 backend
+
+      - name: Upload traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: tools/smoke/test-results
+          if-no-files-found: ignore
+
   test:
     runs-on: ubuntu-latest
     # Postgres only: Action Cable uses the `test` adapter in the test environment, so no Redis.
