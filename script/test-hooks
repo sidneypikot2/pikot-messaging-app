@@ -18,6 +18,7 @@ sandbox="$(mktemp -d)"
 trap 'rm -rf "$sandbox"' EXIT
 main="$sandbox/main"        # a checkout on main
 task="$sandbox/task"        # a linked worktree on a task branch
+staging="$sandbox/staging"  # a linked worktree on staging
 
 g() { git -c user.name=test -c user.email=test@example.com -c commit.gpgsign=false "$@"; }
 
@@ -30,6 +31,12 @@ g -C "$main" add -A
 g -C "$main" commit -q -m "initial"
 git -C "$main" update-ref refs/remotes/origin/main HEAD
 git -C "$main" worktree add -q -b infra/kan-1-example "$task"
+# staging is one migration ahead of main: merged work that hasn't been released yet.
+git -C "$main" worktree add -q -b staging "$staging"
+echo "# on staging" > "$staging/backend/db/migrate/20260303000000_on_staging.rb"
+g -C "$staging" add -A
+g -C "$staging" commit -q -m "merged to staging"
+git -C "$main" update-ref refs/remotes/origin/staging staging
 
 failures=0
 total=0
@@ -128,6 +135,9 @@ source backend/.env
 cp backend/.env /tmp/copy
 cd backend && cat .env
 head -1 backend/.env.production
+cat backend/.env.staging
+cat .env.production.local
+grep KEY config/.env.local
 cat backend/config/master.key
 cat backend/config/credentials/production.key && cat backend/config/production.key
 cat backend/.kamal/secrets
@@ -197,6 +207,10 @@ expect_bash allow "$main" "git switch -c infra/kan-2-other && git commit -m x"
 expect_bash allow "$task" "git commit -m x"
 expect_bash allow "$main" "git -C $task commit -m x"
 expect_bash allow "$main" "git log --oneline"
+# staging is protected the same way.
+expect_bash block "$staging" "git commit -m x"
+expect_bash block "$staging" "git push"
+expect_bash block "$task" "git -C $staging commit -m x"
 
 # --- guard-edit ---------------------------------------------------------------------------
 
@@ -207,7 +221,14 @@ expect_edit block "$task/backend/config/credentials.yml.enc"
 expect_edit block "$task/backend/config/master.key"
 expect_edit block "$task/frontend/vendor/material-symbols/material-symbols.css"
 expect_edit block "$task/backend/db/migrate/20260101000000_merged.rb"
+expect_edit block "$task/backend/db/migrate/20260303000000_on_staging.rb"
 expect_edit allow "$task/backend/db/migrate/20260202000000_new.rb"
+expect_edit block "$task/backend/.env"
+expect_edit block "$task/backend/.env.staging"
+expect_edit block "$task/backend/.env.production.local"
+expect_edit block "$task/.env.local"
+expect_edit allow "$task/backend/.env.example"
+expect_edit allow "$task/.env"
 expect_edit allow "$task/backend/Gemfile"
 expect_edit allow "$task/backend/app/models/user.rb"
 expect_edit allow "$task/frontend/js/app.js"
@@ -228,9 +249,10 @@ echo '{"tool_input":{"file_path":"/x"}}' | PATH="$no_jq" "$guard_edit" >/dev/nul
 # --- Git hooks ----------------------------------------------------------------------------
 # Enabled the way a real checkout has them: checked in, core.hooksPath relative.
 
-mkdir -p "$main/.githooks" "$task/.githooks"
+mkdir -p "$main/.githooks" "$task/.githooks" "$staging/.githooks"
 cp "$repo_root"/.githooks/* "$main/.githooks/"
 cp "$repo_root"/.githooks/* "$task/.githooks/"
+cp "$repo_root"/.githooks/* "$staging/.githooks/"
 git -C "$main" config core.hooksPath .githooks
 
 # With the hooks active the guard leaves commits to them...
@@ -238,9 +260,11 @@ expect_bash allow "$main" "git commit -m x"
 expect_bash allow "$main" "git switch -c x; git switch main; git commit -m y"
 
 # ...and they refuse on main whatever the command looked like,
-total=$((total + 5))
+total=$((total + 8))
 echo "change" >> "$main/frontend/js/app.js"
 g -C "$main" commit -q -am "on main" >/dev/null 2>&1 && fail "pre-commit must refuse a commit on main"
+echo "change" >> "$staging/frontend/js/app.js"
+g -C "$staging" commit -q -am "on staging" >/dev/null 2>&1 && fail "pre-commit must refuse a commit on staging"
 
 # while a task branch commits normally (its worktree runs its own copy of the hooks).
 echo "change" >> "$task/frontend/js/app.js"
@@ -252,6 +276,10 @@ zero="0000000000000000000000000000000000000000"
   && fail "pre-push must refuse a push to main"
 (cd "$task" && echo "HEAD $sha refs/heads/main $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
   && fail "pre-push must refuse HEAD:main"
+(cd "$task" && echo "refs/heads/infra/kan-1-example $sha refs/heads/staging $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
+  && fail "pre-push must refuse a push to staging"
+(cd "$task" && echo "HEAD $sha refs/heads/staging $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
+  && fail "pre-push must refuse HEAD:staging"
 (cd "$task" && echo "refs/heads/infra/kan-1-example $sha refs/heads/infra/kan-1-example $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
   || fail "pre-push must allow a push to the task branch"
 

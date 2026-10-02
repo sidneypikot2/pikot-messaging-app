@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [ main, staging ]
 
 # The jobs only read the repository.
 permissions:

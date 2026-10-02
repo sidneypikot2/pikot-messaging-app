@@ -103,7 +103,8 @@ Each task gets its own git worktree, so parallel sessions and the user's own che
 never fight over one working tree. Leave the main checkout on whatever branch it is on.
 
 1. `git fetch origin`, then enter a worktree named `kan-<n>-<kebab-summary>`
-   (`EnterWorktree`). It starts from `origin/main` as last fetched.
+   (`EnterWorktree`). It starts from the default branch, `origin/staging`, as last
+   fetched — check with `git log --oneline -1`, and if it started anywhere else, say so.
 2. Rename its branch to the convention: `git branch -m <area>/kan-<n>-<kebab-summary>`.
 3. Record the branch in the ticket's state lines.
 
@@ -144,7 +145,8 @@ against the endpoint are enough.
    boundary, authorization specs, both channels, the event contract). Fix findings that
    affect correctness or the ticket's requirements; note in the PR any you deliberately
    left.
-2. Commit, push, open the PR:
+2. Commit, push, open the PR against `staging` (`gh pr create --base staging`) — never
+   against `main`, which only takes releases:
    - title per `CLAUDE.md`, same area label as the ticket;
    - body: a few lines — what changed, how it was tested (say plainly when a frontend
      change was not verified in the running app), and the ticket link. The ticket carries
@@ -171,4 +173,5 @@ only works on the main stack's ports. If the task was branched in place (step 4
 exception), restart the main stack's backend instead (`docker compose restart backend`).
 Skip starting a stack when nothing the user can exercise in the app changed.
 
-Stop here. After the user merges the PR, `/kan-finish <KAN-n>` closes the task out.
+Stop here. After the user merges the PR, `/kan-finish <KAN-n>` closes the task out. The
+change is then on `staging`; it reaches production with the next `/release`.

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Refuses commits on main: work goes on a task branch (<area>/kan-<n>-<summary>) and
-# reaches main through a pull request. Enabled by `git config core.hooksPath .githooks`
-# (Claude Code sessions set it on start; see README). Also runs as pre-merge-commit.
+# Refuses commits on the two protected branches. Work goes on a task branch
+# (<area>/kan-<n>-<summary>), reaches staging through a pull request, and main through a
+# release (staging -> main). Enabled by `git config core.hooksPath .githooks` (Claude
+# Code sessions set it on start; see README). Also runs as pre-merge-commit.
 branch="$(git branch --show-current)"
-if [[ "$branch" == "main" ]]; then
-  echo "pre-commit: refusing to commit on main — create a task branch first:" >&2
+if [[ "$branch" == "main" || "$branch" == "staging" ]]; then
+  echo "pre-commit: refusing to commit on $branch — create a task branch first:" >&2
   echo "  git switch -c <area>/kan-<n>-<kebab-summary>" >&2
   exit 1
 fi

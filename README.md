@@ -53,8 +53,11 @@ container. `realtime-events.json` lists the Action Cable events both sides must 
 
 ## Git hooks
 
-`main` only changes through pull requests. The checked-in hooks refuse commits and pushes
-on `main`; enable them once per clone (Claude Code sessions do this on start):
+There are two protected branches. `staging` is the default branch: every task is a pull
+request into it. `main` is what production runs: it only receives `staging`, as a release
+pull request (`staging` → `main`, titled `Release <date>`). The checked-in hooks refuse
+commits and pushes on both; enable them once per clone (Claude Code sessions do this on
+start):
 
 ```bash
 git config core.hooksPath .githooks
@@ -98,4 +101,5 @@ The rules live in one place, [`CLAUDE.md`](CLAUDE.md) (Conventions), and CI enfo
 every pull request. In short: each task has one area — `frontend`, `backend` or `infra` — used
 as its Jira label, GitHub label and branch prefix; branches are `<area>/kan-<n>-<kebab-summary>`
 (e.g. `frontend/kan-12-add-login-form`); commit subjects and PR titles are `KAN-<n> <summary>`.
-`main` is protected: changes arrive through a pull request with green checks.
+`staging` and `main` are protected: changes arrive through a pull request with green checks,
+tasks into `staging` and releases from `staging` into `main`.
