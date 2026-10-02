@@ -5,6 +5,8 @@
 **Date:** September 15, 2026
 **Status:** Revised — realigned with the implemented API/web-split architecture
 
+> **Design intent, not a reference.** `backend/config/routes.rb` and `backend/db/schema.rb` are authoritative for what exists; where this document disagrees with them, the code wins. Group invitations, membership roles/status and `group_invitations` are designed here but **not built**.
+
 ---
 
 ## 1. Overview
@@ -126,25 +128,25 @@ pikot-messaging-app/
 │   ├── app/
 │   │   ├── channels/
 │   │   │   ├── application_cable/
-│   │   │   ├── conversation_channel.rb       # per-conversation message stream (planned)
-│   │   │   └── notifications_channel.rb      # per-user stream (planned)
-│   │   ├── controllers/
+│   │   │   ├── conversation_channel.rb       # per-conversation message stream
+│   │   │   └── notifications_channel.rb      # per-user stream
+│   │   ├── controllers/                      # one per resource — see config/routes.rb
 │   │   │   ├── application_controller.rb     # authenticate_request!
 │   │   │   ├── registrations_controller.rb
 │   │   │   ├── sessions_controller.rb
 │   │   │   ├── email_verifications_controller.rb
+│   │   │   ├── oauth_starts_controller.rb    # same-origin form that starts OAuth
 │   │   │   ├── omniauth_callbacks_controller.rb
-│   │   │   ├── csrf_tokens_controller.rb
-│   │   │   ├── users_controller.rb           # search (planned)
-│   │   │   ├── conversations_controller.rb   # (planned)
-│   │   │   ├── messages_controller.rb        # (planned)
+│   │   │   ├── users_controller.rb           # search
+│   │   │   ├── conversations_controller.rb
+│   │   │   ├── messages_controller.rb
 │   │   │   └── groupchats_controller.rb      # create only (KAN-35)
 │   │   ├── models/
 │   │   │   ├── user.rb
-│   │   │   ├── conversation.rb               # (planned)
-│   │   │   ├── conversation_membership.rb    # (planned)
-│   │   │   ├── message.rb                    # (planned)
-│   │   │   └── group_invitation.rb           # (planned)
+│   │   │   ├── conversation.rb
+│   │   │   ├── conversation_membership.rb
+│   │   │   ├── message.rb                    # plus message_reaction.rb, message_hide.rb
+│   │   │   └── group_invitation.rb           # NOT BUILT
 │   │   ├── services/
 │   │   │   ├── application_service.rb        # .call → new.call convention
 │   │   │   ├── user_serializer.rb
@@ -154,9 +156,10 @@ pikot-messaging-app/
 │   │   │   │   ├── omniauth_authenticator.rb
 │   │   │   │   └── session_issuer.rb
 │   │   │   ├── users/
-│   │   │   │   └── search_service.rb         # (planned)
-│   │   │   ├── messages/                     # (planned)
-│   │   │   ├── conversations/                # (planned)
+│   │   │   │   └── search_service.rb
+│   │   │   ├── messages/
+│   │   │   ├── conversations/
+│   │   │   ├── reactions/
 │   │   │   └── groupchats/                   # create_service.rb (KAN-35)
 │   │   ├── mailers/
 │   │   └── lib/
@@ -304,14 +307,14 @@ erDiagram
 
 - `omniauth-facebook`, `omniauth-linkedin-oauth2`, `omniauth-apple`, via the standard OmniAuth middleware (not Devise).
 - Flow: client hits `GET /auth/:provider` (handled by `OmniAuth::Builder` middleware, not a Rails route) → provider redirect/callback → `OmniauthCallbacksController#create` (`match "auth/:provider/callback"`) → `Auth::OmniauthAuthenticator.call(auth_hash)` finds-or-creates a `User` keyed on `[provider, uid]`, then issues a session the same way as password login (`Auth::SessionIssuer`).
-- **This flow is browser-shaped today** (see [1.4](#14-mobile-readiness-notes)): `omniauth-rails_csrf_protection` protects the callback using a browser session cookie obtained via `GET /csrf_token` (`CsrfTokensController`), which is why CORS has `credentials: true` scoped to `FRONTEND_ORIGIN` (`backend/config/initializers/cors.rb`). A native mobile client would need either a different OAuth handoff (system browser + custom URL scheme, or a provider SDK) or an alternative CSRF strategy for a token-based callback — not yet designed, intentionally deferred until mobile work starts.
+- **This flow is browser-shaped today** (see [1.4](#14-mobile-readiness-notes)): `omniauth-rails_csrf_protection` requires the request phase to be a real form POST carrying a CSRF token tied to a browser session cookie. The frontend navigates to `GET /auth/:provider/start` (`OauthStartsController`), which renders a same-origin auto-submitting form with that token. An earlier `GET /csrf_token` endpoint fetched cross-site by the frontend was removed — browsers drop the session cookie and the POST fails intermittently with `InvalidAuthenticityToken`; do not reintroduce it. A native mobile client would need either a different OAuth handoff (system browser + custom URL scheme, or a provider SDK) or an alternative CSRF strategy for a token-based callback — not yet designed, intentionally deferred until mobile work starts.
 
 ### 6.3 Enforcing "authenticated users only"
 
 - `ApplicationController#authenticate_request!` reads `Authorization: Bearer <token>`, decodes it via `JsonWebToken.decode`, and loads `current_user`; missing/invalid token → `render json: { error: "Unauthorized" }, status: :unauthorized`.
 - There is **no server-side redirect** — the API always returns JSON, never an HTML page. It's each client's own job to react to a `401` (the web frontend redirects to its login screen; a mobile client would do the platform-appropriate equivalent). This is what makes the same auth contract already mobile-ready without change.
 
-### 6.4 Authorization (who can do what) — planned, once messaging is built
+### 6.4 Authorization (who can do what) — design; invitation and role rules not built
 
 No authorization gem is installed; checks are expected to live as plain Ruby inside the relevant service (see the `member?` example in [Section 8](#8-service-layer-pattern)), consistent with how auth already works. Revisit only if that becomes unwieldy once real permission logic (group ownership, membership status) lands:
 
@@ -331,24 +334,9 @@ No authorization gem is installed; checks are expected to live as plain Ruby ins
 Routes are currently flat and unversioned (`config/routes.rb`), matching what's implemented for auth today rather than the nested-resource style v1.0 sketched. The messaging routes below extend that same flat style for consistency; introducing an `/api/v1` prefix (see [1.4](#14-mobile-readiness-notes)) is a decision to make deliberately before a mobile client ships, not assumed here.
 
 ```ruby
-# config/routes.rb (implemented + planned)
-
-# Implemented (KAN-5 / KAN-7)
-post "signup", to: "registrations#create"
-post "login", to: "sessions#create"
-get "me", to: "sessions#show"
-post "email_verification", to: "email_verifications#create"
-post "email_verification/resend", to: "email_verifications#resend"
-get "csrf_token", to: "csrf_tokens#show"
-match "auth/:provider/callback", to: "omniauth_callbacks#create", via: [ :get, :post ]
-match "auth/failure", to: "omniauth_callbacks#failure", via: [ :get, :post ]
-
-# Planned — messaging phase
-get "users/search", to: "users#search"
-
-resources :conversations, only: [ :index, :show, :create ] do
-  resources :messages, only: [ :index, :create, :update, :destroy ]
-end
+# Implemented routes are NOT repeated here — read backend/config/routes.rb.
+# Below is the group-invitation design only. NOT BUILT: today POST /groupchats adds
+# members directly and /conversations/:id/members manages them.
 
 resources :groupchats, controller: "conversations" do
   resources :invitations, controller: "group_invitations", only: [ :create, :destroy ] do
@@ -374,23 +362,23 @@ get "invitations", to: "group_invitations#index"
 | `POST` | `/email_verification/resend` | Resend verification | ✅ implemented | — (plain AR) |
 | `GET` | `/auth/:provider` | Start OAuth | ✅ implemented | OmniAuth middleware |
 | `*` | `/auth/:provider/callback` | OAuth callback | ✅ implemented | `Auth::OmniauthAuthenticator` |
-| `GET` | `/csrf_token` | CSRF token for OAuth callback (web-only, see 6.2) | ✅ implemented | — |
-| `GET` | `/users/search?q=` | Search users | ⏳ planned | `Users::SearchService` |
-| `GET` | `/conversations` | List my conversations | ⏳ planned | — (query) |
-| `POST` | `/conversations` | Start/reuse a direct conversation | ⏳ planned | `Conversations::FindOrCreateDirectService` |
-| `GET` | `/conversations/:id` | Show conversation + messages | ⏳ planned | — (query) |
-| `GET` | `/conversations/:id/messages` | Paginated message history | ⏳ planned | — (query) |
-| `POST` | `/conversations/:id/messages` | Send a message | ⏳ planned | `Messages::CreateService` |
-| `PATCH` | `/messages/:id` | Edit a message | ⏳ planned | `Messages::UpdateService` |
-| `DELETE` | `/messages/:id` | Soft-delete a message (`scope=everyone`, default) or hide it for the current user (`scope=me`) | ⏳ planned | `Messages::DeleteService` / `Messages::HideService` |
+| `GET` | `/auth/:provider/start` | Same-origin form that starts OAuth (web-only, see 6.2) | ✅ implemented | — |
+| `GET` | `/users/search?q=` | Search users | ✅ implemented | `Users::SearchService` |
+| `GET` | `/conversations` | List my conversations | ✅ implemented | — (query) |
+| `POST` | `/conversations` | Start/reuse a direct conversation | ✅ implemented | `Conversations::FindOrCreateDirectService` |
+| `GET` | `/conversations/:id` | Show conversation + messages | ✅ implemented | — (query) |
+| `GET` | `/conversations/:id/messages` | Paginated message history | ✅ implemented | — (query) |
+| `POST` | `/conversations/:id/messages` | Send a message | ✅ implemented | `Messages::CreateService` |
+| `PATCH` | `/messages/:id` | Edit a message | ✅ implemented | `Messages::UpdateService` |
+| `DELETE` | `/messages/:id` | Soft-delete a message (`scope=everyone`, default) or hide it for the current user (`scope=me`) | ✅ implemented | `Messages::DeleteService` / `Messages::HideService` |
 | `POST` | `/groupchats` | Create a group chat (KAN-35: members added directly, invitations still planned) | ✅ implemented | `Groupchats::CreateService` |
-| `PATCH` | `/groupchats/:id` | Update group name/settings | ⏳ planned | `Groupchats::UpdateService` |
-| `DELETE` | `/groupchats/:id` | Delete a group chat (owner only) | ⏳ planned | `Groupchats::DeleteService` |
+| `PATCH` | `/groupchats/:id` | Update group name/settings | ⏳ not built — use `PATCH /conversations/:id` | `Groupchats::UpdateService` |
+| `DELETE` | `/groupchats/:id` | Delete a group chat (owner only) | ⏳ not built — `DELETE /conversations/:id` deletes the chat for the current user only | `Groupchats::DeleteService` |
 | `POST` | `/groupchats/:id/invitations` | Invite a user to the group | ⏳ planned | `Groupchats::InviteMemberService` |
 | `PATCH` | `/invitations/:id/accept` | Invited user accepts | ⏳ planned | `Groupchats::AcceptInvitationService` |
 | `PATCH` | `/invitations/:id/decline` | Invited user declines | ⏳ planned | `Groupchats::DeclineInvitationService` |
 | `DELETE` | `/invitations/:id` | Cancel a pending invite | ⏳ planned | `Groupchats::CancelInvitationService` |
-| `DELETE` | `/groupchats/:id/memberships/:id` | Remove a member, or leave | ⏳ planned | `Groupchats::RemoveMemberService` |
+| `DELETE` | `/groupchats/:id/memberships/:id` | Remove a member, or leave | ⏳ not built — use `/conversations/:id/members` | `Groupchats::RemoveMemberService` |
 | `GET` | `/invitations` | List my pending invitations | ⏳ planned | — (query) |
 
 All planned endpoints return JSON only, same as the implemented ones — no HTML fallback, so they're usable by the web client and a future mobile client without modification.

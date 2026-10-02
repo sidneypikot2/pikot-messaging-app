@@ -4,6 +4,8 @@
 # --- Claude Code ---
 /.claude/scheduled_tasks.lock
 /.claude/settings.local.json
+/.claude/worktrees/
+/CLAUDE.local.md
 
 # --- Rails backend ---
 /backend/.bundle
