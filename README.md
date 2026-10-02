@@ -54,7 +54,7 @@ docker compose build backend
 ## Roadmap
 
 Tracked in Jira ([KAN project](https://sidneypikot2.atlassian.net/jira/software/projects/KAN)).
-Auth (manual + social login) is done. Planned: conversations, real-time messaging (Action Cable + Redis), group chats, then a mobile client.
+Done: auth (manual + social login), direct and group conversations, real-time messaging (Action Cable + Redis), message edit/delete/reactions, per-conversation settings. Planned: group invitations with approval, then a mobile client.
 
 ## Workflow conventions
 
@@ -65,8 +65,8 @@ Every task is tagged by area — `frontend`, `backend`, or `infra` — consisten
   "Add login form", no prefix needed.
 - **GitHub labels**: same three labels (`frontend`, `backend`, `infra`) exist on this repo — apply one to
   every issue/PR touching that area.
-- **Branches**: `<area>/<jira-key>-<kebab-summary>`, e.g. `frontend/KAN-12-add-login-form` or
-  `backend/KAN-15-auth-endpoint`. Use `infra/...` for Docker/CI/deploy/tooling changes that aren't
+- **Branches**: `<area>/<jira-key>-<kebab-summary>`, e.g. `frontend/kan-12-add-login-form` or
+  `backend/kan-15-auth-endpoint`. Use `infra/...` for Docker/CI/deploy/tooling changes that aren't
   specific to one app.
 - **PR titles**: `<JIRA-KEY> <summary>`, e.g. `KAN-12 Add login form` — keeps Jira smart-commit linking
   working and makes the area/ticket traceable from the PR list.

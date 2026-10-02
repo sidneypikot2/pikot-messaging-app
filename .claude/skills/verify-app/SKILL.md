@@ -1,6 +1,7 @@
 ---
 name: verify-app
-description: Run PikotChat locally and prove a change works in the real app - start the Docker stack, log in with the dev test accounts, drive the chat UI in Chrome (two users in two tabs for real-time checks), capture screenshots and post them to the Jira ticket. Use only when the user explicitly asks to run, test, screenshot or verify the app - never automatically, even after a change that touches frontend/.
+description: Run PikotChat locally and prove a change works in the real app - start the Docker stack, log in with the dev test accounts, drive the chat UI in Chrome (two users in two tabs for real-time checks), capture screenshots and post them to the Jira ticket.
+disable-model-invocation: true
 ---
 
 # Verify the app
