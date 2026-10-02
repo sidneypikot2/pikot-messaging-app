@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Finds worktree Docker stacks that outlived their worktree. Claude Code and git clean up
+# a worktree's files; nothing cleans up its containers and volumes if the worktree was
+# removed without script/worktree-down.
+#
+#   script/docker-sweep            report orphaned stacks and merged worktrees (changes nothing)
+#   script/docker-sweep --quiet    the same, one line, nothing when all is clean
+#   script/docker-sweep --apply    delete the orphaned stacks, volumes included
+#
+# A stack is orphaned when its Compose project is named pikot-<something> (what
+# script/worktree-env writes) and no current worktree claims that name. The main
+# checkout's stack is never touched: it holds the real development database.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+mode="${1:-report}"
+case "$mode" in
+  report|--quiet|--apply) ;;
+  *) echo "usage: script/docker-sweep [--quiet | --apply]" >&2; exit 2 ;;
+esac
+
+docker info >/dev/null 2>&1 || { [[ "$mode" == --quiet ]] || echo "docker-sweep: Docker isn't running"; exit 0; }
+
+main_root="$(git worktree list --porcelain | sed -n 's/^worktree //p' | head -n1)"
+main_project="$(basename "$main_root" | tr '[:upper:]' '[:lower:]')"
+
+# Project names claimed by the worktrees that exist now.
+claimed="$(git worktree list --porcelain | sed -n 's/^worktree //p' | while IFS= read -r wt; do
+  [[ -f "$wt/.env" ]] && sed -n 's/^COMPOSE_PROJECT_NAME=//p' "$wt/.env"
+done || true)"
+
+# Every pikot-* Compose project Docker still knows, from its containers and its volumes.
+label='com.docker.compose.project'
+projects="$( { docker ps -a --filter "label=$label" --format "{{.Label \"$label\"}}"
+               docker volume ls --filter "label=$label" --format "{{.Label \"$label\"}}"; } 2>/dev/null \
+             | grep -E '^pikot-' | sort -u || true)"
+
+orphans=()
+while IFS= read -r project; do
+  [[ -n "$project" && "$project" != "$main_project" ]] || continue
+  grep -qx -- "$project" <<<"$claimed" || orphans+=("$project")
+done <<<"$projects"
+
+# Worktrees whose branch is already merged: their task is finished but not closed out.
+# A branch with no commits of its own is also an ancestor of main; what tells them apart
+# is that a merged branch's tip came in through a merge, not along main's own line.
+mainline="$(git rev-list --first-parent origin/main 2>/dev/null || true)"
+merged=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && merged+=("$line")
+done < <(git worktree list --porcelain | awk -v main="$main_root" '
+  /^worktree / { path = substr($0, 10) }
+  /^branch /   { if (path != main) print path "\t" substr($0, 19) }' | while IFS=$'\t' read -r path branch; do
+    tip="$(git rev-parse "$branch" 2>/dev/null)" || continue
+    git merge-base --is-ancestor "$tip" origin/main 2>/dev/null || continue
+    grep -qx -- "$tip" <<<"$mainline" || echo "${path##*/} ($branch)"
+  done || true)
+
+if [[ "$mode" == --quiet ]]; then
+  parts=()
+  (( ${#orphans[@]} > 0 )) && parts+=("${#orphans[@]} orphaned Docker stack(s): ${orphans[*]} — script/docker-sweep --apply removes them")
+  (( ${#merged[@]} > 0 )) && parts+=("${#merged[@]} worktree(s) with a merged branch: ${merged[*]} — /kan-finish closes them")
+  (( ${#parts[@]} > 0 )) && (IFS=';'; echo "${parts[*]}")
+  exit 0
+fi
+
+for item in ${merged[@]+"${merged[@]}"}; do
+  echo "docker-sweep: worktree with a merged branch still present: $item — run /kan-finish for its ticket"
+done
+
+if (( ${#orphans[@]} == 0 )); then
+  echo "docker-sweep: no orphaned stacks"
+  exit 0
+fi
+
+for project in "${orphans[@]}"; do
+  containers="$(docker ps -a -q --filter "label=$label=$project" | wc -l | tr -d ' ')"
+  volumes="$(docker volume ls -q --filter "label=$label=$project" | tr '\n' ' ')"
+  if [[ "$mode" == --apply ]]; then
+    docker compose -p "$project" down --volumes --remove-orphans >/dev/null 2>&1 || true
+    # `down` only knows the volumes of containers that still exist; remove the rest by label.
+    leftover="$(docker volume ls -q --filter "label=$label=$project")"
+    # shellcheck disable=SC2086  # one volume name per word
+    [[ -n "$leftover" ]] && docker volume rm $leftover >/dev/null
+    echo "docker-sweep: removed $project ($containers container(s); volumes: ${volumes:-none})"
+  else
+    echo "docker-sweep: orphaned stack $project — $containers container(s); volumes: ${volumes:-none}"
+  fi
+done
+[[ "$mode" == --apply ]] || echo "docker-sweep: run with --apply to delete them (their databases are throwaway copies)"

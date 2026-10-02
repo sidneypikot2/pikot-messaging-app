@@ -5,7 +5,7 @@
 #   script/check              everything
 #   script/check frontend     structure, lint, event contract
 #   script/check backend      rubocop, full rspec suite, event contract
-#   script/check tooling      shellcheck, guard and git-hook tests
+#   script/check tooling      shellcheck, guard and git-hook tests, instruction-file checks
 #
 # Needs Docker and jq. CI runs the same scripts (backend natively, for speed); the
 # security scans (`bin/ci`: bundler-audit, brakeman) stay CI-only.
@@ -25,30 +25,21 @@ step() { # name, command...
   "$@" || failed+=("$name")
 }
 
-# In a worktree the backend's containers need their own ports and project name first.
-backend_stack() {
-  if [[ "$(git rev-parse --path-format=absolute --git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" && ! -f .env ]]; then
-    script/worktree-env >/dev/null
-  fi
-}
-
 if [[ "$area" == all || "$area" == frontend ]]; then
-  step "frontend structure" script/check-frontend
+  step "frontend structure" script/lint frontend
   step "frontend lint" script/lint-frontend
 fi
 if [[ "$area" != tooling ]]; then
   step "event contract" script/check-events
 fi
 if [[ "$area" == all || "$area" == backend ]]; then
-  backend_stack
-  step "rubocop" docker compose run --rm backend bin/rubocop
-  # A fresh stack (a new worktree, a cloud session) has no test database yet.
-  step "test database" docker compose run --rm -e RAILS_ENV=test backend bin/rails db:prepare
-  step "rspec" docker compose run --rm backend bundle exec rspec
+  step "rubocop" script/lint backend
+  step "rspec" script/test
 fi
 if [[ "$area" == all || "$area" == tooling ]]; then
   step "shell lint" script/lint-shell
   step "guards and git hooks" script/test-hooks
+  step "instruction files" script/check-docs
 fi
 
 if (( ${#failed[@]} > 0 )); then

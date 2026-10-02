@@ -31,12 +31,17 @@ First run creates the Postgres databases automatically (`db:prepare`).
 ## Running tests
 
 ```bash
+script/test [spec/path_spec.rb[:LINE]]   # backend specs (no argument: the full suite)
+script/lint               # rubocop and the frontend structure rules
 script/check              # everything CI runs (needs Docker and jq)
 script/check frontend     # static checks: structure, lint in page load order, event contract
 script/check backend      # rubocop, the full rspec suite, event contract
-script/check tooling      # shellcheck, the Claude Code guards and git hooks
+script/check tooling      # shellcheck, the Claude Code guards and git hooks, instruction-file checks
 script/smoke              # browser smoke test: starts the stack, logs two users in, sends a message live
 ```
+
+You need Docker Desktop, plus `jq` (the Claude Code hooks) and `gh` (pull requests) if you
+work with Claude Code here; a session reports whichever is missing when it starts.
 
 `script/smoke` runs Playwright in its own container (`tools/smoke/`) against the Compose
 stack. It creates two accounts, `smoke-alice@example.com` and `smoke-bob@example.com`, in

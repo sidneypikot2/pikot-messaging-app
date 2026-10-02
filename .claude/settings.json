@@ -3,8 +3,11 @@
   "permissions": {
     "allow": [
       "Bash(.claude/skills/kan-task/scripts/discord-thread.sh:*)",
-      "Bash(docker compose run --rm backend bundle exec rspec:*)",
-      "Bash(docker compose run --rm backend bin/rubocop:*)",
+      "Bash(script/test:*)",
+      "Bash(script/lint:*)",
+      "Bash(script/check-docs)",
+      "Bash(script/docker-sweep)",
+      "Bash(script/docker-sweep --quiet)",
       "Bash(docker compose run --rm backend bin/ci)",
       "Bash(docker compose run --rm backend bin/rails db:migrate:*)",
       "Bash(script/check)",
@@ -75,7 +78,15 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-frontend.sh" }
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-frontend.sh" },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/rubocop.sh", "timeout": 60 }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/worktree-remove.sh", "timeout": 120 }
         ]
       }
     ],
@@ -84,6 +95,7 @@
         "matcher": "startup|resume",
         "hooks": [
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/git-hooks.sh", "timeout": 10 },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/env-check.sh", "timeout": 20 },
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/cloud-start.sh", "timeout": 120 }
         ]
       },

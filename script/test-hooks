@@ -122,6 +122,15 @@ git push --no-verify
 git -c core.hooksPath=/dev/null commit -m x
 git config core.hooksPath /dev/null
 git config --unset core.hooksPath
+cat backend/.env
+grep SECRET backend/.env
+source backend/.env
+cp backend/.env /tmp/copy
+cd backend && cat .env
+head -1 backend/.env.production
+cat backend/config/master.key
+cat backend/config/credentials/production.key && cat backend/config/production.key
+cat backend/.kamal/secrets
 CASES
 
 while IFS= read -r command; do
@@ -157,6 +166,10 @@ docker compose run --rm backend bin/rails db:migrate
 docker compose run --rm backend bin/rails db:reset
 cat backend/db/schema.rb
 grep -n create_table backend/db/schema.rb
+cat backend/.env.example
+cp backend/.env.example /tmp/copy
+cat .env
+ls backend
 CASES
 
 # Prose in a heredoc (a commit message, a PR body) is not a command...
@@ -241,6 +254,17 @@ zero="0000000000000000000000000000000000000000"
   && fail "pre-push must refuse HEAD:main"
 (cd "$task" && echo "refs/heads/infra/kan-1-example $sha refs/heads/infra/kan-1-example $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
   || fail "pre-push must allow a push to the task branch"
+
+# Claude Code rewrites core.hooksPath to the main checkout's absolute path when it creates
+# a worktree. The guard must still see the hooks as active — otherwise it falls back to
+# judging by the current branch and blocks things the hooks would allow.
+git -C "$main" config core.hooksPath "$main/.githooks"
+expect_bash allow "$main" "git push origin infra/kan-1-example"
+expect_bash allow "$main" "$(printf 'git commit -F - <<X\nfix\ngit stash is now blocked\nX')"
+# A hooks path that isn't the repository's .githooks doesn't count.
+mkdir -p "$sandbox/elsewhere"
+git -C "$main" config core.hooksPath "$sandbox/elsewhere"
+expect_bash block "$main" "git commit -m x"
 
 if (( failures > 0 )); then
   echo "test-hooks: $failures of $total failed" >&2

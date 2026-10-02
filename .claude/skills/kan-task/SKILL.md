@@ -23,7 +23,7 @@ git worktree list
 
 The Jira project, site, cloudId and statuses are in `CLAUDE.md` (Project overview).
 
-**Cloud session** (`CLAUDE_CODE_REMOTE=true`): the same workflow with three differences.
+**Cloud session** (`CLAUDE_CODE_REMOTE=true`): the same workflow with these differences.
 Skip step 2 — there is no Discord there. In step 3, use the Atlassian tools if the session
 has them; if it doesn't, ask the user for an existing `KAN-<n>` and don't start without
 one. In step 4 there is no worktree: rename the session's branch
@@ -119,9 +119,9 @@ Exceptions — say which applies:
 Test-first for backend behaviour, as described in `.claude/rules/backend.md`.
 
 ```bash
-docker compose run --rm backend bundle exec rspec spec/path_spec.rb   # affected files while iterating
-script/check <frontend|backend|tooling>                               # before the PR: everything CI runs for the area
-script/smoke                                                          # frontend, login, messaging or channel changes
+script/test spec/path_spec.rb             # affected files while iterating
+script/check <frontend|backend|tooling>   # before the PR: everything CI runs for the area
+script/smoke                              # frontend, login, messaging or channel changes
 ```
 
 Both must pass before step 6; paste the failing output rather than describing it if they
@@ -130,16 +130,20 @@ composer, conversation list), update `tools/smoke/tests/` in the same PR.
 
 In a worktree, run `script/worktree-env` once before the first `docker compose` command:
 it gives the worktree its own ports and project name so its containers don't collide with
-the main stack.
+the main stack. (The `script/` commands above do this themselves.)
 
 Don't run the `verify-app` skill or open the browser unless the user asks for it, even
 when the change touches `frontend/` — the user tests in the browser themselves (step 7).
-For a backend change, RSpec plus a `curl` against the endpoint is enough.
+For a backend change outside login, messaging and the channels, the specs plus a `curl`
+against the endpoint are enough.
 
 ## 6. Review, then pull request
 
-1. Run `/code-review` on the branch's diff. Fix findings that affect correctness or the
-   ticket's requirements; note in the PR any you deliberately left.
+1. Review the branch's diff twice, in fresh contexts: `/code-review` for general
+   correctness, and the `code-reviewer` subagent for this project's own rules (service
+   boundary, authorization specs, both channels, the event contract). Fix findings that
+   affect correctness or the ticket's requirements; note in the PR any you deliberately
+   left.
 2. Commit, push, open the PR:
    - title per `CLAUDE.md`, same area label as the ticket;
    - body: a few lines — what changed, how it was tested (say plainly when a frontend

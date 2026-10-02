@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Lints the code. The one place the rubocop command lives.
+#
+#   script/lint               backend (rubocop) and frontend (structure rules)
+#   script/lint backend [rubocop arguments, e.g. -a app/models/user.rb]
+#   script/lint frontend
+#
+# Rubocop paths are relative to backend/. Uses the running backend container when the
+# stack is up, a one-off container otherwise. Needs Docker only.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+# shellcheck source=script/lib.sh
+source script/lib.sh
+
+area="${1:-all}"
+case "$area" in
+  all|backend|frontend) shift || true ;;
+  *) echo "usage: script/lint [backend [rubocop args] | frontend]" >&2; exit 2 ;;
+esac
+
+status=0
+if [[ "$area" == all || "$area" == backend ]]; then
+  ensure_worktree_env
+  backend_do - bin/rubocop "$@" || status=1
+fi
+if [[ "$area" == all || "$area" == frontend ]]; then
+  script/check-frontend || status=1
+fi
+exit "$status"
