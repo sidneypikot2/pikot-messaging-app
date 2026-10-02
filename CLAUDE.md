@@ -1,17 +1,26 @@
 # CLAUDE.md
 
-We are building the app described in `SPEC.md`. It is not loaded automatically, and it records design intent, not current state — read the relevant section only for general architectural tasks. For what actually exists, `backend/config/routes.rb` and `backend/db/schema.rb` are authoritative.
+`SPEC.md` holds only the architectural decisions (and why) and the design for what is not built yet (group invitations, roles, mobile). It is not loaded automatically — read it when a task touches those. For what actually exists, `backend/config/routes.rb` and `backend/db/schema.rb` are authoritative.
 
 Keep your replies extremely concise and focus on conveying the key information. No unnecessary fluff, no long code snippets.
 
 When adding a gem or library, or using a third-party API not already used in this repo, look up the official documentation first. Follow existing in-repo usage otherwise.
 Use context7 directly for a single lookup; use the DocsExplorer subagent only when several technologies need looking up at once.
 
-Claude Code config is checked in under `.claude/`: subagents in `agents/`, skills in `skills/` (`/kan-task`, `/verify-app` — user-invoked only), shared settings in `settings.json`, and area conventions in `rules/` (`backend.md`, `frontend.md`), which load automatically when files under that area are touched. Put new area-specific conventions there, not in this file.
+Claude Code config is checked in under `.claude/`: subagents in `agents/`, skills in `skills/` (`/kan-task`, `/kan-finish`, `/verify-app` — user-invoked only), shared settings and hooks in `settings.json` / `hooks/`, MCP servers in `.mcp.json`, and conventions in `rules/`, which load automatically when matching files are read. Put new conventions in a rule file scoped by `paths:` to the files they concern — a new topic gets its own file — not in this file.
+
+## Conventions
+
+These apply to every task, whether or not `/kan-task` was run:
+
+- **Area**: `frontend`, `backend` or `infra` — one per task, used as the Jira label, GitHub label and branch prefix.
+- **Branch**: `<area>/kan-<n>-<kebab-summary>` from an up-to-date `origin/main`. Never commit on `main`.
+- **Commit subject and PR title**: `KAN-<n> <summary>`.
+- **Done** means: for backend changes the affected specs and `bin/rubocop` pass (full suite once before the PR); for frontend changes `script/check-frontend` passes, and say plainly that it was not verified in the running app unless `/verify-app` was run.
 
 ## Git safety
 
-Check `git status` before switching branches. Never stash, reset or discard existing work to make room — other sessions and the user also work in this checkout; if something is in the way, stop and report it. Stage only the files that belong to the task.
+Do task work in a git worktree (`.claude/worktrees/<name>`), not by switching the main checkout's branch — the user and other sessions work there. Never stash, reset or discard existing work to make room; if something is in the way, stop and report it. Stage only the files that belong to the task. `.claude/hooks/guard-bash.sh` blocks the destructive commands and commits on `main`; don't work around it.
 
 ## Project overview
 
@@ -33,7 +42,11 @@ docker compose run --rm backend bin/rubocop
 docker compose run --rm backend bin/ci        # setup, rubocop, bundler-audit, brakeman
 docker compose run --rm backend bin/rails db:migrate
 docker compose run --rm backend bundle install && docker compose build backend   # after a Gemfile change
+script/check-frontend         # frontend structural rules (no test suite exists); also runs in CI
+script/worktree-env           # in a worktree, once: own ports (8080+N / 3000+N) and project name
 ```
+
+In a cloud session the VM's own Ruby and PostgreSQL are the wrong versions — use `docker compose` there too (`.claude/hooks/cloud-start.sh` starts db and redis).
 
 `docker-compose.yml` must NOT set `RAILS_ENV` in the backend's `environment:` block — `docker compose run backend bundle exec rspec` inherits it and needs Rails' `test` default. It's set inline in `command:` instead, so `docker compose exec` needs `-e RAILS_ENV=development`.
 

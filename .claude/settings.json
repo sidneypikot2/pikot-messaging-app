@@ -1,12 +1,21 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(.claude/skills/kan-task/scripts/discord-thread.sh:*)",
       "Bash(docker compose run --rm backend bundle exec rspec:*)",
       "Bash(docker compose run --rm backend bin/rubocop:*)",
       "Bash(docker compose run --rm backend bin/ci)",
+      "Bash(docker compose run --rm backend bin/rails db:migrate:*)",
+      "Bash(script/check-frontend)",
+      "Bash(script/worktree-env)",
+      "Bash(docker compose up -d:*)",
+      "Bash(docker compose restart backend)",
       "Bash(docker compose ps:*)",
-      "Bash(docker compose logs:*)"
+      "Bash(docker compose logs:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",
@@ -14,21 +23,63 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(docker compose down -v:*)",
+      "Bash(docker compose config:*)",
       "Read(.env)",
       "Read(**/.env)",
       "Read(**/.env.local)",
       "Read(**/.env.development)",
       "Read(**/.env.production)",
+      "Read(**/.env.test)",
       "Read(backend/config/master.key)",
       "Read(backend/.kamal/secrets)",
-      "Edit(.env)",
-      "Edit(.env.*)",
       "Edit(**/.env)",
-      "Edit(**/.env.*)",
-      "Write(.env)",
-      "Write(.env.*)",
+      "Edit(**/.env.local)",
+      "Edit(**/.env.development)",
+      "Edit(**/.env.production)",
+      "Edit(**/.env.test)",
       "Write(**/.env)",
-      "Write(**/.env.*)"
+      "Write(**/.env.local)",
+      "Write(**/.env.development)",
+      "Write(**/.env.production)",
+      "Write(**/.env.test)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-bash.sh" }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-edit.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-frontend.sh" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/cloud-start.sh", "timeout": 120 }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          { "type": "command", "command": "echo \"Branch: $(git branch --show-current)\"; git status --short" }
+        ]
+      }
     ]
   }
 }

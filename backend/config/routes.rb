@@ -25,7 +25,7 @@ Rails.application.routes.draw do
   match "auth/failure", to: "omniauth_callbacks#failure", via: [ :get, :post ]
 
   # Direct messaging (KAN-14) — deliberately flat update/destroy rather than nesting all
-  # 4 message actions under /conversations/:id/messages (see SPEC.md Section 7).
+  # 4 message actions under /conversations/:id/messages (see SPEC.md section 1).
   get "users/search", to: "users#search"
 
   # Conversation settings (KAN-41): update = rename / theme, destroy = "delete chat" for

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Stops a worktree's Docker Compose stack and deletes its volumes (its throwaway
+# database), ready for the worktree to be removed. Refuses to run in the main checkout,
+# whose development database must never be dropped this way.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+if [[ "$(git rev-parse --path-format=absolute --git-dir)" == "$(git rev-parse --path-format=absolute --git-common-dir)" ]]; then
+  echo "worktree-down: this is the main checkout — refusing to delete its volumes." >&2
+  exit 1
+fi
+[[ -f "$root/.env" ]] || { echo "worktree-down: no .env here, so no worktree stack was set up." >&2; exit 0; }
+
+cd "$root"
+docker compose down --volumes --remove-orphans

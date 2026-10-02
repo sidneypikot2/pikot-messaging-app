@@ -1,16 +1,33 @@
 ---
 name: kan-task
-description: The end-to-end workflow for any new piece of work on PikotChat - plan first, open a Discord thread, create the KAN Jira ticket, branch, implement, verify, open the PR, move the ticket through its statuses, and check the branch out locally for testing. Run when the user asks to start a task or to create a ticket, branch or PR for one.
+description: The workflow for starting a piece of work on PikotChat and taking it to an open PR - plan, Discord thread, KAN Jira ticket, worktree and branch, implement, check, review, PR, ticket to In Review. Run when the user asks to start a task or to create a ticket, branch or PR for one. After the PR merges, /kan-finish closes it out.
+argument-hint: "[what to build, or an existing KAN-<n> to resume]"
 disable-model-invocation: true
 ---
 
 # KAN task workflow
 
 Every task follows the same path so that Jira, GitHub and Discord never drift out of sync
-with the code. Do each step without being asked.
+with the code. Do each step without being asked. Branch, commit and PR naming and the
+definition of done are in `CLAUDE.md` (Conventions) — follow them, they aren't repeated here.
+
+Task: $ARGUMENTS
+
+Where things stand right now:
+
+```!
+git branch --show-current
+git status --short
+git worktree list
+```
 
 Jira: project `KAN`, cloudId `ca2c20d7-9b28-45c4-a475-81e449242242`, site
 `https://sidneypikot2.atlassian.net`. Statuses: To Do → In Progress → In Review → Done.
+
+**Resuming**: if the task names an existing `KAN-<n>`, read the ticket first — its
+description ends with the state lines written in step 3 (`Discord thread:`, `Branch:`,
+`PR:`). Pick up from the first step that hasn't happened; don't create a second thread,
+ticket or branch.
 
 ## 1. Plan
 
@@ -25,7 +42,7 @@ goes to Discord after approval, once the thread exists (step 2).
 One thread per task, so each task has its own log.
 
 ```bash
-.claude/skills/kan-task/scripts/discord-thread.sh create <features|infra> "<name>"   # prints thread ID
+${CLAUDE_SKILL_DIR}/scripts/discord-thread.sh create <features|infra> "<name>"   # prints thread ID
 ```
 
 - `features` — any frontend or backend work, including tasks that touch both.
@@ -35,8 +52,7 @@ Post into the thread with the Discord `reply` tool (`chat_id` = thread ID). Keep
 short — the Jira ticket holds the detail, the thread points at it:
 - after approval: the plan in two or three lines;
 - the ticket link, then the PR link, each as a one-liner;
-- decisions or blockers that came up, when they happen;
-- at the end: one closing line, plus anything that did not get done.
+- decisions or blockers that came up, when they happen.
 
 Don't restate the ticket description or the PR body in the thread.
 
@@ -55,70 +71,88 @@ validation rules, allowed values, size limits, routes, gems added (or deliberate
 added, and why), and non-obvious gotchas. Go back and enrich the description once the
 details firm up during implementation — even on a ticket that is already Done.
 
+End the description with the task's state, and keep it current as the steps happen — a
+later session (or `/kan-finish`) has nothing else to find these by:
+
+```
+Discord thread: <thread ID, or "none">
+Branch: <branch name>
+PR: <URL once opened>
+```
+
 Then:
 - Transition the ticket to **In Progress** (transition IDs are per-issue — look them up for
   that issue first, via the Atlassian `discover` tool if no transitions-listing tool is
   loaded; don't guess).
 - `discord-thread.sh rename <threadId> "<KAN-key> <summary>"` and post the ticket link.
 
-## 4. Branch
+If the Atlassian tools aren't available (cloud session without the connector), stop and
+say so — the branch name needs the ticket key.
 
-`<area>/<jira-key>-<kebab-summary>` from an up-to-date `origin/main`, e.g.
-`backend/kan-15-auth-endpoint`. If the task builds on an unmerged PR, stack on that branch
-and say so in the PR.
+## 4. Worktree and branch
 
-Check `git status` first. Never stash, reset or discard existing work to make the switch —
-if something is in the way, stop and report it. Stage only the files that belong to the
-task.
+Each task gets its own git worktree, so parallel sessions and the user's own checkout
+never fight over one working tree. Leave the main checkout on whatever branch it is on.
+
+1. Enter a worktree named `kan-<n>-<kebab-summary>` (`EnterWorktree`). It starts from an
+   up-to-date `origin/main`.
+2. Rename its branch to the convention: `git branch -m <area>/kan-<n>-<kebab-summary>`.
+3. Record the branch in the ticket's state lines.
+
+Exceptions — say which applies:
+- The task's changes already exist uncommitted in the current checkout: branch in place
+  (`git switch -c <branch>`) instead of creating a worktree, and stage only the task's files.
+- The task builds on an unmerged PR: create the worktree from that branch
+  (`git worktree add .claude/worktrees/<name> -b <branch> <base-branch>`) and say so in the PR.
+- Cloud session: the VM is already an isolated checkout; just create the branch.
 
 ## 5. Implement and check
 
-For a change to backend behaviour, write the spec first: one failing request or service
-spec, watch it fail for the right reason, implement until it passes, then the next
-behaviour. Test through the public interface (the endpoint, `Service.call`, the channel),
-not private methods, so the spec survives a refactor. Refactor only on green. Skip
-test-first for migrations, config and pure refactors already covered by specs; the
-frontend has no tests.
+Test-first for backend behaviour, as described in `.claude/rules/backend.md`.
 
 ```bash
-docker compose run --rm backend bundle exec rspec
+docker compose run --rm backend bundle exec rspec     # affected files while iterating, full suite before the PR
 docker compose run --rm backend bin/rubocop
+script/check-frontend                                 # any frontend change
 ```
 
-While iterating, run only the affected spec files; run the full suite once before the PR.
+In a worktree, run `script/worktree-env` once before the first `docker compose` command:
+it gives the worktree its own ports and project name so its containers don't collide with
+the main stack.
 
 Don't run the `verify-app` skill or open the browser unless the user asks for it, even
 when the change touches `frontend/` — the user tests in the browser themselves (step 7).
-For a backend change, RSpec plus a `curl` against the endpoint is enough. Say in the PR
-that the frontend change was not verified in the running app.
+For a backend change, RSpec plus a `curl` against the endpoint is enough.
 
-## 6. Pull request
+## 6. Review, then pull request
 
-- Title: `<JIRA-KEY> <summary>` (e.g. `KAN-12 Add login form`), same area label as the ticket.
-- Body: a few lines — what changed, how it was tested (including anything not verified),
-  and the ticket link. The ticket carries the full detail; don't copy it into the PR.
-- Transition the ticket to **In Review**.
-- Post the PR link to the thread. If the user asked for a `verify-app` run, post its
-  screenshots to the ticket — the thread points at the ticket for proof, no screenshots
-  there.
+1. Run `/code-review` on the branch's diff. Fix findings that affect correctness or the
+   ticket's requirements; note in the PR any you deliberately left.
+2. Commit, push, open the PR:
+   - title per `CLAUDE.md`, same area label as the ticket;
+   - body: a few lines — what changed, how it was tested (say plainly when a frontend
+     change was not verified in the running app), and the ticket link. The ticket carries
+     the full detail; don't copy it into the PR.
+3. `gh pr checks --watch`. If a check fails, read the log, fix it, push, and watch again —
+   the task isn't in review until CI is green.
+4. Transition the ticket to **In Review**, record the PR URL in its state lines, and post
+   the PR link to the thread. If the user asked for a `verify-app` run, post its
+   screenshots to the ticket — the thread points at the ticket, no screenshots there.
 
-## 7. Local checkout for testing
+## 7. Hand over for testing
 
-The user tests every task locally before approving the merge. Once the PR is open, leave
-the local checkout on the PR branch — fetch and check it out if a cloud session opened the
-PR (same `git status` rule as step 4) — then:
+The user tests every task locally before approving the merge. Start the worktree's stack
+and tell them where it is:
 
 ```bash
-docker compose restart backend                                      # applies migrations
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/up   # expect 200
+script/worktree-env          # prints this worktree's URLs
+docker compose up -d
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:<backend port>/up   # expect 200
 ```
 
-Tell the user which branch and commit they're on and how to test the change. Skip the
-restart when no backend code changed.
+Report: the branch and commit, the frontend URL to open, and what to try. Social login
+only works on the main stack's ports. If the task was branched in place (step 4
+exception), restart the main stack's backend instead (`docker compose restart backend`).
+Skip starting a stack when nothing the user can exercise in the app changed.
 
-## 8. After merge
-
-- Transition the ticket to **Done**.
-- Check which branch is checked out (other sessions and the user also switch branches
-  here), then switch back to `main` and fast-forward.
-- Post a closing note in the thread.
+Stop here. After the user merges the PR, `/kan-finish <KAN-n>` closes the task out.
