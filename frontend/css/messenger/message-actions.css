@@ -1,0 +1,386 @@
+/* messenger/message-actions.css — 4 of 7. Needs base.css and thread.css.
+   What you can do to a message, plus the two shared overlays those actions open.
+   Sections, in order:
+     - Reactions: .message-bubble-wrap, the hover toolbar (KAN-30: react / reply / ⋮),
+       .message-menu-trigger and the .message-menu dropdown
+     - Modal shell, shared by every dialog on the page: .modal-backdrop, .modal,
+       header / body / footer, .modal-cancel, .modal-confirm — and the unsend dialog's
+       own options (.unsend-option, KAN-30)
+     - Reaction pills under a bubble (.reactions-strip, .reaction-pill)
+     - Emoji picker panel (.emoji-picker*), shared by the per-message react trigger and
+       the composer's emoji button
+   Driven by message-actions.js and emoji-picker.js.
+   No media queries. Careful with order: the .composer-input-wrap .emoji-picker-btn
+   rules here are written to out-specify ".composer button" in composer.css, which
+   loads after this file — keep their specificity if you touch either side. */
+
+/* Reactions */
+
+.message-bubble-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Hover toolbar (KAN-30) — Messenger-style react / reply / ⋮ beside the bubble, outside
+   it: to the right of other people's messages, to the left of your own. Hidden until
+   the message is hovered, or while its ⋮ menu is open. */
+
+.message-toolbar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.15rem;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+.message-row.other .message-toolbar {
+  left: 100%;
+  padding-left: 6px;
+}
+
+/* The gap to the bubble is padding, not an offset, so the pointer never leaves the
+   (hovered) row on its way from the bubble to a button. row-reverse keeps 🙂 nearest the bubble on both sides, with ⋮ outermost. */
+.message-row.own .message-toolbar {
+  right: 100%;
+  padding-right: 6px;
+  flex-direction: row-reverse;
+}
+
+/* The toolbar's transform/opacity make it a stacking context, so the ⋮ menu's own
+   z-index only counts inside it; the toolbar itself has to sit above later rows (whose
+   positioned bubble wraps would otherwise paint over an open menu). */
+.message-toolbar.menu-open {
+  z-index: 20;
+}
+
+.message-row:hover .message-toolbar,
+.message-toolbar.menu-open,
+.message-toolbar:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.message-toolbar > button,
+.message-menu-trigger {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.message-toolbar > button:hover,
+.message-menu-trigger:hover,
+.menu-open .message-menu-trigger {
+  background: rgba(31, 36, 48, 0.07);
+  color: var(--text);
+}
+
+.message-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.message-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--shadow-pop);
+}
+
+.message-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.message-menu button:hover,
+.message-menu button:focus-visible {
+  background: var(--bg);
+}
+
+/* Unsend dialog (KAN-30) */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(31, 36, 48, 0.45);
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(27, 37, 89, 0.2);
+}
+
+.modal-header {
+  position: relative;
+  padding: 1rem 3rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.modal-close {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.unsend-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.unsend-option input {
+  margin-top: 0.2rem;
+  accent-color: var(--orange);
+}
+
+.unsend-option strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.unsend-option-hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.modal-footer button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-cancel {
+  background: none;
+  color: var(--accent-ink);
+}
+
+.modal-confirm {
+  background: var(--orange);
+  color: var(--on-accent);
+}
+
+.modal-confirm:hover {
+  background: var(--orange-dark);
+}
+
+.reactions-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.reaction-pill {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.reaction-pill:hover {
+  border-color: var(--orange);
+}
+
+.reaction-pill.mine {
+  background: rgba(242, 153, 74, 0.15);
+  border-color: var(--orange);
+  color: var(--accent-ink);
+}
+
+/* Emoji picker panel — shared by the per-message react-trigger and the composer's emoji
+   button (see EmojiPicker.create in emoji-picker.js). Positioned via JS (getBoundingClientRect
+   + position: fixed, see positionPopover in message-actions.js), not CSS anchoring, since it's too big to
+   trust a simple bottom/left offset near the edges of the viewport. */
+
+.emoji-picker {
+  width: 300px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: var(--shadow-pop);
+  z-index: 20;
+  box-sizing: border-box;
+}
+
+.emoji-picker-search {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.emoji-picker-tabs {
+  display: flex;
+  gap: 0.15rem;
+  overflow-x: auto;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.emoji-picker-tabs button {
+  display: flex;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  flex: none;
+}
+
+.emoji-picker-tabs button.active,
+.emoji-picker-tabs button:hover {
+  background: var(--bg);
+}
+
+.emoji-picker-tabs button.active {
+  color: var(--accent-ink);
+}
+
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.1rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.emoji-picker-item {
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  aspect-ratio: 1;
+}
+
+.emoji-picker-item:hover {
+  background: var(--bg);
+}
+
+/* Higher specificity than ".composer button" (which sets a solid orange background) —
+   this sits inside the input itself, so it needs to look like a subtle icon, not a
+   second call-to-action button next to Send. */
+.composer-input-wrap .emoji-picker-btn {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  display: flex;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* :not(:disabled) matches the specificity of ".composer button:hover:not(:disabled)". */
+.composer-input-wrap .emoji-picker-btn:hover:not(:disabled) {
+  background: var(--bg);
+  color: var(--accent-ink);
+}
+
+/* Smiley buttons fill in on hover, Messenger-style (KAN-40). */
+.composer-input-wrap .emoji-picker-btn:hover .icon,
+.react-trigger:hover .icon,
+.emoji-picker-tabs button.active .icon {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+

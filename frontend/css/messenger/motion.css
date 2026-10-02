@@ -1,0 +1,331 @@
+/* messenger/motion.css — 7 of 7, loaded last so it can animate anything above.
+   All entrance animations and loading placeholders (KAN-48). Nothing here sets layout
+   or colour beyond the skeleton shapes; closing is instant unless noted.
+   Sections, in order:
+     - Pop-in entrances for menus, pickers, modals and the reaction toast
+       (.status-menu, .search-results, .message-menu, .emoji-picker, .modal, …)
+       with their @keyframes
+     - Expandable sections of the conversation panel
+       (@supports interpolate-size: allow-keywords)
+     - Opening a conversation: .thread-active--entering, .message-list--entering,
+       @keyframes row-rise (classes toggled by playThreadEntrance /
+       playMessagesEntrance in thread.js)
+     - Skeleton screens: .skeleton, .skeleton-row / -avatar / -line for the
+       conversation list, .message-skeleton / .skeleton-bubble for a thread
+     - @media (max-width: 720px): the chat slides in from the right
+     - Info panel slide-in / closing (.chat-info, .chat-info--closing)
+     - @media (max-width: 720px): the panel slides over the chat instead
+     - @media (prefers-reduced-motion: reduce): keep the fades, drop the movement.
+       Any new animation added above needs a line in this last block. */
+
+/* Entrances for things that pop up. They run whenever the element starts rendering
+   ([hidden] removed, or inserted into the page), so no JS is involved; closing stays
+   instant. Menus grow out of the control that opened them; the emoji picker and the
+   chat list's ⋯ menu only fade and slide, because JS measures them as they open and a
+   scale would skew getBoundingClientRect. */
+.status-menu,
+.search-results,
+.message-menu {
+  transform-origin: top left;
+  animation: pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The message ⋮ menu is small, so it gets a deeper scale and a longer, gentler curve
+   to read as one smooth unfold rather than a snap. */
+.message-menu {
+  animation: pop-in-deep 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.emoji-picker,
+.message-menu.conversation-menu {
+  animation: fade-drop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.status-durations {
+  animation: fade-drop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-backdrop {
+  animation: fade-in 0.18s ease-out;
+}
+
+.modal {
+  animation: modal-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reaction-toast {
+  animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+}
+
+@keyframes pop-in-deep {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.92);
+  }
+}
+
+@keyframes fade-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* Expandable sections of the conversation panel (Customize chat, Privacy &
+   notifications, …) slide open and shut. Transitions rather than keyframes, so a
+   re-render of the panel doesn't replay them; browsers without interpolate-size just
+   snap as before. */
+@supports (interpolate-size: allow-keywords) {
+  .chat-info-section {
+    interpolate-size: allow-keywords;
+  }
+
+  .chat-info-section::details-content {
+    height: 0;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      height 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.2s ease-out,
+      content-visibility 0.26s allow-discrete;
+  }
+
+  .chat-info-section[open]::details-content {
+    height: auto;
+    opacity: 1;
+  }
+}
+
+/* Opening a conversation (playThreadEntrance / playMessagesEntrance in thread.js): the
+   header fades in, then the loaded rows rise into place starting from the newest, so
+   the thread settles from the composer upward. --enter-i is the row's distance from the
+   bottom, capped, which keeps the whole stagger under a quarter of a second. */
+.thread-active--entering .thread-header > .avatar-wrap,
+.thread-active--entering .thread-heading {
+  animation: fade-in 0.22s ease-out;
+}
+
+.message-list--entering > :not(.pagination-status) {
+  animation: row-rise 0.36s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--enter-i, 0) * 22ms);
+}
+
+@keyframes row-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Skeleton screens: placeholder shapes while the conversation list and a newly opened
+   thread load. Every block paints the same viewport-fixed gradient, so the highlight
+   crosses the whole screen as one band instead of each block shimmering on its own. */
+.skeleton {
+  display: block;
+  background-color: #e3e6ed;
+  background-image: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  background-size: 200vw 100%;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.6s linear infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 100vw 0;
+  }
+  to {
+    background-position: -100vw 0;
+  }
+}
+
+.conversation-list .skeleton-row {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* The rows thin out down the list, so it reads as "more coming" rather than six items. */
+.skeleton-row:nth-child(2) { opacity: 0.85; }
+.skeleton-row:nth-child(3) { opacity: 0.7; }
+.skeleton-row:nth-child(4) { opacity: 0.55; }
+.skeleton-row:nth-child(5) { opacity: 0.4; }
+.skeleton-row:nth-child(6) { opacity: 0.25; }
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.skeleton-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.skeleton-line {
+  height: 0.6rem;
+  border-radius: 4px;
+}
+
+.skeleton-line:first-child {
+  width: 45%;
+}
+
+.skeleton-line:last-child {
+  width: 80%;
+}
+
+.skeleton-row:nth-child(even) .skeleton-line:first-child {
+  width: 58%;
+}
+
+.skeleton-row:nth-child(3n) .skeleton-line:last-child {
+  width: 65%;
+}
+
+/* Waits a beat before showing, so a fast load doesn't flash it. */
+.message-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: fade-in 0.2s ease-out 0.18s backwards;
+}
+
+.skeleton-bubble {
+  height: 2.5rem;
+  min-width: 5rem;
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+.skeleton-bubble.own {
+  align-self: flex-end;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 4px;
+}
+
+/* Narrow screens show one pane at a time, so the chat arrives from the right, the way
+   the back arrow sends it away. */
+@media (max-width: 720px) {
+  .thread-active--entering {
+    animation: thread-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes thread-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+/* The conversation info panel slides in from the right and pushes the thread narrower
+   as it comes. Its column is sized by the panel's margin box, so animating a negative
+   right margin grows the column while the panel keeps its full width — nothing inside
+   it reflows mid-slide. closeChatInfo waits for chat-info-out before hiding it. */
+.chat-info {
+  animation: chat-info-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-info--closing {
+  animation: chat-info-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes chat-info-in {
+  from {
+    margin-right: calc(-1 * var(--chat-info-width));
+  }
+}
+
+@keyframes chat-info-out {
+  to {
+    margin-right: calc(-1 * var(--chat-info-width));
+  }
+}
+
+/* Narrow screens: the panel covers the chat, so it slides over it instead; going back
+   is immediate, like the chat's own back arrow. */
+@media (max-width: 720px) {
+  .chat-info {
+    animation: chat-info-over 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .chat-info--closing {
+    animation: none;
+  }
+}
+
+@keyframes chat-info-over {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+/* Reduced motion: keep the fade, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .status-menu,
+  .search-results,
+  .message-menu,
+  .message-menu.conversation-menu,
+  .emoji-picker,
+  .status-durations,
+  .modal,
+  .reaction-toast {
+    animation: fade-in 0.12s ease-out;
+  }
+
+  .chat-info-section::details-content {
+    transition: opacity 0.12s ease-out, content-visibility 0.12s allow-discrete;
+  }
+
+  .chat-info {
+    animation: fade-in 0.12s ease-out;
+  }
+
+  .chat-info--closing {
+    animation: none;
+  }
+
+  .skeleton {
+    background-image: none;
+    animation: none;
+  }
+
+  .message-list--entering > :not(.pagination-status),
+  .thread-active--entering {
+    animation: fade-in 0.12s ease-out;
+    animation-delay: 0s;
+  }
+}

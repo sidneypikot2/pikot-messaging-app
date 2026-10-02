@@ -1,0 +1,430 @@
+/* messenger/thread.css — 3 of 7. Needs base.css; reuses .avatar from sidebar.css.
+   The right column's reading area: the open conversation and its messages.
+   Sections, in order:
+     - Thread shell: .thread, .thread-empty, .thread-active, .thread-header
+     - .message-list, older-messages pagination status + spinner
+     - Message rows and bubbles (.message-row, .own / .other, .message-bubble),
+       inline edit form (.message-edit), deleted bubbles
+     - Time dividers (KAN-37), "edited" label, the bubble's hover timestamp (::after)
+     - Seen indicator (.seen-*) and the shared .has-tooltip
+     - Group chats: sender name and avatar per run (.message-list--group)
+     - Replies: quoted message inside a bubble (.message-quote), jump highlight,
+       and the reply bar above the composer (.reply-bar)
+   Driven by thread.js, thread-meta.js and message-events.js.
+   No media queries. The hover toolbar and reactions on a bubble are in
+   message-actions.css; system lines ("Alice named the group…") are in
+   conversation-settings.css; entrance animations and skeletons are in motion.css. */
+
+/* Thread */
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.thread-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: balance;
+  padding: 2rem;
+}
+
+.thread-empty p {
+  max-width: 34ch;
+  margin: 0;
+}
+
+.thread-active {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.thread-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+.thread-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.thread-header span {
+  font-weight: 700;
+  color: var(--navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-header .thread-subtitle {
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pagination-status {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.pagination-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: pagination-spin 0.6s linear infinite;
+}
+
+@keyframes pagination-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The row spans the thread's full width so hovering anywhere along the message's line
+   (not just over the bubble) reveals its toolbar (KAN-30); the 65% cap moves onto the
+   row's children, which align to their side. */
+.message-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-row > * {
+  max-width: 65%;
+}
+
+.message-row.own {
+  align-items: flex-end;
+}
+
+.message-row.other {
+  align-items: flex-start;
+}
+
+.message-bubble {
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.message-row.own .message-bubble {
+  background: var(--orange);
+  color: var(--on-accent);
+  border-bottom-right-radius: 4px;
+}
+
+.message-row.other .message-bubble {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.message-edit {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem;
+}
+
+.message-edit textarea {
+  width: 100%;
+  resize: none;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.message-edit button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-right: 0.4rem;
+}
+
+.message-edit button:first-of-type {
+  background: var(--orange);
+  color: var(--on-accent);
+}
+
+.message-edit button:last-of-type {
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.message-bubble.deleted {
+  font-style: italic;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+/* Time dividers (KAN-37) — Messenger-style: times only at gaps, not under every message. */
+.time-divider {
+  align-self: center;
+  margin: 0.4rem 0 0.1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.message-edited {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0 0.6rem 0.15rem;
+}
+
+/* The exact send time on hover, above the bubble; after a short delay so it doesn't
+   flicker while the pointer just passes over the thread. */
+.message-bubble {
+  position: relative;
+}
+
+.message-bubble::after {
+  content: attr(data-time);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 400;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+
+.message-row.own .message-bubble::after {
+  right: 0;
+}
+
+.message-row.other .message-bubble::after {
+  left: 0;
+}
+
+.message-bubble:hover::after {
+  opacity: 1;
+  transition-delay: 0.4s;
+}
+
+/* Seen indicator (KAN-36, groups KAN-35) — "Seen at 4:55 PM" text in 1:1 chats; small
+   overlapping reader avatars, or "Seen by everyone", in groups. */
+
+.seen-indicator {
+  align-self: flex-end;
+  margin-top: 0.2rem;
+  cursor: default;
+}
+
+.seen-text {
+  position: relative;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.seen-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.seen-avatars > * + * {
+  margin-left: -4px;
+}
+
+.seen-avatars .avatar,
+.seen-more {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  font-size: 0.45rem;
+  border: 1.5px solid var(--bg);
+  box-sizing: content-box;
+}
+
+.seen-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Opens to the left: seen indicators sit at the thread's right edge. pre-line lets a
+   group's "Seen by everyone"/"+N" tooltip list one reader per line. */
+.has-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: pre;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+
+.has-tooltip:hover::after,
+.has-tooltip:focus-visible::after {
+  opacity: 1;
+}
+
+/* Group sender labels (KAN-35): name above the first bubble of a run, avatar beside the
+   last. The padding makes room for the avatar left of the bubbles. */
+
+.message-list--group .message-row.other {
+  padding-left: 36px;
+}
+
+.message-sender-name {
+  margin: 0 0 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.message-sender-avatar {
+  position: absolute;
+  left: -36px;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  font-size: 0.6rem;
+}
+
+/* Replies */
+
+.message-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 100%;
+  margin-bottom: 0.2rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.message-quote:hover {
+  opacity: 1;
+}
+
+.message-quote-author {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.message-quote-body {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-quote.deleted .message-quote-body {
+  font-style: italic;
+}
+
+.message-row.highlight .message-bubble {
+  animation: message-highlight 1.2s ease;
+}
+
+@keyframes message-highlight {
+  0%, 40% { box-shadow: 0 0 0 3px var(--orange); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 1.5rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.reply-bar-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-bar-text strong {
+  color: var(--navy);
+}
+
+.reply-bar-cancel {
+  display: flex;
+  padding: 0.15rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.reply-bar-cancel:hover {
+  color: var(--accent-ink);
+}
+
