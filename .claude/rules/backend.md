@@ -13,6 +13,8 @@ Topic rules load on top of this one when their files are read: `backend-auth.md`
 
 **Authorization** is plain Ruby, no gem: scope lookups through the user (`current_user.conversations.find(...)`) where possible; otherwise the service raises `NotAuthorizedError`, which `ApplicationController` renders as 403. `RecordNotFound` → 404, `RecordInvalid` → 422 with `errors`. Every new write action needs a spec for the non-member / non-owner case.
 
+**Request values**: don't coerce a value from the request with `.to_s`, `.to_i` or the like in a service — `nil.to_s` turns a missing key into a deliberate empty value, and a hash or array gets stringified and saved. A missing or wrong-typed value is a 422 (add an error and raise `ActiveRecord::RecordInvalid`, as `Conversations::NoteUpdateService` does), with a spec for it.
+
 **Jobs and cache** use `solid_queue` / `solid_cache` (own schema files in `backend/db/`; primary database in dev/test). There is no Sidekiq. Redis is only the Action Cable adapter and the presence store.
 
 **Specs**: for a behaviour change write the spec first — one failing request or service spec, watch it fail for the right reason, then implement. Test through the public interface (the endpoint, `Service.call`, the channel), not private methods. Skip test-first for migrations, config and pure refactors already covered. While iterating run only the affected spec files (`script/test spec/...`); run the full suite once before the PR (`script/check backend`).
