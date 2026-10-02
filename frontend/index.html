@@ -38,8 +38,16 @@
         <ul id="search-results" class="search-results" hidden></ul>
       </div>
 
-      <p id="conversations-status" class="sidebar-status">Loading conversations…</p>
-      <ul id="conversation-list" class="conversation-list"></ul>
+      <p id="conversations-status" class="sidebar-status" hidden></p>
+      <!-- Skeleton rows stand in until loadConversations replaces them. -->
+      <ul id="conversation-list" class="conversation-list" aria-busy="true" aria-label="Conversations">
+        <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
+        <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
+        <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
+        <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
+        <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
+        <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
+      </ul>
     </aside>
 
     <main class="thread">

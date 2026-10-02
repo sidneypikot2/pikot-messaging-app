@@ -119,6 +119,7 @@ function applyConversationUpdate(conversation) {
 function openChatInfo() {
   if (!activeConversation) return;
   chatInfoOpen = true;
+  chatInfoEl.classList.remove("chat-info--closing"); // reopened mid-slide
   chatInfoEl.hidden = false;
   messengerEl.classList.add("messenger--info-open");
   threadInfoBtnEl.setAttribute("aria-expanded", "true");
@@ -126,12 +127,26 @@ function openChatInfo() {
   renderChatInfo();
 }
 
+// The panel slides out before it is hidden. The slide is the CSS animation on
+// .chat-info--closing; where the stylesheet defines none (narrow screens, reduced
+// motion, panel already hidden) there is nothing to wait for and it hides at once.
 function closeChatInfo() {
   chatInfoOpen = false;
-  chatInfoEl.hidden = true;
-  messengerEl.classList.remove("messenger--info-open");
   threadInfoBtnEl.setAttribute("aria-expanded", "false");
   threadInfoBtnEl.classList.remove("active");
+
+  const hide = () => {
+    if (chatInfoOpen) return; // reopened while sliding out
+    chatInfoEl.hidden = true;
+    chatInfoEl.classList.remove("chat-info--closing");
+    messengerEl.classList.remove("messenger--info-open");
+  };
+
+  if (chatInfoEl.hidden) return hide();
+  chatInfoEl.classList.add("chat-info--closing");
+  const slides = chatInfoEl.getAnimations().filter((a) => a.animationName === "chat-info-out");
+  if (slides.length === 0) return hide();
+  Promise.all(slides.map((a) => a.finished)).then(hide, hide);
 }
 
 threadInfoBtnEl.addEventListener("click", () => (chatInfoOpen ? closeChatInfo() : openChatInfo()));

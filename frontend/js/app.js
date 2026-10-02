@@ -362,10 +362,13 @@ async function loadConversations() {
     conversationsStatusEl.hidden = conversations.length > 0;
     if (conversations.length === 0) conversationsStatusEl.textContent = "No conversations yet — search for someone to start one.";
 
-    renderList(conversationListEl, conversations, buildConversationItem);
+    renderList(conversationListEl, conversations, buildConversationItem); // replaces the skeleton rows
   } catch (err) {
+    conversationListEl.querySelectorAll(".skeleton-row").forEach((row) => row.remove());
     conversationsStatusEl.hidden = false;
     conversationsStatusEl.textContent = err.message;
+  } finally {
+    conversationListEl.removeAttribute("aria-busy");
   }
 }
 
@@ -466,11 +469,41 @@ function resetTypingState() {
 // switch (this is exactly what happened to the old load-older button it replaced).
 function resetPaginationState() {
   messageListEl.appendChild(paginationStatusEl);
-  paginationStatusEl.classList.remove("pagination-status--centered");
   paginationStatusEl.hidden = true;
   paginationStatusEl.textContent = "";
   hasMoreOlder = true;
   isLoadingOlder = false;
+}
+
+// Opening a conversation plays one entrance: the header fades in (the whole thread
+// slides in on narrow screens, where it replaces the list) and, once loaded, the newest
+// rows rise into place from the composer upward. Both are plain CSS keyed off a class
+// that is taken off again afterwards, so rows added later — new messages, older pages,
+// redrawn dividers — don't replay it.
+const THREAD_ENTRANCE_MS = 700;
+const THREAD_ENTRANCE_ROWS = 10;
+let threadEntranceTimer = null;
+
+function playThreadEntrance() {
+  clearTimeout(threadEntranceTimer);
+  messageListEl.classList.remove("message-list--entering");
+  threadActiveEl.classList.remove("thread-active--entering");
+  void threadActiveEl.offsetWidth; // restarts the animation when switching between chats
+  threadActiveEl.classList.add("thread-active--entering");
+  threadEntranceTimer = setTimeout(endThreadEntrance, THREAD_ENTRANCE_MS);
+}
+
+function playMessagesEntrance() {
+  const rows = [...messageListEl.children].reverse();
+  rows.forEach((row, i) => row.style.setProperty("--enter-i", Math.min(i, THREAD_ENTRANCE_ROWS)));
+  messageListEl.classList.add("message-list--entering");
+  clearTimeout(threadEntranceTimer);
+  threadEntranceTimer = setTimeout(endThreadEntrance, THREAD_ENTRANCE_MS);
+}
+
+function endThreadEntrance() {
+  threadActiveEl.classList.remove("thread-active--entering");
+  messageListEl.classList.remove("message-list--entering");
 }
 
 // `conversation` is a list entry (or anything with the same shape) — the header, sender
@@ -499,6 +532,7 @@ async function selectConversation(conversation) {
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
   messengerEl.classList.add("messenger--chat-open");
+  playThreadEntrance();
   renderThreadHeader(conversation);
   applyChatTheme(conversation);
   if (chatInfoOpen) renderChatInfo();
@@ -530,6 +564,7 @@ function selectDraftConversation(user) {
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
   messengerEl.classList.add("messenger--chat-open");
+  playThreadEntrance();
   renderThreadHeader({ kind: "direct", other_user: user });
   applyChatTheme(null);
   closeChatInfo(); // nothing to set up until the first message creates the conversation
@@ -594,7 +629,6 @@ function renderHeaderPresence() {
 // --- Messages ---
 
 function updatePaginationStatus() {
-  paginationStatusEl.classList.remove("pagination-status--centered");
   paginationStatusEl.hidden = hasMoreOlder;
   paginationStatusEl.textContent = hasMoreOlder ? "" : "No more messages to display";
 }
@@ -606,27 +640,42 @@ function showLoadingIndicator() {
   paginationStatusEl.hidden = false;
 }
 
-// Bigger and vertically centered over the (otherwise still-empty) message list, so
-// opening a conversation reads clearly as "loading" rather than a subtle top-corner hint
-// — distinct from the small in-flow spinner loadOlderMessages uses further down.
-function showInitialLoadingIndicator() {
-  paginationStatusEl.classList.add("pagination-status--centered");
-  paginationStatusEl.innerHTML = '<span class="pagination-spinner pagination-spinner--large"></span>';
-  paginationStatusEl.hidden = false;
+// Opening a conversation shows placeholder bubbles in the still-empty message list —
+// the shape of what is coming, rather than a spinner. (Older pages keep the small
+// in-flow spinner above.) Widths are percentages of the list; "own" rows sit right.
+const MESSAGE_SKELETON_ROWS = [
+  ["other", 38], ["other", 24], ["own", 30], ["other", 46], ["own", 22], ["own", 36], ["other", 28],
+];
+
+function buildMessageSkeleton() {
+  const skeleton = document.createElement("div");
+  skeleton.className = "message-skeleton";
+  skeleton.setAttribute("role", "status");
+  skeleton.setAttribute("aria-label", "Loading messages");
+  MESSAGE_SKELETON_ROWS.forEach(([side, width]) => {
+    const bubble = document.createElement("span");
+    bubble.className = `skeleton skeleton-bubble ${side}`;
+    bubble.style.width = `${width}%`;
+    skeleton.appendChild(bubble);
+  });
+  return skeleton;
 }
 
 async function loadMessages() {
-  showInitialLoadingIndicator();
+  const skeleton = buildMessageSkeleton();
+  messageListEl.appendChild(skeleton);
   try {
     const { messages, has_more } = await Api.messages(token, activeConversationId);
+    skeleton.remove();
     messages.forEach((message) => appendMessageEl(message));
     if (messages.length > 0) oldestLoadedMessageId = messages[0].id;
     hasMoreOlder = has_more;
     updatePaginationStatus();
     refreshThreadDecorations();
+    playMessagesEntrance();
     messageListEl.scrollTop = messageListEl.scrollHeight;
   } catch (err) {
-    paginationStatusEl.classList.remove("pagination-status--centered");
+    skeleton.remove();
     paginationStatusEl.hidden = true;
     clearComposerError();
     showComposerError(err.message);

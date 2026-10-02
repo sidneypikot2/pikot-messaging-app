@@ -56,6 +56,7 @@ body {
   grid-template-columns: minmax(240px, 320px) 1fr;
   height: 100vh;
   height: 100dvh;
+  overflow: clip; /* the info panel slides in from beyond the right edge */
 }
 
 /* Sidebar */
@@ -668,7 +669,6 @@ body {
 }
 
 .message-list {
-  position: relative; /* positioning context for .pagination-status--centered */
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
@@ -684,16 +684,6 @@ body {
   margin-bottom: 0.5rem;
 }
 
-/* Initial conversation load only — bigger and centered over the message list, rather
-   than the small in-flow spinner used at the top for loading older messages. */
-.pagination-status--centered {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  margin-bottom: 0;
-}
-
 .pagination-spinner {
   display: inline-block;
   width: 16px;
@@ -702,12 +692,6 @@ body {
   border-top-color: var(--orange);
   border-radius: 50%;
   animation: pagination-spin 0.6s linear infinite;
-}
-
-.pagination-spinner--large {
-  width: 36px;
-  height: 36px;
-  border-width: 3px;
 }
 
 @keyframes pagination-spin {
@@ -1648,10 +1632,12 @@ body {
 }
 
 .messenger--info-open {
-  grid-template-columns: minmax(240px, 320px) 1fr minmax(260px, 320px);
+  grid-template-columns: minmax(240px, 320px) 1fr auto;
 }
 
 .chat-info {
+  --chat-info-width: clamp(260px, 26vw, 320px);
+  width: var(--chat-info-width);
   overflow-y: auto;
   background: #fff;
   border-left: 1px solid var(--border);
@@ -1990,6 +1976,7 @@ body {
   }
 
   .chat-info {
+    width: auto;
     border-left: none;
   }
 
@@ -2171,6 +2158,176 @@ body {
   }
 }
 
+/* Opening a conversation (playThreadEntrance / playMessagesEntrance in app.js): the
+   header fades in, then the loaded rows rise into place starting from the newest, so
+   the thread settles from the composer upward. --enter-i is the row's distance from the
+   bottom, capped, which keeps the whole stagger under a quarter of a second. */
+.thread-active--entering .thread-header > .avatar-wrap,
+.thread-active--entering .thread-heading {
+  animation: fade-in 0.22s ease-out;
+}
+
+.message-list--entering > :not(.pagination-status) {
+  animation: row-rise 0.36s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--enter-i, 0) * 22ms);
+}
+
+@keyframes row-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Skeleton screens: placeholder shapes while the conversation list and a newly opened
+   thread load. Every block paints the same viewport-fixed gradient, so the highlight
+   crosses the whole screen as one band instead of each block shimmering on its own. */
+.skeleton {
+  display: block;
+  background-color: #e3e6ed;
+  background-image: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  background-size: 200vw 100%;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.6s linear infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 100vw 0;
+  }
+  to {
+    background-position: -100vw 0;
+  }
+}
+
+.conversation-list .skeleton-row {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* The rows thin out down the list, so it reads as "more coming" rather than six items. */
+.skeleton-row:nth-child(2) { opacity: 0.85; }
+.skeleton-row:nth-child(3) { opacity: 0.7; }
+.skeleton-row:nth-child(4) { opacity: 0.55; }
+.skeleton-row:nth-child(5) { opacity: 0.4; }
+.skeleton-row:nth-child(6) { opacity: 0.25; }
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.skeleton-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.skeleton-line {
+  height: 0.6rem;
+  border-radius: 4px;
+}
+
+.skeleton-line:first-child {
+  width: 45%;
+}
+
+.skeleton-line:last-child {
+  width: 80%;
+}
+
+.skeleton-row:nth-child(even) .skeleton-line:first-child {
+  width: 58%;
+}
+
+.skeleton-row:nth-child(3n) .skeleton-line:last-child {
+  width: 65%;
+}
+
+/* Waits a beat before showing, so a fast load doesn't flash it. */
+.message-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: fade-in 0.2s ease-out 0.18s backwards;
+}
+
+.skeleton-bubble {
+  height: 2.5rem;
+  min-width: 5rem;
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+.skeleton-bubble.own {
+  align-self: flex-end;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 4px;
+}
+
+/* Narrow screens show one pane at a time, so the chat arrives from the right, the way
+   the back arrow sends it away. */
+@media (max-width: 720px) {
+  .thread-active--entering {
+    animation: thread-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes thread-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+/* The conversation info panel slides in from the right and pushes the thread narrower
+   as it comes. Its column is sized by the panel's margin box, so animating a negative
+   right margin grows the column while the panel keeps its full width — nothing inside
+   it reflows mid-slide. closeChatInfo waits for chat-info-out before hiding it. */
+.chat-info {
+  animation: chat-info-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-info--closing {
+  animation: chat-info-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes chat-info-in {
+  from {
+    margin-right: calc(-1 * var(--chat-info-width));
+  }
+}
+
+@keyframes chat-info-out {
+  to {
+    margin-right: calc(-1 * var(--chat-info-width));
+  }
+}
+
+/* Narrow screens: the panel covers the chat, so it slides over it instead; going back
+   is immediate, like the chat's own back arrow. */
+@media (max-width: 720px) {
+  .chat-info {
+    animation: chat-info-over 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .chat-info--closing {
+    animation: none;
+  }
+}
+
+@keyframes chat-info-over {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
 /* Reduced motion: keep the fade, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   .status-menu,
@@ -2186,5 +2343,24 @@ body {
 
   .chat-info-section::details-content {
     transition: opacity 0.12s ease-out, content-visibility 0.12s allow-discrete;
+  }
+
+  .chat-info {
+    animation: fade-in 0.12s ease-out;
+  }
+
+  .chat-info--closing {
+    animation: none;
+  }
+
+  .skeleton {
+    background-image: none;
+    animation: none;
+  }
+
+  .message-list--entering > :not(.pagination-status),
+  .thread-active--entering {
+    animation: fade-in 0.12s ease-out;
+    animation-delay: 0s;
   }
 }
