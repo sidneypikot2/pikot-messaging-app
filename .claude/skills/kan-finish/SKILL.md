@@ -19,6 +19,11 @@ Works from a fresh session: everything needed is in the Jira ticket (project and
 are in `CLAUDE.md`). Read it first — the description ends with `Discord thread:`,
 `Branch:` and `PR:` lines written by `/kan-task`.
 
+If this session has already done work on a *different* KAN ticket, say so before anything
+else and recommend `/clear` and running `/kan-finish` again — every turn re-sends the whole
+conversation. Carry on here only if the user says to. The session that did this task's
+own work is fine (step 6 uses it).
+
 ## 1. Confirm the merge
 
 `gh pr view <PR> --json state,mergedAt,headRefName`. If the PR isn't `MERGED`, stop and
@@ -84,4 +89,5 @@ Show the proposed edit and wait: rules, hooks and skills change only through a P
 user has agreed to (its own `infra` task). One correction that was particular to this
 task is not a lesson. If there is nothing, say "no lessons".
 
-Report what was closed and anything left behind.
+Report what was closed and anything left behind, and end by telling the user to `/clear`
+before starting the next task.
