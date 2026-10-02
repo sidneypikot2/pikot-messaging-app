@@ -1,3 +1,5 @@
+// The sign-up page (signup.html): the registration form, its validation and errors.
+
 if (Session.token()) {
   window.location.href = "index.html";
 }

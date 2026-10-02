@@ -1,3 +1,6 @@
+// Where the login token and user are kept: sessionStorage, or localStorage with
+// "remember me". Used by every page. No UI.
+
 const TOKEN_KEY = "pikotchat_token";
 const USER_KEY = "pikotchat_user";
 

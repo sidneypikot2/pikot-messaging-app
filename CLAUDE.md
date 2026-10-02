@@ -7,7 +7,9 @@ Keep your replies extremely concise and focus on conveying the key information. 
 When adding a gem or library, or using a third-party API not already used in this repo, look up the official documentation first. Follow existing in-repo usage otherwise.
 Use context7 directly for a single lookup; use the DocsExplorer subagent only when several technologies need looking up at once.
 
-Don't read large files whole — `frontend/js/app.js`, `frontend/css/messenger.css` and `frontend/js/conversation-settings.js` in particular. Grep for the selector, function or section comment (`/* Sidebar */`, `/* Thread */`, …) and read only that range.
+Don't read large files whole — `frontend/css/messenger.css` and `frontend/js/conversation-settings.js` in particular. Grep for the selector, function or section comment (`/* Sidebar */`, `/* Thread */`, …) and read only that range.
+
+The chat page's JS is plain classic scripts sharing globals, split by section and loaded in this order by `frontend/index.html`: `chat-core.js` (state, DOM refs, helpers), `presence.js`, `conversation-list.js`, `thread.js`, `message-actions.js`, `thread-meta.js` (time dividers, seen, sender runs), `message-events.js` (edit, incoming), `notifications.js` (sound, toast, typing), `composer.js`, `search.js` (search, new group), `app.js` (logout, init), `conversation-settings.js`. Top-level code may only use names from its own or an earlier file.
 
 Project-level Claude Code config is checked in under `.claude/`: subagents in `.claude/agents/`, skills in `.claude/skills/`, shared settings in `.claude/settings.json`. Use the `kan-task` skill for the task/ticket/branch/PR workflow and `verify-app` to check a change in the running app — only when the user asks for it, never automatically.
 

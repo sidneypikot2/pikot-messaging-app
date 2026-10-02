@@ -1,3 +1,5 @@
+// The login page (login.html): the email/password form and its errors.
+
 if (Session.token()) {
   window.location.href = "index.html";
 }

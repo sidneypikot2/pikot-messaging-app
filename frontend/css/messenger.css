@@ -1280,7 +1280,7 @@ body {
 
 /* Emoji picker panel — shared by the per-message react-trigger and the composer's emoji
    button (see EmojiPicker.create in emoji-picker.js). Positioned via JS (getBoundingClientRect
-   + position: fixed, see positionPopover in app.js), not CSS anchoring, since it's too big to
+   + position: fixed, see positionPopover in message-actions.js), not CSS anchoring, since it's too big to
    trust a simple bottom/left offset near the edges of the viewport. */
 
 .emoji-picker {
@@ -2158,7 +2158,7 @@ body {
   }
 }
 
-/* Opening a conversation (playThreadEntrance / playMessagesEntrance in app.js): the
+/* Opening a conversation (playThreadEntrance / playMessagesEntrance in thread.js): the
    header fades in, then the loaded rows rise into place starting from the newest, so
    the thread settles from the composer upward. --enter-i is the row's distance from the
    bottom, capped, which keeps the whole stagger under a quarter of a second. */
