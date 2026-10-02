@@ -11,7 +11,13 @@ module Conversations
     def call
       raise NotAuthorizedError, "not a member of this conversation" unless @conversation.member?(@user)
 
-      @conversation.note = @body.to_s
+      # Only "" clears the note: a missing or non-text body is a malformed request, not a removal.
+      unless @body.is_a?(String)
+        @conversation.errors.add(:note, "must be text")
+        raise ActiveRecord::RecordInvalid, @conversation
+      end
+
+      @conversation.note = @body
       return @conversation unless @conversation.note_changed?
 
       @conversation.note_updated_by = @user

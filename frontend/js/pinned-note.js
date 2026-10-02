@@ -18,7 +18,6 @@ function resetPinnedNote(conversation) {
   noteExpanded = false;
   noteEditing = false;
   noteSaving = false;
-  threadNoteBtnEl.hidden = !conversation?.id; // a draft has no note yet
   renderPinnedNote(conversation);
 }
 
@@ -32,11 +31,22 @@ function notePreview(body) {
 // innerHTML, so whatever someone types can't inject markup.
 const NOTE_LINK_PATTERN = /\b(?:https?:\/\/|www\.)[^\s<>"]+/gi;
 
+// Sentence punctuation right after a link isn't part of it: "see example.com." A closing
+// bracket is, when the link opened it: "wiki/Foo_(bar)".
+function trimLinkEnd(url) {
+  for (;;) {
+    const trimmed = url.replace(/[.,!?;:'"]+$/, "");
+    const last = trimmed.at(-1);
+    const opener = { ")": "(", "]": "[" }[last];
+    if (!opener || trimmed.split(opener).length > trimmed.split(last).length - 1) return trimmed;
+    url = trimmed.slice(0, -1);
+  }
+}
+
 function linkifyInto(container, text) {
   let last = 0;
   for (const match of text.matchAll(NOTE_LINK_PATTERN)) {
-    // Sentence punctuation right after a link isn't part of it: "see example.com."
-    const url = match[0].replace(/[.,!?;:)\]'"]+$/, "");
+    const url = trimLinkEnd(match[0]);
     container.append(text.slice(last, match.index));
     const link = document.createElement("a");
     link.href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
@@ -75,6 +85,9 @@ function noteButton(label, className, onClick) {
 }
 
 function renderPinnedNote(conversation = activeConversation) {
+  // A draft has no note yet. Set here, not only on reset: a draft becomes a real chat
+  // on its first message without being selected again.
+  threadNoteBtnEl.hidden = !activeConversationId;
   if (!conversation || conversation.id !== activeConversationId) {
     pinnedNoteEl.hidden = true;
     pinnedNoteEl.replaceChildren();
@@ -228,14 +241,17 @@ async function saveNote(body) {
   pinnedNoteEl.querySelectorAll("button, textarea").forEach((el) => (el.disabled = true));
   try {
     const { conversation } = await Api.updateConversationNote(token, conversationId, body);
+    // Switched chats meanwhile: the reset already cleared noteSaving, and the chat now
+    // open may have its own save in flight.
+    if (conversationId !== activeConversationId) return;
     noteSaving = false;
-    if (conversationId !== activeConversationId) return; // switched chats meanwhile
     noteEditing = false;
     noteExpanded = !!conversation.note;
     applyConversationUpdate(conversation);
   } catch (err) {
+    if (conversationId !== activeConversationId) return;
     noteSaving = false;
-    if (conversationId !== activeConversationId || !error) return;
+    if (!error) return;
     error.textContent = err.message;
     error.hidden = false;
     pinnedNoteEl.querySelectorAll("button, textarea").forEach((el) => (el.disabled = false));

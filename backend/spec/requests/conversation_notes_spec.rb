@@ -45,6 +45,25 @@ RSpec.describe "Conversation notes", type: :request do
         .with(hash_including(event: "conversation_updated", conversation: hash_including(note: hash_including(body: "Hotel: Seaside Inn"))))
     end
 
+    it "sends the system line to the open thread and to members who don't have it open" do
+      expect {
+        put "/conversations/#{group.id}/note", params: { body: "Hotel: Seaside Inn" }, headers: headers_for(alice), as: :json
+      }.to have_broadcasted_to(group).from_channel(ConversationChannel).with(hash_including(event: "message_created"))
+        .and have_broadcasted_to(bob).from_channel(NotificationsChannel).with(hash_including(event: "message_created"))
+    end
+
+    it "rejects a body that isn't text, or is missing, rather than clearing the note" do
+      direct.update!(note: "Old plan", note_updated_by: alice)
+
+      [ { body: { a: 1 } }, { body: [ "x" ] }, {} ].each do |params|
+        put "/conversations/#{direct.id}/note", params: params, headers: headers_for(alice), as: :json
+
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+      expect(direct.reload.note).to eq("Old plan")
+      expect(direct.messages.where(kind: :system).count).to eq(0)
+    end
+
     it "removes the note when the body is blank" do
       direct.update!(note: "Old plan", note_updated_by: alice)
 
