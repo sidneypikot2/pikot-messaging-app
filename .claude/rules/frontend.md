@@ -14,6 +14,8 @@ Static HTML / CSS / vanilla JS — no build step, no bundler, no `package.json`,
 
 **Chat page CSS**: split by section under `frontend/css/messenger/`. `frontend/index.html` is the source of truth for the link order, which is cascade order — later files override earlier ones. Each file's header comment lists its sections; read only the file you need.
 
+**Animations** live in `frontend/css/messenger/motion.css`, each with a line in its `prefers-reduced-motion` block. The exception is one whose size is only known at run time (a panel sliding to the height of its content): that goes in the feature's JS with the Web Animations API, as in `frontend/js/pinned-note.js`. It checks `prefers-reduced-motion` itself — the CSS block doesn't reach it — and cleans up synchronously when it is interrupted, not on the animation's `cancel` event, which arrives after the next draw and undoes it. Animate padding along with height: a border-box element can't be shorter than its padding.
+
 **Reading**: don't read large files whole — `frontend/js/conversation-settings.js` in particular. Grep for the function or section comment and read only that range.
 
 **Social login**: start it by navigating to `GET /auth/:provider/start` on the backend, never with `fetch`.
