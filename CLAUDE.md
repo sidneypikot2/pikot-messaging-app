@@ -32,7 +32,7 @@ PikotChat is a messaging app portfolio project. Built so far: email/password and
 
 Work is tracked in Jira, not in this repo: project `KAN`, site `https://sidneypikot2.atlassian.net`, cloudId `ca2c20d7-9b28-45c4-a475-81e449242242`. Statuses: To Do → In Progress → In Review → Done.
 
-**Production exists.** The backend runs on Render at `https://pikot-messaging-app-backend.onrender.com`, and `frontend/js/config.js` sends every non-localhost page there. The service is set up in Render's dashboard — nothing in this repo describes it or shows what triggers a deploy, so assume a merge to `main` can reach it. Changes to `backend/config/environments/production.rb`, CORS / `FRONTEND_ORIGIN`, `frontend/js/config.js`, migrations and environment variables are production changes: say so in the PR. The Kamal config (`backend/config/deploy.yml`) is unused scaffolding.
+**Production exists.** The backend runs on Render at `https://pikot-messaging-app-backend.onrender.com`, and `frontend/js/config.js` sends every non-localhost page there. The service is set up in Render's dashboard, not in this repo, and **everything merged to `main` can reach production**. Changes to `backend/config/environments/production.rb`, CORS / `FRONTEND_ORIGIN`, `frontend/js/config.js`, migrations and environment variables are production changes: say so in the PR. The Kamal config (`backend/config/deploy.yml`) is unused scaffolding.
 
 ## Running and checking
 
