@@ -23,7 +23,8 @@ exists() {
   for base in "" backend/ frontend/ .claude/; do
     [[ -e "$base$p" ]] && return 0
   done
-  git check-ignore -q -- "$p" "backend/$p" 2>/dev/null
+  # (--quiet takes one path at a time.)
+  git check-ignore -q -- "$p" 2>/dev/null || git check-ignore -q -- "backend/$p" 2>/dev/null
 }
 for doc in "${docs[@]}"; do
   [[ -f "$doc" ]] || continue
