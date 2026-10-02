@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# A merge commit is a commit: same rule as pre-commit (git doesn't run that for merges).
+exec "$(dirname "$0")/pre-commit"

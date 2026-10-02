@@ -1,0 +1,52 @@
+name: PR conventions
+
+# Checks the naming conventions in CLAUDE.md that tie a pull request to its Jira ticket
+# and area. Its own workflow so that editing a title or a label re-runs this check only,
+# not the test suite.
+on:
+  pull_request:
+    types: [ opened, edited, synchronize, reopened, labeled, unlabeled ]
+
+permissions:
+  contents: read
+
+jobs:
+  conventions:
+    # Dependabot names its own branches and titles.
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name, title and area label
+        # Values come in through the environment, never interpolated into the script:
+        # a PR title is untrusted input.
+        env:
+          BRANCH: ${{ github.head_ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+        run: |
+          errors=0
+          fail() { echo "::error::$1"; errors=$((errors + 1)); }
+
+          if [[ ! "$BRANCH" =~ ^(frontend|backend|infra)/kan-[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            fail "Branch '$BRANCH' is not <area>/kan-<n>-<kebab-summary> (area: frontend, backend or infra)."
+          fi
+
+          if [[ ! "$TITLE" =~ ^KAN-[0-9]+\ [^[:space:]] ]]; then
+            fail "Title '$TITLE' is not 'KAN-<n> <summary>'."
+          fi
+
+          areas=0
+          for label in $LABELS; do
+            case "$label" in frontend|backend|infra) areas=$((areas + 1)) ;; esac
+          done
+          if (( areas != 1 )); then
+            fail "Expected exactly one area label (frontend, backend or infra), found $areas."
+          fi
+
+          if [[ "$BRANCH" =~ ^(frontend|backend|infra)/kan-([0-9]+)- ]]; then
+            area="${BASH_REMATCH[1]}"; number="${BASH_REMATCH[2]}"
+            [[ " $LABELS " == *" $area "* ]] || fail "Branch area '$area' has no matching label."
+            [[ "$TITLE" =~ ^KAN-$number\  ]] || fail "Title and branch name different tickets (branch: KAN-$number)."
+          fi
+
+          exit $(( errors > 0 ))

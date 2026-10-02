@@ -33,6 +33,16 @@ First run creates the Postgres databases automatically (`db:prepare`).
 ```bash
 docker compose run --rm backend bundle exec rspec
 script/check-frontend     # structural checks for the static frontend (it has no test suite)
+script/test-hooks         # the Claude Code guards and git hooks (needs jq)
+```
+
+## Git hooks
+
+`main` only changes through pull requests. The checked-in hooks refuse commits and pushes
+on `main`; enable them once per clone (Claude Code sessions do this on start):
+
+```bash
+git config core.hooksPath .githooks
 ```
 
 ## Running a second stack (git worktrees)
