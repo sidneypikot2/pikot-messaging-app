@@ -7,7 +7,9 @@ Keep your replies extremely concise and focus on conveying the key information. 
 When adding a gem or library, or using a third-party API not already used in this repo, look up the official documentation first. Follow existing in-repo usage otherwise.
 Use context7 directly for a single lookup; use the DocsExplorer subagent only when several technologies need looking up at once.
 
-Project-level Claude Code config is checked in under `.claude/`: subagents in `.claude/agents/`, skills in `.claude/skills/`, shared settings in `.claude/settings.json`. Use the `kan-task` skill for the task/ticket/branch/PR workflow and `verify-app` to check a change in the running app.
+Don't read large files whole — `frontend/js/app.js`, `frontend/css/messenger.css` and `frontend/js/conversation-settings.js` in particular. Grep for the selector, function or section comment (`/* Sidebar */`, `/* Thread */`, …) and read only that range.
+
+Project-level Claude Code config is checked in under `.claude/`: subagents in `.claude/agents/`, skills in `.claude/skills/`, shared settings in `.claude/settings.json`. Use the `kan-task` skill for the task/ticket/branch/PR workflow and `verify-app` to check a change in the running app — only when the user asks for it, never automatically.
 
 ## Project overview
 
