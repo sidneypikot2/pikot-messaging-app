@@ -111,10 +111,12 @@ Exceptions — say which applies:
 Test-first for backend behaviour, as described in `.claude/rules/backend.md`.
 
 ```bash
-docker compose run --rm backend bundle exec rspec     # affected files while iterating, full suite before the PR
-docker compose run --rm backend bin/rubocop
-script/check-frontend                                 # any frontend change
+docker compose run --rm backend bundle exec rspec spec/path_spec.rb   # affected files while iterating
+script/check <frontend|backend|tooling>                               # before the PR: everything CI runs for the area
 ```
+
+`script/check` must pass before step 6; paste its failing output rather than describing it
+if it doesn't.
 
 In a worktree, run `script/worktree-env` once before the first `docker compose` command:
 it gives the worktree its own ports and project name so its containers don't collide with

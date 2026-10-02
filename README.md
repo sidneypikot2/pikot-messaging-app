@@ -31,10 +31,14 @@ First run creates the Postgres databases automatically (`db:prepare`).
 ## Running tests
 
 ```bash
-docker compose run --rm backend bundle exec rspec
-script/check-frontend     # structural checks for the static frontend (it has no test suite)
-script/test-hooks         # the Claude Code guards and git hooks (needs jq)
+script/check              # everything CI runs (needs Docker and jq)
+script/check frontend     # static checks: structure, lint in page load order, event contract
+script/check backend      # rubocop, the full rspec suite, event contract
+script/check tooling      # shellcheck, the Claude Code guards and git hooks
 ```
+
+The frontend has no test suite; its lint runs ESLint from `tools/frontend-lint/` in a Node
+container. `realtime-events.json` lists the Action Cable events both sides must agree on.
 
 ## Git hooks
 

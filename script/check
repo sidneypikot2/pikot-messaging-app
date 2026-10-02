@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# The definition of done, in one command: runs every check CI runs for an area and
+# reports which ones failed.
+#
+#   script/check              everything
+#   script/check frontend     structure, lint, event contract
+#   script/check backend      rubocop, full rspec suite, event contract
+#   script/check tooling      shellcheck, guard and git-hook tests
+#
+# Needs Docker and jq. CI runs the same scripts (backend natively, for speed); the
+# security scans (`bin/ci`: bundler-audit, brakeman) stay CI-only.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+area="${1:-all}"
+case "$area" in
+  all|frontend|backend|tooling) ;;
+  *) echo "usage: script/check [frontend|backend|tooling]" >&2; exit 2 ;;
+esac
+
+failed=()
+step() { # name, command...
+  local name="$1"; shift
+  echo "== $name"
+  "$@" || failed+=("$name")
+}
+
+# In a worktree the backend's containers need their own ports and project name first.
+backend_stack() {
+  if [[ "$(git rev-parse --path-format=absolute --git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" && ! -f .env ]]; then
+    script/worktree-env >/dev/null
+  fi
+}
+
+if [[ "$area" == all || "$area" == frontend ]]; then
+  step "frontend structure" script/check-frontend
+  step "frontend lint" script/lint-frontend
+fi
+if [[ "$area" != tooling ]]; then
+  step "event contract" script/check-events
+fi
+if [[ "$area" == all || "$area" == backend ]]; then
+  backend_stack
+  step "rubocop" docker compose run --rm backend bin/rubocop
+  # A fresh stack (a new worktree, a cloud session) has no test database yet.
+  step "test database" docker compose run --rm -e RAILS_ENV=test backend bin/rails db:prepare
+  step "rspec" docker compose run --rm backend bundle exec rspec
+fi
+if [[ "$area" == all || "$area" == tooling ]]; then
+  step "shell lint" script/lint-shell
+  step "guards and git hooks" script/test-hooks
+fi
+
+if (( ${#failed[@]} > 0 )); then
+  echo "check: FAILED — ${failed[*]}" >&2
+  exit 1
+fi
+echo "check: ok ($area)"

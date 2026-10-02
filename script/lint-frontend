@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Lints the frontend JavaScript as each page loads it: syntax, names that don't exist on
+# the page, and top-level code that runs before a later script defines what it uses
+# (tools/frontend-lint/lint.mjs). The frontend has no Node toolchain of its own, so this
+# runs in a Node container; only Docker is needed. Run from anywhere. Used by CI.
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Dependencies are installed into tools/frontend-lint/node_modules (gitignored) the
+# first time, and again whenever the lockfile changes.
+docker run --rm \
+  -v "$root/tools/frontend-lint:/tool" \
+  -v "$root/frontend:/frontend:ro" \
+  -w /tool \
+  node:24-alpine sh -c '
+    if ! cmp -s package-lock.json node_modules/.installed-lock 2>/dev/null; then
+      npm ci --no-audit --no-fund --silent && cp package-lock.json node_modules/.installed-lock
+    fi
+    node selftest.mjs && node lint.mjs /frontend'

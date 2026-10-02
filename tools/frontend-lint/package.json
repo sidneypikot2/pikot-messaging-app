@@ -1,0 +1,10 @@
+{
+  "name": "pikot-frontend-lint",
+  "private": true,
+  "description": "Lint for the static frontend. Tooling only: the frontend itself has no build step and no dependencies. Run through script/lint-frontend.",
+  "type": "module",
+  "dependencies": {
+    "eslint": "10.11.0",
+    "globals": "17.13.0"
+  }
+}
