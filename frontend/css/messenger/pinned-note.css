@@ -17,8 +17,8 @@
 
 .pinned-note {
   border-bottom: 1px solid var(--border);
-  background: #fff;
-  font-size: 0.88rem;
+  background: var(--surface);
+  font-size: var(--text-sm);
 }
 
 .pinned-note-strip {
@@ -40,7 +40,7 @@
 }
 
 .pinned-note .icon {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
   font-size: 1.1rem;
 }
 
@@ -70,15 +70,15 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .pinned-note-link {
   padding: 0.25rem 0.5rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
-  color: var(--orange-dark);
+  color: var(--accent-ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -119,20 +119,20 @@
 }
 
 .pinned-note-body a {
-  color: var(--orange-dark);
+  color: var(--accent-ink);
   text-decoration: underline;
 }
 
 .pinned-note-meta {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .pinned-note-input {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font: inherit;
   resize: vertical;
   min-height: 6rem;
@@ -154,17 +154,17 @@
 .pinned-note-counter {
   flex: 1;
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 /* Same look as the dialogs' footer buttons. */
 .pinned-note-actions .modal-cancel,
 .pinned-note-actions .modal-confirm {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.45rem 1rem;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -176,7 +176,7 @@
 .pinned-note-stale,
 .pinned-note-error {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .pinned-note-stale {

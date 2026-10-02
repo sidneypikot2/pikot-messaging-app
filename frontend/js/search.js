@@ -45,8 +45,9 @@ function renderSearchResults(users) {
     const name = document.createElement("span");
     name.textContent = displayName(user);
 
-    li.appendChild(avatar);
-    li.appendChild(name);
+    li.dataset.key = user.id;
+    li.tabIndex = 0;
+    li.append(avatar, name);
     li.addEventListener("click", () => {
       searchInput.value = "";
       searchResultsEl.hidden = true;
@@ -66,6 +67,8 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-box")) searchResultsEl.hidden = true;
 });
 
+makeKeyboardList(searchResultsEl, searchInput);
+
 // --- New group dialog (KAN-35) ---
 
 const newGroupDialogEl = document.getElementById("new-group-dialog");
@@ -73,6 +76,7 @@ const newGroupFormEl = document.getElementById("new-group-form");
 const newGroupNameEl = document.getElementById("new-group-name");
 const newGroupSearchEl = document.getElementById("new-group-search");
 const newGroupResultsEl = document.getElementById("new-group-results");
+makeKeyboardList(newGroupResultsEl, newGroupSearchEl);
 const newGroupChipsEl = document.getElementById("new-group-chips");
 const newGroupErrorEl = document.getElementById("new-group-error");
 const newGroupCreateEl = document.getElementById("new-group-create");
@@ -143,6 +147,8 @@ function renderNewGroupResults(users) {
     Avatar.render(avatar, user);
     const name = document.createElement("span");
     name.textContent = displayName(user);
+    li.dataset.key = user.id;
+    li.tabIndex = 0;
     li.append(avatar, name);
     li.addEventListener("click", () => {
       newGroupMembers.set(user.id, user);
@@ -156,6 +162,10 @@ function renderNewGroupResults(users) {
 }
 
 document.getElementById("new-group-btn").addEventListener("click", openNewGroupDialog);
+
+// The empty thread pane's two ways in (KAN-62): the people search, or a new group.
+document.getElementById("thread-empty-new-message").addEventListener("click", () => searchInput.focus());
+document.getElementById("thread-empty-new-group").addEventListener("click", openNewGroupDialog);
 newGroupDialogEl.querySelectorAll("[data-new-group-cancel]").forEach((btn) => btn.addEventListener("click", closeNewGroupDialog));
 newGroupDialogEl.addEventListener("click", (event) => {
   if (event.target === newGroupDialogEl) closeNewGroupDialog();

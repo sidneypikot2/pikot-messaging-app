@@ -1,6 +1,6 @@
 // Everything the thread draws around its messages rather than in them: time dividers,
-// the "seen" avatars under messages, sender names and avatars on runs in group chats,
-// and hover tooltips.
+// the "seen" avatars under messages, runs of one sender's bubbles (drawn together in
+// every chat, with sender names and avatars in group chats), and hover tooltips.
 
 // --- Time dividers (KAN-37) ---
 
@@ -102,18 +102,22 @@ function messageIdOf(row) {
   return Number(row.id.replace("message-", ""));
 }
 
-// Group chats (KAN-35): other people's messages carry the sender's name above the first
-// bubble of a run and their avatar beside the last one, Messenger-style.
+// A run is consecutive messages from one sender. Every chat draws a run's bubbles close
+// together with the joined corners squared off (.run-continues, KAN-62). Group chats
+// (KAN-35) also put the sender's name above the first bubble of someone else's run and
+// their avatar beside the last one, Messenger-style.
 function decorateSenderRuns() {
   messageListEl.querySelectorAll(".message-sender-name, .message-sender-avatar").forEach((el) => el.remove());
   messageListEl.classList.toggle("message-list--group", isGroup(activeConversation));
-  if (!isGroup(activeConversation)) return;
 
   const rows = [...messageListEl.querySelectorAll(".message-row:not(.system)")];
   // A time divider (KAN-37) or system line (KAN-41) between two messages breaks the run,
   // as in Messenger.
   const startsRun = (row, index) =>
     rows[index - 1]?.dataset.senderId !== row.dataset.senderId || row.previousElementSibling?.matches(".time-divider, .message-row.system");
+  rows.forEach((row, index) => row.classList.toggle("run-continues", !startsRun(row, index)));
+  if (!isGroup(activeConversation)) return;
+
   rows.forEach((row, index) => {
     if (!row.classList.contains("other")) return;
     const sender = knownSenders.get(Number(row.dataset.senderId));

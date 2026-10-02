@@ -103,7 +103,7 @@ function setMyStatus(status, until = null) {
   statusBtnEl.title = `Status: ${label}${until ? ` ${untilText(until)}` : ""}`;
   statusMenuEl.querySelectorAll("li").forEach((li) => {
     const checked = li.dataset.status === status;
-    li.setAttribute("aria-checked", String(checked));
+    li.querySelector(".status-option").setAttribute("aria-pressed", String(checked));
     const untilEl = li.querySelector(".status-until");
     if (untilEl) untilEl.textContent = checked && until ? `On ${untilText(until)}` : "";
   });
@@ -116,13 +116,38 @@ function setMyStatus(status, until = null) {
 
 function collapseStatusDurations() {
   statusMenuEl.querySelectorAll(".status-durations").forEach((el) => { el.hidden = true; });
+  statusMenuEl.querySelectorAll(".status-option[aria-expanded]").forEach((el) => el.setAttribute("aria-expanded", "false"));
 }
 
+// Opening it focuses the current status, so the keyboard starts where the eye does.
 function toggleStatusMenu(open = statusMenuEl.hidden) {
   statusMenuEl.hidden = !open;
   collapseStatusDurations();
   statusBtnEl.setAttribute("aria-expanded", String(open));
+  if (open) statusMenuEl.querySelector('.status-option[aria-pressed="true"]')?.focus();
 }
+
+// Arrow keys step through the visible buttons (options and duration choices alike);
+// Escape closes the menu and hands focus back to my avatar (KAN-62).
+statusMenuEl.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.stopPropagation();
+    toggleStatusMenu(false);
+    statusBtnEl.focus();
+    return;
+  }
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  event.preventDefault();
+  const buttons = [...statusMenuEl.querySelectorAll("button")].filter((btn) => btn.offsetParent);
+  const next = buttons[buttons.indexOf(document.activeElement) + (event.key === "ArrowDown" ? 1 : -1)];
+  next?.focus();
+});
+
+// Tabbing out closes it. A null relatedTarget is left alone: Safari doesn't focus a
+// clicked button, so a mouse click inside the menu would otherwise close it first.
+statusMenuEl.addEventListener("focusout", (event) => {
+  if (!statusMenuEl.hidden && event.relatedTarget && !event.relatedTarget.closest(".status-picker")) toggleStatusMenu(false);
+});
 
 statusBtnEl.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -136,15 +161,20 @@ statusMenuEl.addEventListener("click", async (event) => {
   if (!item) return;
   const durationBtn = event.target.closest("button[data-minutes]");
   if (item.hasAttribute("data-timed") && !durationBtn) {
+    if (!event.target.closest(".status-option")) return; // a click between the duration buttons
     const durations = item.querySelector(".status-durations");
     const wasOpen = !durations.hidden;
     collapseStatusDurations();
     durations.hidden = wasOpen;
+    item.querySelector(".status-option").setAttribute("aria-expanded", String(!wasOpen));
+    if (!wasOpen) durations.querySelector("button").focus();
     return;
   }
 
   const minutes = durationBtn?.dataset.minutes ? Number(durationBtn.dataset.minutes) : null;
+  const hadFocus = statusMenuEl.contains(document.activeElement);
   toggleStatusMenu(false);
+  if (hadFocus) statusBtnEl.focus();
   const [previous, previousUntil] = [myStatus, myStatusUntil];
   setMyStatus(item.dataset.status, minutes ? new Date(Date.now() + minutes * 60000).toISOString() : null);
   try {

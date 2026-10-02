@@ -28,14 +28,15 @@
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: none;
-  color: var(--accent-ink);
+  background: var(--bg); /* the same soft circle as the sidebar's buttons (KAN-62) */
+  color: var(--accent-ink); /* but in the chat's theme colour, as in Messenger */
   font-size: 1.15rem;
   cursor: pointer;
 }
 
-.thread-info-btn:hover {
-  background: var(--bg);
+.thread-info-btn:hover,
+.thread-info-btn.active {
+  background: var(--accent-soft);
 }
 
 /* Beats ".thread-header span", which would make the icon bold navy text. */
@@ -56,7 +57,7 @@
   --chat-info-width: clamp(260px, 26vw, 320px);
   width: var(--chat-info-width);
   overflow-y: auto;
-  background: #fff;
+  background: var(--surface);
   border-left: 1px solid var(--border);
   padding: 0 0.75rem 1.5rem;
   min-width: 0;
@@ -112,14 +113,14 @@
 
 .chat-info-name {
   margin: 0.9rem 0 0;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   color: var(--text);
   word-break: break-word;
 }
 
 .chat-info-subtitle {
   margin: 0.2rem 0 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -133,7 +134,7 @@
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   cursor: pointer;
 }
 
@@ -161,9 +162,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.7rem 0.5rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: var(--text-md);
   color: var(--text);
   cursor: pointer;
   list-style: none;
@@ -193,11 +194,11 @@
   gap: 0.7rem;
   padding: 0.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   text-align: left;
 }
 
@@ -234,7 +235,7 @@
 }
 
 .chat-info-action-text small {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -287,7 +288,7 @@
 }
 
 .system-line {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--muted);
   text-align: center;
 }
@@ -296,14 +297,14 @@
 
 .settings-text {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   color: var(--muted);
   line-height: 1.4;
 }
 
 .settings-error {
   margin: -0.5rem 1.25rem 1rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--error);
 }
 
@@ -327,7 +328,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   color: var(--text);
   cursor: pointer;
 }
@@ -346,7 +347,7 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px transparent;
+  box-shadow: 0 0 0 2px var(--surface-pop), 0 0 0 3px transparent;
 }
 
 .theme-swatch .icon {
@@ -354,7 +355,7 @@
 }
 
 .theme-option input:checked + .theme-swatch {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text);
+  box-shadow: 0 0 0 2px var(--surface-pop), 0 0 0 4px var(--text);
 }
 
 .theme-option input:checked + .theme-swatch .icon {
@@ -362,7 +363,7 @@
 }
 
 .theme-option input:focus-visible + .theme-swatch {
-  outline: 2px solid var(--navy);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 4px;
 }
 
@@ -378,7 +379,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 720px) {
@@ -407,7 +408,8 @@
 }
 
 /* The list's ⋯ button (KAN-41): floats over the right end of a conversation while it's
-   hovered (or its menu is open), taking the unread badge's place. */
+   hovered, focused from the keyboard, or its menu is open, taking the unread badge's
+   place. Hidden with opacity rather than display, so Tab can still reach it (KAN-62). */
 .conversation-list li {
   position: relative;
 }
@@ -419,12 +421,14 @@
   transform: translateY(-50%);
   width: 32px;
   height: 32px;
-  display: none;
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   cursor: pointer;
 }
@@ -434,18 +438,21 @@
 }
 
 .conversation-list li:hover .conversation-menu-trigger,
-.conversation-list li.menu-open .conversation-menu-trigger,
-.conversation-menu-trigger:focus-visible {
-  display: flex;
+.conversation-list li:focus-within .conversation-menu-trigger,
+.conversation-list li.menu-open .conversation-menu-trigger {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .conversation-list li:hover .unread-badge,
+.conversation-list li:focus-within .unread-badge,
 .conversation-list li.menu-open .unread-badge {
   visibility: hidden;
 }
 
 /* Room for the button so the preview text doesn't run under it. */
 .conversation-list li:hover .conversation-text,
+.conversation-list li:focus-within .conversation-text,
 .conversation-list li.menu-open .conversation-text {
   padding-right: 2.25rem;
 }
@@ -458,7 +465,8 @@
 /* Touch screens have no hover: keep the button showing. */
 @media (hover: none) {
   .conversation-menu-trigger {
-    display: flex;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .conversation-list li .conversation-text {

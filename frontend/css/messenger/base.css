@@ -1,13 +1,17 @@
 /* messenger/base.css — 1 of 8, loaded first.
    Foundation for the chat page (index.html): everything later files build on.
    Sections, in order:
-     - :root design tokens (--navy, --orange, --accent-ink, --on-accent, --text, --muted,
-       --border, --bg, --error, --shadow-pop). Conversation themes override the accent
-       tokens at runtime (applyChatTheme).
+     - :root design tokens: colours (--navy, --orange, --accent-ink, --on-accent, --text,
+       --muted, --heading, --border, --bg, --surface, --surface-pop, --error, …), the
+       type scale (--text-xs … --text-xl) and radii (--radius-sm … --radius-bubble).
+       Conversation themes override the accent tokens at runtime (applyChatTheme).
+     - Accent tints (--accent-soft, --accent-ring), re-declared on the themed elements
+     - Dark mode (KAN-62): the colour tokens again for prefers-color-scheme: dark
      - ::selection and :focus-visible defaults
      - reset (* box-sizing), [hidden], body
      - .messenger — the page's two-column grid (sidebar | thread)
-   No media queries. Add a new token here, never in a section file. */
+   No layout media queries. Add a new token here, never in a section file, and give a
+   colour token its dark value as well. */
 
 /* Reuses login.css's color scheme (same values, kept self-contained here — each page
    family in this app has its own standalone stylesheet, matching style.css/login.css). */
@@ -19,28 +23,93 @@
   /* Text-safe partners of the accent: --accent-ink is the accent as text on a light
      surface, --on-accent is text on an accent fill. Themes override both (applyChatTheme). */
   --accent-ink: #a25818;
-  --on-accent: var(--navy);
+  --on-accent: #1b2559;
   --text: #1f2430;
   --muted: #5f6673;
+  --heading: var(--navy); /* names, titles and navy icons */
   --border: #d8dce3;
-  --bg: #f4f5f8;
+  --bg: #f4f5f8; /* behind everything, and hover fills */
+  --surface: #fff; /* panels, bars and other people's bubbles */
+  --surface-pop: #fff; /* menus, dialogs and pickers floating above the panels */
+  --hover-tint: rgba(31, 36, 48, 0.07);
+  --tooltip-bg: var(--navy);
+  --focus-ring: var(--navy);
+  --skeleton: #e3e6ed;
+  --skeleton-shine: rgba(255, 255, 255, 0.75);
+  --online-soft: #ddf3e1;
+  --online-ink: #1f7a35;
   --error: #c53030;
   --error-bg: #fdecec;
   /* Floating surfaces (menus, pickers) lift with shadow alone — no hairline as well. */
   --shadow-pop: 0 1px 2px rgba(27, 37, 89, 0.1), 0 8px 24px rgba(27, 37, 89, 0.16);
+  --shadow-modal: 0 12px 40px rgba(27, 37, 89, 0.2);
+
+  /* Type scale (KAN-62), for text only: icons, emoji and avatar initials keep their own
+     sizes, which follow the box they sit in. */
+  --text-xs: 0.75rem; /* timestamps, hints, small labels */
+  --text-sm: 0.85rem; /* secondary text, menus, list previews */
+  --text-md: 0.92rem; /* messages and inputs */
+  --text-lg: 1.1rem; /* panel and dialog titles */
+  --text-xl: 1.25rem; /* the brand */
+
+  --radius-sm: 6px; /* small buttons, tooltips */
+  --radius-md: 8px; /* rows and controls inside a panel or menu */
+  --radius-lg: 12px; /* menus, dialogs, list rows, inputs */
+  --radius-bubble: 14px;
+
   accent-color: var(--orange);
   caret-color: var(--accent-ink);
   scrollbar-color: #c3c8d2 transparent;
   scrollbar-width: thin;
 }
 
+/* Tints of the accent. Declared again on the elements applyChatTheme recolours: a custom
+   property built from another is worked out where it's declared, so on :root alone they
+   would stay orange in a blue chat. */
+:root,
+.thread-active,
+.chat-info,
+#settings-dialog {
+  --accent-soft: color-mix(in srgb, var(--orange) 15%, transparent);
+  --accent-ring: color-mix(in srgb, var(--orange) 20%, transparent);
+}
+
+/* Dark mode (KAN-62), following the system setting. Surfaces get lighter the higher they
+   float. Accent fills stay as they are (navy text on orange still reads); --accent-ink
+   turns light for text on dark surfaces, and applyChatTheme does the same for themes. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent-ink: #f5a865;
+    --text: #e6e8ee;
+    --muted: #9ba3b4;
+    --heading: #eef0f7;
+    --border: #2f3442;
+    --bg: #12141b;
+    --surface: #1b1e27;
+    --surface-pop: #252935;
+    --hover-tint: rgba(255, 255, 255, 0.08);
+    --tooltip-bg: #3a4160;
+    --focus-ring: #9fb3ff;
+    --skeleton: #2a2f3b;
+    --skeleton-shine: rgba(255, 255, 255, 0.06);
+    --online-soft: #1d3a26;
+    --online-ink: #7ddc97;
+    --error: #ff8080;
+    --error-bg: #3a1d1f;
+    --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
+    scrollbar-color: #3b4050 transparent;
+  }
+}
+
 ::selection {
-  background: rgba(242, 153, 74, 0.35);
+  background: color-mix(in srgb, var(--orange) 35%, transparent);
   color: var(--text);
 }
 
 :focus-visible {
-  outline: 2px solid var(--navy);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -62,6 +131,14 @@ body {
   color: var(--text);
 }
 
+/* Fields take the surface colour rather than the browser's own, which turns a grey of
+   its choosing in dark mode. */
+input:not([type="radio"], [type="checkbox"]),
+textarea {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
 .messenger {
   display: grid;
   grid-template-columns: minmax(240px, 320px) 1fr;
@@ -69,4 +146,3 @@ body {
   height: 100dvh;
   overflow: clip; /* the info panel slides in from beyond the right edge */
 }
-

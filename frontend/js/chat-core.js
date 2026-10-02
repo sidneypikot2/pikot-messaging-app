@@ -75,10 +75,55 @@ function displayName(user) {
   return user.username || user.email;
 }
 
+// Rebuilding a list would drop keyboard focus, so a row that carries data-key gets it
+// back afterwards (the row itself, or the same-classed control inside it).
 function renderList(container, items, buildItemEl) {
+  const focused = container.contains(document.activeElement) ? document.activeElement : null;
+  const focusedRow = focused?.closest("[data-key]");
   const frag = document.createDocumentFragment();
   items.forEach((item) => frag.appendChild(buildItemEl(item)));
   container.replaceChildren(frag);
+  if (!focusedRow) return;
+
+  const row = [...container.children].find((el) => el.dataset.key === focusedRow.dataset.key);
+  const target = focused === focusedRow || !focused.classList[0] ? row : row?.querySelector(`.${focused.classList[0]}`);
+  target?.focus({ preventScroll: true });
+}
+
+// Click-to-pick lists (conversations, search results) made usable from the keyboard
+// (KAN-62): rows are tabbable, Enter or Space picks one, the arrow keys move between
+// them, and with an input the list belongs to, ArrowDown there enters the list and
+// Escape in the list goes back to it.
+function makeKeyboardList(listEl, inputEl = null) {
+  const rows = () => [...listEl.querySelectorAll(":scope > li[tabindex]")];
+
+  listEl.addEventListener("keydown", (event) => {
+    const row = event.target.closest("li[tabindex]");
+    if (!row || row.parentElement !== listEl) return;
+
+    if ((event.key === "Enter" || event.key === " ") && event.target === row) {
+      event.preventDefault();
+      row.click();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const all = rows();
+      const next = all[all.indexOf(row) + (event.key === "ArrowDown" ? 1 : -1)];
+      if (next) next.focus();
+      else if (event.key === "ArrowUp") inputEl?.focus();
+    } else if (event.key === "Escape" && inputEl) {
+      event.preventDefault();
+      event.stopPropagation(); // closes just the list, not the dialog it sits in
+      listEl.hidden = true;
+      inputEl.focus();
+    }
+  });
+
+  inputEl?.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" && !listEl.hidden) {
+      event.preventDefault();
+      rows()[0]?.focus();
+    }
+  });
 }
 
 // --- Conversations ---
