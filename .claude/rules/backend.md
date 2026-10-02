@@ -5,7 +5,7 @@ paths:
 
 # Backend conventions
 
-Topic rules load on top of this one when their files are read: `backend-auth.md` (login, OAuth), `backend-realtime.md` (channels, presence, broadcasts).
+Topic rules load on top of this one when their files are read: `backend-auth.md` (login, OAuth), `backend-realtime.md` (channels, presence, broadcasts), `backend-migrations.md` (anything under `db/`).
 
 **API-only** (`ActionController::API`) — no views, no cookie sessions. Sessions are stateless JWTs (`app/lib/json_web_token.rb`) read from `Authorization: Bearer <token>` by `ApplicationController#authenticate_request!`. CORS allows `ENV["FRONTEND_ORIGIN"]` (default `http://localhost:8080`).
 

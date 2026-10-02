@@ -89,15 +89,8 @@ Done: auth (manual + social login), direct and group conversations, real-time me
 
 ## Workflow conventions
 
-Every task is tagged by area — `frontend`, `backend`, or `infra` — consistently across Jira and GitHub:
-
-- **Jira**: add the matching `frontend` / `backend` / `infra` label to each issue (the `KAN` project is
-  team-managed, so it has no Components field — Labels are the area tag). Summaries stay plain, e.g.
-  "Add login form", no prefix needed.
-- **GitHub labels**: same three labels (`frontend`, `backend`, `infra`) exist on this repo — apply one to
-  every issue/PR touching that area.
-- **Branches**: `<area>/<jira-key>-<kebab-summary>`, e.g. `frontend/kan-12-add-login-form` or
-  `backend/kan-15-auth-endpoint`. Use `infra/...` for Docker/CI/deploy/tooling changes that aren't
-  specific to one app.
-- **PR titles**: `<JIRA-KEY> <summary>`, e.g. `KAN-12 Add login form` — keeps Jira smart-commit linking
-  working and makes the area/ticket traceable from the PR list.
+The rules live in one place, [`CLAUDE.md`](CLAUDE.md) (Conventions), and CI enforces them on
+every pull request. In short: each task has one area — `frontend`, `backend` or `infra` — used
+as its Jira label, GitHub label and branch prefix; branches are `<area>/kan-<n>-<kebab-summary>`
+(e.g. `frontend/kan-12-add-login-form`); commit subjects and PR titles are `KAN-<n> <summary>`.
+`main` is protected: changes arrive through a pull request with green checks.

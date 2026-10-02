@@ -6,8 +6,10 @@ disable-model-invocation: true
 
 # Verify the app
 
-There are no frontend tests, so this is the only check that a UI change works. RSpec covers
-the backend; this covers what the user sees.
+`script/smoke` already proves the basics automatically — login, and a message between two
+users in real time. Run it first; if it fails, fix that before opening a browser. This
+skill is for what the smoke test doesn't walk through: the specific change, as the user
+sees it.
 
 ## 1. Start the stack
 
@@ -88,10 +90,12 @@ Screenshots are the most expensive part of a verification run. Keep them few and
 - Save screenshots to disk with descriptive names: `KAN-<n>-<what>.jpg`
   (e.g. `KAN-29-reply-quote.jpg`).
 - Jira: comment on the ticket with a short summary of what was verified and the
-  screenshot embedded inline. Use `uploadAttachmentToJiraIssue` via `executeWrite` with
-  `filePath` to get an `uploadCommand`, run it to get a `fileId`, then pass that as
-  `inlineFileId` to `addOrEditJiraIssueComment`. Don't also run the operation's second
-  phase (attaching the file to the issue) for a file that's already embedded.
+  screenshot embedded inline. The Atlassian server's operation names change between
+  versions, so find the attachment-upload operation with its `discover` tool rather than
+  from memory (at the time of writing: `uploadAttachmentToJiraIssue` gives an upload
+  command that returns a file ID, which the comment tool takes as `inlineFileId`). Embed
+  the file once — don't also attach it to the issue separately. If the upload can't be
+  done, say so and give the screenshot paths instead.
 - Discord: one line in the task's thread saying what was verified, pointing at the ticket.
   Don't re-upload the screenshots there.
 - Do this when the PR is opened and the ticket moves to In Review.

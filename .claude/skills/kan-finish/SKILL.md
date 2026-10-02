@@ -15,9 +15,9 @@ git status --short
 git worktree list
 ```
 
-Works from a fresh session: everything needed is in the Jira ticket (project `KAN`,
-cloudId `ca2c20d7-9b28-45c4-a475-81e449242242`). Read it first — the description ends with
-`Discord thread:`, `Branch:` and `PR:` lines written by `/kan-task`.
+Works from a fresh session: everything needed is in the Jira ticket (project and cloudId
+are in `CLAUDE.md`). Read it first — the description ends with `Discord thread:`,
+`Branch:` and `PR:` lines written by `/kan-task`.
 
 ## 1. Confirm the merge
 
@@ -40,16 +40,22 @@ git worktree remove <worktree path>
 
 `git worktree remove` refuses when the worktree has uncommitted or untracked files. Don't
 force it — list what's there and ask. If this session is itself inside that worktree,
-leave it first (`ExitWorktree`).
+leave it first (`ExitWorktree` with `keep`; `remove` would need to discard the branch's
+commits, and plain `git worktree remove` checks properly).
 
-## 4. Branch and main
+## 4. Main and branch
 
-- Delete the merged local branch: `git branch -d <branch>` (`-d`, not `-D` — if git says
-  it isn't merged, stop and report). The remote branch is deleted by GitHub on merge;
-  `git fetch --prune` clears the stale ref.
-- Update `main` in the main checkout only if it is on `main` with a clean tree:
-  `git pull --ff-only`. If it's on another branch or has changes, leave it alone and say
-  so — the user or another session is working there.
+In this order — `git branch -d` judges "merged" against the local `main`, so a stale
+`main` makes it refuse a branch that is merged:
+
+1. `git fetch --prune` (the remote branch is deleted by GitHub on merge; this clears the
+   stale ref).
+2. Update `main` in the main checkout only if it is on `main` with a clean tree:
+   `git pull --ff-only`. If it's on another branch or has changes, leave it alone and say
+   so — the user or another session is working there.
+3. Delete the merged local branch: `git branch -d <branch>` (`-d`, not `-D`). If git still
+   says it isn't merged, stop and report; when `main` couldn't be updated in step 2, leave
+   the branch and say so.
 
 ## 5. Closing note
 
