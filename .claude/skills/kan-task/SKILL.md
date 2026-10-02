@@ -71,6 +71,13 @@ task.
 
 ## 5. Implement and check
 
+For a change to backend behaviour, write the spec first: one failing request or service
+spec, watch it fail for the right reason, implement until it passes, then the next
+behaviour. Test through the public interface (the endpoint, `Service.call`, the channel),
+not private methods, so the spec survives a refactor. Refactor only on green. Skip
+test-first for migrations, config and pure refactors already covered by specs; the
+frontend has no tests.
+
 ```bash
 docker compose run --rm backend bundle exec rspec
 docker compose run --rm backend bin/rubocop
@@ -78,9 +85,10 @@ docker compose run --rm backend bin/rubocop
 
 While iterating, run only the affected spec files; run the full suite once before the PR.
 
-For a change that touches `frontend/`, verify it in the running app with the `verify-app`
-skill and keep the screenshots. For a backend-only change, RSpec plus a `curl` against the
-endpoint is enough — don't open the browser.
+Don't run the `verify-app` skill or open the browser unless the user asks for it, even
+when the change touches `frontend/` — the user tests in the browser themselves (step 7).
+For a backend change, RSpec plus a `curl` against the endpoint is enough. Say in the PR
+that the frontend change was not verified in the running app.
 
 ## 6. Pull request
 
@@ -88,8 +96,9 @@ endpoint is enough — don't open the browser.
 - Body: a few lines — what changed, how it was tested (including anything not verified),
   and the ticket link. The ticket carries the full detail; don't copy it into the PR.
 - Transition the ticket to **In Review**.
-- Post the verification screenshots to the ticket (see `verify-app`), and the PR link to
-  the thread — the thread points at the ticket for proof, no screenshots there.
+- Post the PR link to the thread. If the user asked for a `verify-app` run, post its
+  screenshots to the ticket — the thread points at the ticket for proof, no screenshots
+  there.
 
 ## 7. Local checkout for testing
 
