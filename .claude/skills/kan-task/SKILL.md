@@ -113,10 +113,12 @@ Test-first for backend behaviour, as described in `.claude/rules/backend.md`.
 ```bash
 docker compose run --rm backend bundle exec rspec spec/path_spec.rb   # affected files while iterating
 script/check <frontend|backend|tooling>                               # before the PR: everything CI runs for the area
+script/smoke                                                          # frontend, login, messaging or channel changes
 ```
 
-`script/check` must pass before step 6; paste its failing output rather than describing it
-if it doesn't.
+Both must pass before step 6; paste the failing output rather than describing it if they
+don't. When a task changes what `script/smoke` walks through (login form, search,
+composer, conversation list), update `tools/smoke/tests/` in the same PR.
 
 In a worktree, run `script/worktree-env` once before the first `docker compose` command:
 it gives the worktree its own ports and project name so its containers don't collide with

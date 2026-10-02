@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Browser smoke test: starts this checkout's Compose stack, makes sure the two smoke
+# accounts exist, and drives the real app in the Playwright container — the pages load
+# without script errors, login works, and a message travels between two users live
+# (tools/smoke/tests/). The only check that executes the frontend. Used by CI.
+#
+#   script/smoke
+#
+# Needs Docker only. It uses the stack's development database: it creates the accounts
+# smoke-alice@example.com / smoke-bob@example.com and leaves their test messages there.
+# On failure, traces and screenshots are in tools/smoke/test-results/.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+# In a worktree the stack needs its own ports and project name first.
+if [[ "$(git rev-parse --path-format=absolute --git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" && ! -f .env ]]; then
+  script/worktree-env >/dev/null
+fi
+port() { local value=""; [[ -f .env ]] && value="$(sed -n "s/^$1=//p" .env | head -n1)"; echo "${value:-$2}"; }
+backend_port="$(port BACKEND_PORT 3000)"
+
+docker compose up -d db redis backend frontend
+
+# The backend runs db:prepare before it listens; a first boot takes a while.
+echo "smoke: waiting for the backend on port $backend_port"
+for _ in $(seq 1 90); do
+  curl -fs -o /dev/null "http://localhost:$backend_port/up" && break
+  sleep 2
+done
+curl -fs -o /dev/null "http://localhost:$backend_port/up" \
+  || { echo "smoke: the backend never came up — see: docker compose logs backend" >&2; exit 1; }
+
+docker compose exec -T -e RAILS_ENV=development backend bin/rails runner - < tools/smoke/ensure_users.rb
+
+docker compose run --rm smoke

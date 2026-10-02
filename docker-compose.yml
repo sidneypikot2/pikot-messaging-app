@@ -68,6 +68,31 @@ services:
     depends_on:
       - backend
 
+  # Browser smoke test — run with script/smoke; the profile keeps it out of
+  # `docker compose up`. The image tag must match @playwright/test in
+  # tools/smoke/package.json, or Playwright can't find its browsers.
+  smoke:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    profiles: ["smoke"]
+    init: true
+    ipc: host
+    working_dir: /smoke
+    volumes:
+      - ./tools/smoke:/smoke
+    environment:
+      FRONTEND_PORT: ${FRONTEND_PORT:-8080}
+      BACKEND_PORT: ${BACKEND_PORT:-3000}
+      CI: ${CI:-}
+    # Dependencies go into tools/smoke/node_modules (gitignored), reinstalled only when
+    # the lockfile changes.
+    command: >
+      sh -c "cmp -s package-lock.json node_modules/.installed-lock 2>/dev/null
+      || (npm ci --no-audit --no-fund --silent && cp package-lock.json node_modules/.installed-lock);
+      npx playwright test"
+    depends_on:
+      - frontend
+      - backend
+
 volumes:
   postgres_data:
   redis_data:
