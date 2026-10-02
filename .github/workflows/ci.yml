@@ -69,6 +69,22 @@ jobs:
         working-directory: .
         run: script/check-frontend
 
+  tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # The Claude Code guards and the git hooks are shell: lint them, then run the table
+      # of commands they must block and allow (script/test-hooks).
+      - name: Lint shell scripts
+        working-directory: .
+        run: shellcheck --severity=warning .claude/hooks/*.sh .claude/cloud-setup.sh .claude/skills/*/scripts/*.sh .githooks/* script/*
+
+      - name: Test guards and git hooks
+        working-directory: .
+        run: script/test-hooks
+
   test:
     runs-on: ubuntu-latest
     # Postgres only: Action Cable uses the `test` adapter in the test environment, so no Redis.

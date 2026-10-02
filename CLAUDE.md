@@ -15,12 +15,12 @@ These apply to every task, whether or not `/kan-task` was run:
 
 - **Area**: `frontend`, `backend` or `infra` — one per task, used as the Jira label, GitHub label and branch prefix.
 - **Branch**: `<area>/kan-<n>-<kebab-summary>` from an up-to-date `origin/main`. Never commit on `main`.
-- **Commit subject and PR title**: `KAN-<n> <summary>`.
+- **Commit subject and PR title**: `KAN-<n> <summary>`. CI checks the branch name, PR title and area label (`.github/workflows/pr-conventions.yml`).
 - **Done** means: for backend changes the affected specs and `bin/rubocop` pass (full suite once before the PR); for frontend changes `script/check-frontend` passes, and say plainly that it was not verified in the running app unless `/verify-app` was run.
 
 ## Git safety
 
-Do task work in a git worktree (`.claude/worktrees/<name>`), not by switching the main checkout's branch — the user and other sessions work there. Never stash, reset or discard existing work to make room; if something is in the way, stop and report it. Stage only the files that belong to the task. `.claude/hooks/guard-bash.sh` blocks the destructive commands and commits on `main`; don't work around it.
+Do task work in a git worktree (`.claude/worktrees/<name>`), not by switching the main checkout's branch — the user and other sessions work there. Never stash, reset or discard existing work to make room; if something is in the way, stop and report it. Stage only the files that belong to the task. `.githooks/` refuses commits and pushes on `main` (enabled by `core.hooksPath`, set on session start); `.claude/hooks/guard-bash.sh` and `guard-edit.sh` block the destructive commands and edits to generated files. Don't work around either — when one blocks something that should be allowed, fix the guard and add the case to `script/test-hooks`.
 
 ## Project overview
 

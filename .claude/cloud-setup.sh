@@ -9,6 +9,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# The guard hooks read their input with jq and block everything without it.
+command -v jq >/dev/null || { apt-get update -qq && apt-get install -y -qq jq; }
+
 if ! docker info >/dev/null 2>&1; then
   (dockerd >/tmp/dockerd.log 2>&1 &)
   for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done

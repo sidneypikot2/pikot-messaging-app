@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+# Tests for the guards: .claude/hooks/guard-bash.sh, .claude/hooks/guard-edit.sh and the
+# git hooks in .githooks/. Each case is a command (or path) and whether it must be
+# blocked. Runs against a throwaway repository, so it never touches this one.
+# Run from anywhere; exits 1 and lists every failure. Used by CI.
+#
+# When you change a guard, add the case here first and watch it fail.
+set -uo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+guard_bash="$repo_root/.claude/hooks/guard-bash.sh"
+guard_edit="$repo_root/.claude/hooks/guard-edit.sh"
+
+# Hooks inherit GIT_DIR etc. when this runs from inside one; the sandbox must not.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+
+sandbox="$(mktemp -d)"
+trap 'rm -rf "$sandbox"' EXIT
+main="$sandbox/main"        # a checkout on main
+task="$sandbox/task"        # a linked worktree on a task branch
+
+g() { git -c user.name=test -c user.email=test@example.com -c commit.gpgsign=false "$@"; }
+
+git init -q -b main "$main"
+git -C "$main" config core.hooksPath /dev/null     # no hooks yet, whatever the machine's global config says
+mkdir -p "$main/backend/db/migrate" "$main/backend/config" "$main/frontend/js"
+echo "# merged" > "$main/backend/db/migrate/20260101000000_merged.rb"
+echo "// app" > "$main/frontend/js/app.js"
+g -C "$main" add -A
+g -C "$main" commit -q -m "initial"
+git -C "$main" update-ref refs/remotes/origin/main HEAD
+git -C "$main" worktree add -q -b infra/kan-1-example "$task"
+
+failures=0
+total=0
+fail() { echo "test-hooks: FAIL — $1" >&2; failures=$((failures + 1)); }
+
+# expect_bash <block|allow> <cwd> <command>
+expect_bash() {
+  local want="$1" cwd="$2" command="$3" status
+  total=$((total + 1))
+  jq -n --arg command "$command" --arg cwd "$cwd" '{tool_input: {command: $command}, cwd: $cwd}' \
+    | "$guard_bash" >/dev/null 2>&1
+  status=$?
+  case "$want:$status" in
+    block:2|allow:0) ;;
+    *) fail "guard-bash should $want (exit $status) in ${cwd##*/}: $command" ;;
+  esac
+}
+
+# expect_edit <block|allow> <absolute path>
+expect_edit() {
+  local want="$1" path="$2" status
+  total=$((total + 1))
+  jq -n --arg path "$path" '{tool_input: {file_path: $path}}' | "$guard_edit" >/dev/null 2>&1
+  status=$?
+  case "$want:$status" in
+    block:2|allow:0) ;;
+    *) fail "guard-edit should $want (exit $status): ${path#"$sandbox"/}" ;;
+  esac
+}
+
+# --- guard-bash: throwing away work -----------------------------------------------------
+
+while IFS= read -r command; do
+  [[ -n "$command" ]] && expect_bash block "$task" "$command"
+done <<'CASES'
+git stash
+git stash push -m wip
+git stash pop
+git add -A && git stash
+command git stash
+env FOO=1 git stash
+FOO=1 git stash
+/usr/bin/git stash
+sh -c "git stash"
+bash -c 'git stash'
+eval "git stash"
+echo $(git stash)
+git -C . stash
+git --no-pager stash
+git reset --hard
+git reset --hard HEAD~1
+git reset -q --hard origin/main
+git clean -fd
+git checkout .
+git checkout -- .
+git checkout HEAD -- .
+git checkout -- frontend/
+git checkout main -- frontend backend
+git checkout -- 'frontend/js/*.js'
+git checkout -f main
+git switch --discard-changes main
+git restore .
+git restore frontend
+git restore frontend/js/app.js backend
+git restore --staged --worktree .
+git restore --source HEAD~1 frontend
+git branch -D old
+git branch --delete --force old
+git worktree remove --force ../other
+git worktree remove ../other -f
+git push --force
+git push origin infra/kan-1-example --force
+git push -f origin infra/kan-1-example
+git push origin +infra/kan-1-example
+docker compose down -v
+docker compose down --volumes
+docker compose down --remove-orphans --volumes
+docker-compose down -v
+docker volume rm pikot_postgres_data
+docker system prune -af --volumes
+echo x > backend/db/schema.rb
+echo x >> backend/Gemfile.lock
+sed -i '' s/a/b/ backend/Gemfile.lock
+cat x | tee backend/config/credentials.yml.enc
+echo k > backend/config/master.key
+git commit --no-verify -m x
+git commit -n -m x
+git commit -anm x
+git push --no-verify
+git -c core.hooksPath=/dev/null commit -m x
+git config core.hooksPath /dev/null
+git config --unset core.hooksPath
+CASES
+
+while IFS= read -r command; do
+  [[ -n "$command" ]] && expect_bash allow "$task" "$command"
+done <<'CASES'
+git status
+git stash list
+git stash show -p
+git reset HEAD~1
+git reset --soft HEAD~1
+git checkout -b infra/kan-2-other
+git checkout main
+git switch main
+git checkout -- frontend/js/app.js
+git checkout HEAD -- frontend/js/app.js
+git restore frontend/js/app.js
+git restore --staged .
+git restore --staged frontend
+git branch -d old
+git worktree remove ../other
+git push
+git push -u origin infra/kan-1-example
+git push --force-with-lease
+git commit -m "Explain why git stash is blocked"
+git commit -m 'never run: git reset --hard'
+git config --get core.hooksPath
+echo "run git stash later"
+grep -rn "git clean" .claude
+docker compose down
+docker compose up -d
+docker compose run --rm backend bundle exec rspec
+docker compose run --rm backend bin/rails db:migrate
+docker compose run --rm backend bin/rails db:reset
+cat backend/db/schema.rb
+grep -n create_table backend/db/schema.rb
+CASES
+
+# Prose in a heredoc (a commit message, a PR body) is not a command...
+expect_bash allow "$task" "$(printf 'git commit -F - <<EOF\nKAN-1 Guard notes\n\ngit stash is blocked\ngit reset --hard too\nEOF')"
+expect_bash allow "$task" "$(printf "gh pr create --title x --body \"\$(cat <<'EOF'\ngit clean -fd is blocked\nEOF\n)\"")"
+# ...but a heredoc fed to a shell is.
+expect_bash block "$task" "$(printf 'bash <<EOF\ngit stash\nEOF')"
+
+# Dropping the database: only a worktree's throwaway database may go.
+expect_bash block "$main" "docker compose run --rm backend bin/rails db:drop"
+expect_bash block "$main" "docker compose run --rm backend bin/rails db:reset"
+expect_bash allow "$task" "docker compose run --rm backend bin/rails db:drop"
+
+# --- guard-bash: commits and pushes on main, before the git hooks are enabled -------------
+
+expect_bash block "$main" "git commit -m x"
+expect_bash block "$main" "git add -A && git commit -m x"
+expect_bash block "$main" "command git commit -m x"
+expect_bash block "$main" "env FOO=1 git commit -m x"
+expect_bash block "$main" 'sh -c "git commit -m x"'
+expect_bash block "$main" "git push"
+expect_bash block "$sandbox" "cd main && git commit -m x"
+expect_bash block "$task" "git -C $main commit -m x"
+expect_bash allow "$main" "git switch -c infra/kan-2-other && git commit -m x"
+expect_bash allow "$task" "git commit -m x"
+expect_bash allow "$main" "git -C $task commit -m x"
+expect_bash allow "$main" "git log --oneline"
+
+# --- guard-edit ---------------------------------------------------------------------------
+
+expect_edit block "$task/backend/db/schema.rb"
+expect_edit block "$task/backend/db/queue_schema.rb"
+expect_edit block "$task/backend/Gemfile.lock"
+expect_edit block "$task/backend/config/credentials.yml.enc"
+expect_edit block "$task/backend/config/master.key"
+expect_edit block "$task/frontend/vendor/material-symbols/material-symbols.css"
+expect_edit block "$task/backend/db/migrate/20260101000000_merged.rb"
+expect_edit allow "$task/backend/db/migrate/20260202000000_new.rb"
+expect_edit allow "$task/backend/Gemfile"
+expect_edit allow "$task/backend/app/models/user.rb"
+expect_edit allow "$task/frontend/js/app.js"
+
+# --- Both guards fail closed without jq ---------------------------------------------------
+
+total=$((total + 2))
+no_jq="$sandbox/no-jq-bin"
+mkdir -p "$no_jq"
+for tool in bash cat git grep awk dirname basename env; do
+  tool_path="$(command -v "$tool")" && ln -s "$tool_path" "$no_jq/$tool"
+done
+echo '{"tool_input":{"command":"ls"},"cwd":"/"}' | PATH="$no_jq" "$guard_bash" >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "guard-bash must block when jq is missing"
+echo '{"tool_input":{"file_path":"/x"}}' | PATH="$no_jq" "$guard_edit" >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "guard-edit must block when jq is missing"
+
+# --- Git hooks ----------------------------------------------------------------------------
+# Enabled the way a real checkout has them: checked in, core.hooksPath relative.
+
+mkdir -p "$main/.githooks" "$task/.githooks"
+cp "$repo_root"/.githooks/* "$main/.githooks/"
+cp "$repo_root"/.githooks/* "$task/.githooks/"
+git -C "$main" config core.hooksPath .githooks
+
+# With the hooks active the guard leaves commits to them...
+expect_bash allow "$main" "git commit -m x"
+expect_bash allow "$main" "git switch -c x; git switch main; git commit -m y"
+
+# ...and they refuse on main whatever the command looked like,
+total=$((total + 5))
+echo "change" >> "$main/frontend/js/app.js"
+g -C "$main" commit -q -am "on main" >/dev/null 2>&1 && fail "pre-commit must refuse a commit on main"
+
+# while a task branch commits normally (its worktree runs its own copy of the hooks).
+echo "change" >> "$task/frontend/js/app.js"
+g -C "$task" commit -q -am "on a task branch" >/dev/null 2>&1 || fail "pre-commit must allow a commit on a task branch"
+
+sha="$(git -C "$task" rev-parse HEAD)"
+zero="0000000000000000000000000000000000000000"
+(cd "$task" && echo "refs/heads/infra/kan-1-example $sha refs/heads/main $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
+  && fail "pre-push must refuse a push to main"
+(cd "$task" && echo "HEAD $sha refs/heads/main $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
+  && fail "pre-push must refuse HEAD:main"
+(cd "$task" && echo "refs/heads/infra/kan-1-example $sha refs/heads/infra/kan-1-example $zero" | .githooks/pre-push origin url >/dev/null 2>&1) \
+  || fail "pre-push must allow a push to the task branch"
+
+if (( failures > 0 )); then
+  echo "test-hooks: $failures of $total failed" >&2
+  exit 1
+fi
+echo "test-hooks: ok ($total cases)"

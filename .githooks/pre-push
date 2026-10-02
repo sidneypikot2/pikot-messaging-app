@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Refuses pushes to main, from any local branch: main only changes through a merged
+# pull request. Git feeds one line per ref being pushed:
+#   <local ref> <local sha> <remote ref> <remote sha>
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/main" ]]; then
+    echo "pre-push: refusing to push to main — push the task branch and open a pull request." >&2
+    exit 1
+  fi
+done
+exit 0
