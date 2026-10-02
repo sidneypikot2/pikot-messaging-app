@@ -1,10 +1,29 @@
 ---
 name: verify-app
 description: Run PikotChat locally and prove a change works in the real app - start the Docker stack, log in with the dev test accounts, drive the chat UI in Chrome (two users in two tabs for real-time checks), capture screenshots and post them to the Jira ticket.
+argument-hint: "<KAN-n> <what to verify>"
 disable-model-invocation: true
+context: fork
+agent: general-purpose
+background: false
 ---
 
 # Verify the app
+
+This skill runs in a subagent, so the screenshots it takes never enter the session that
+asked for it. You have not seen that session's conversation: everything you know about the
+task is below and in the Jira ticket (project and cloudId are in `CLAUDE.md`; the ticket's
+description ends with its `Discord thread:`, `Branch:` and `PR:` lines).
+
+Verify: $ARGUMENTS
+
+```!
+git branch --show-current
+git diff --stat origin/staging...HEAD
+```
+
+If nothing above says what to verify, verify what the diff changes, and say that is what
+you did. With no ticket key, skip the Jira and Discord steps and say so.
 
 `script/smoke` already proves the basics automatically — login, and a message between two
 users in real time. Run it first; if it fails, fix that before opening a browser. This
@@ -100,9 +119,11 @@ Screenshots are the most expensive part of a verification run. Keep them few and
   Don't re-upload the screenshots there.
 - Do this when the PR is opened and the ticket moves to In Review.
 
-## Reporting
+## Return
 
-Say exactly what was exercised and what was seen. If something couldn't be verified
-(Chrome unavailable, a provider login that needs real credentials), say so rather than
-implying it was checked. Social login can't be completed locally without provider
-credentials in `backend/.env`.
+Your final message is all the calling session gets. Make it text only: what was exercised
+and what was seen, any console errors, the paths of the saved screenshots, and the link to
+the Jira comment. Don't read the saved screenshots back or attach them. If something
+couldn't be verified (Chrome unavailable, a provider login that needs real credentials),
+say so rather than implying it was checked. Social login can't be completed locally
+without provider credentials in `backend/.env`.
