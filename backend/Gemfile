@@ -41,7 +41,7 @@ gem "solid_queue"
 # Redis-backed Action Cable adapter — actioncable's redis subscription adapter itself
 # requires "< 6" (lib/action_cable/subscription_adapter/redis.rb), so an unpinned redis
 # gem resolves to a version it can't actually load at broadcast time (KAN-14 fix).
-gem "redis", "< 6"
+gem "redis", "< 7"
 
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
