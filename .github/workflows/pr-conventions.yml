@@ -1,8 +1,9 @@
 name: PR conventions
 
-# Checks the naming conventions in CLAUDE.md that tie a pull request to its Jira ticket
-# and area. Its own workflow so that editing a title or a label re-runs this check only,
-# not the test suite.
+# Checks the conventions in CLAUDE.md. A pull request into staging is a task: its branch,
+# title and label tie it to a Jira ticket and an area. A pull request into main is a
+# release: it comes from staging and nowhere else. Its own workflow so that editing a
+# title or a label re-runs this check only, not the test suite.
 on:
   pull_request:
     types: [ opened, edited, synchronize, reopened, labeled, unlabeled ]
@@ -28,6 +29,7 @@ jobs:
         # a PR title is untrusted input.
         env:
           BRANCH: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
           PR: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -39,6 +41,15 @@ jobs:
 
           errors=0
           fail() { echo "::error::$1"; errors=$((errors + 1)); }
+
+          # main only takes releases: staging, as a whole, under a dated title.
+          if [[ "$BASE" == "main" ]]; then
+            [[ "$BRANCH" == "staging" ]] \
+              || fail "Only staging is merged into main (a release). Open this pull request against staging."
+            [[ "$TITLE" =~ ^Release\ [0-9]{4}-[0-9]{2}-[0-9]{2} ]] \
+              || fail "Title '$TITLE' is not 'Release <YYYY-MM-DD>'."
+            exit $(( errors > 0 ))
+          fi
 
           if [[ ! "$BRANCH" =~ ^(frontend|backend|infra)/kan-[0-9]+-[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
             fail "Branch '$BRANCH' is not <area>/kan-<n>-<kebab-summary> (area: frontend, backend or infra)."

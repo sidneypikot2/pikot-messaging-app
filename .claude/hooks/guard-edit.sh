@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Edit/Write: blocks hand-edits to generated, encrypted and vendored
-# files, and to migrations that are already on main. Exit 2 blocks the edit and shows
+# files, to secret files, and to migrations that are already merged. Exit 2 blocks the edit and shows
 # stderr to Claude. guard-bash.sh covers the same files written from the shell.
 # Every rule here has a case in script/test-hooks; add one when you change a rule.
 set -uo pipefail
@@ -25,14 +25,23 @@ case "$path" in
     block "encrypted; it can only be changed with bin/rails credentials:edit." ;;
   */backend/config/master.key|*/backend/config/*.key)
     block "secret key; it is never read or written from a session." ;;
+  */.env.example) ;;
+  */backend/.env|*/.env.*)
+    # The dotenv convention: .env, .env.local, .env.<environment>[.local]. A worktree's
+    # root .env (ports, written by script/worktree-env) is the one plain .env that isn't
+    # secret, and it isn't under backend/.
+    block "secret environment file; sessions don't write secrets. Document a new variable in backend/.env.example." ;;
   */frontend/vendor/*)
     block "vendored third-party file; replace it from upstream rather than editing." ;;
   */backend/db/migrate/*.rb)
-    # A migration that is on main has already run in other databases; changing it
-    # changes nothing there. New migrations (not on main yet) stay editable.
-    if git -C "$(dirname "$path")" cat-file -e "origin/main:backend/db/migrate/$(basename "$path")" 2>/dev/null; then
-      block "this migration is already on main; write a new migration instead of changing one that has run."
-    fi ;;
+    # A migration that is on staging or main has already run in other databases; changing
+    # it changes nothing there. New migrations (only on this branch) stay editable.
+    name="backend/db/migrate/$(basename "$path")"
+    for ref in origin/staging origin/main; do
+      if git -C "$(dirname "$path")" cat-file -e "$ref:$name" 2>/dev/null; then
+        block "this migration is already on ${ref#origin/}; write a new migration instead of changing one that has run."
+      fi
+    done ;;
 esac
 
 exit 0

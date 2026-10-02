@@ -5,8 +5,8 @@
 #
 # This is fast feedback, not a security boundary: it reads the command text, and text can
 # always be written another way. What must hold whatever the command looks like is
-# enforced where it happens — commits and pushes to main by .githooks/ (and by branch
-# protection on GitHub). Every rule here has a case in script/test-hooks; add one when
+# enforced where it happens — commits and pushes to main and staging by .githooks/ (and by
+# branch protection on GitHub). Every rule here has a case in script/test-hooks; add one when
 # you change a rule.
 set -uo pipefail
 
@@ -136,10 +136,12 @@ fi
 # `.env.example` is documentation, and a worktree's root `.env` only holds port numbers.
 
 named="$(sed -E 's/\.env\.example//g' <<<"$cmd")"
-SECRET='(^|[^A-Za-z0-9_])backend/\.env|\.env\.(local|development|production|test)|master\.key|config/[A-Za-z0-9_]+\.key|\.kamal/secrets'
+# Any `.env.<something>` counts (.env.local, .env.staging, .env.production.local, ...):
+# the dotenv naming convention, not a list of the names in use today.
+SECRET='(^|[^A-Za-z0-9_])backend/\.env|(^|[^A-Za-z0-9_])\.env\.[A-Za-z0-9_]|master\.key|config/[A-Za-z0-9_]+\.key|\.kamal/secrets'
 if grep -Eq -- "$SECRET" <<<"$named" \
   || { [[ "$cd_dir" == backend || "$cd_dir" == */backend ]] && grep -Eq -- '(^|[[:space:]"'"'"'=<])\.env([[:space:]"'"'"';|&)]|$)' <<<"$named"; }; then
-  block "this command names a secret file (backend/.env, a *.key file or .kamal/secrets). Sessions don't read or copy secrets; see backend/.env.example for the variable names."
+  block "this command names a secret file (backend/.env, a .env.<name> file, a *.key file or .kamal/secrets). Sessions don't read or copy secrets; see backend/.env.example for the variable names."
 fi
 
 # --- Generated and secret files, written from the shell ---------------------------------
@@ -153,17 +155,17 @@ if matches ">>?[[:space:]]*[^[:space:];&|]*${PROTECTED}" \
 fi
 
 # --- Commits and pushes -----------------------------------------------------------------
-# Work belongs on a task branch (<area>/kan-<n>-<summary>), never on main. The git hooks
-# in .githooks/ enforce that at the moment git acts, so here it is enough to make sure
-# they run.
+# Work belongs on a task branch (<area>/kan-<n>-<summary>), never on main or staging. The
+# git hooks in .githooks/ enforce that at the moment git acts, so here it is enough to
+# make sure they run.
 
-matches "${GIT}(${SEG}[[:space:]])?-c[[:space:]]+core\.hooks[Pp]ath" && block "overriding core.hooksPath turns the main-branch hooks off."
-matches "${GIT}config[[:space:]]${SEG}core\.hooks[Pp]ath[[:space:]=]+[^[:space:]]" && block "changing core.hooksPath turns the main-branch hooks off."
-matches "${GIT}config[[:space:]]${SEG}--unset(-all)?[[:space:]]+core\.hooks[Pp]ath" && block "unsetting core.hooksPath turns the main-branch hooks off."
+matches "${GIT}(${SEG}[[:space:]])?-c[[:space:]]+core\.hooks[Pp]ath" && block "overriding core.hooksPath turns the protected-branch hooks off."
+matches "${GIT}config[[:space:]]${SEG}core\.hooks[Pp]ath[[:space:]=]+[^[:space:]]" && block "changing core.hooksPath turns the protected-branch hooks off."
+matches "${GIT}config[[:space:]]${SEG}--unset(-all)?[[:space:]]+core\.hooks[Pp]ath" && block "unsetting core.hooksPath turns the protected-branch hooks off."
 
 if matches "${GIT}(commit|push)([[:space:]]|$)"; then
-  matches "${GIT}(commit|push)[[:space:]]${SEG}--no-verify" && block "--no-verify skips the main-branch hooks."
-  matches "${GIT}commit[[:space:]]+(${SEG}[[:space:]])?-[a-zA-Z]*n[a-zA-Z]*([[:space:]]|$)" && block "git commit -n skips the main-branch hooks."
+  matches "${GIT}(commit|push)[[:space:]]${SEG}--no-verify" && block "--no-verify skips the protected-branch hooks."
+  matches "${GIT}commit[[:space:]]+(${SEG}[[:space:]])?-[a-zA-Z]*n[a-zA-Z]*([[:space:]]|$)" && block "git commit -n skips the protected-branch hooks."
 
   root="$(git -C "$target" rev-parse --show-toplevel 2>/dev/null || true)"
   hooks_path="$(git -C "$target" config --get core.hooksPath 2>/dev/null || true)"
@@ -177,7 +179,7 @@ if matches "${GIT}(commit|push)([[:space:]]|$)"; then
     # set yet), so judge by the branch the command starts on.
     if ! matches "${GIT}(checkout[[:space:]]+-b|switch[[:space:]]+-c)[[:space:]]"; then
       branch="$(git -C "$target" branch --show-current 2>/dev/null || true)"
-      [[ "$branch" == "main" ]] && block "on main — create the task branch first (see Conventions in CLAUDE.md)."
+      [[ "$branch" == "main" || "$branch" == "staging" ]] && block "on $branch — create the task branch first (see Conventions in CLAUDE.md)."
     fi
   fi
 fi
