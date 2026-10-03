@@ -50,6 +50,8 @@ setInterval(() => {
   renderHeaderPresence();
 }, 60000);
 
+makeKeyboardList(conversationListEl);
+
 async function loadConversations() {
   try {
     const { conversations } = await Api.conversations(token);
@@ -76,7 +78,12 @@ async function loadConversations() {
 function buildConversationItem(conversation) {
   const li = document.createElement("li");
   li.dataset.conversationId = conversation.id;
-  if (conversation.id === activeConversationId) li.classList.add("active");
+  li.dataset.key = conversation.id;
+  li.tabIndex = 0;
+  if (conversation.id === activeConversationId) {
+    li.classList.add("active");
+    li.setAttribute("aria-current", "true");
+  }
 
   const avatar = document.createElement("div");
   renderConversationAvatar(avatar, conversation);

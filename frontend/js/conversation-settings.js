@@ -17,15 +17,16 @@ const settingsConfirmEl = document.getElementById("settings-confirm");
 
 // Same keys as Conversation::THEMES; null is the app's own orange. Each sets the
 // colors the thread is drawn with (own bubbles, Send, accents): ink is the accent as
-// text on a light surface, on is the text color on an accent fill.
+// text on a light surface, inkDark the same on a dark one (dark mode, KAN-62), and on is
+// the text color on an accent fill.
 const CHAT_THEMES = {
-  orange: { label: "Orange", color: "#f2994a", dark: "#e07f2b", ink: "#a25818", on: "#1b2559" },
-  blue: { label: "Blue", color: "#3b82f6", dark: "#2563eb", ink: "#1c5cea", on: "#fff" },
-  purple: { label: "Purple", color: "#9b51e0", dark: "#8240c4", ink: "#8240c4", on: "#fff" },
-  pink: { label: "Pink", color: "#e84393", dark: "#cf2d7c", ink: "#be2972", on: "#fff" },
-  green: { label: "Green", color: "#27ae60", dark: "#1e9150", ink: "#197842", on: "#1b2559" },
-  red: { label: "Red", color: "#eb5757", dark: "#d64545", ink: "#c62c2c", on: "#fff" },
-  teal: { label: "Teal", color: "#14a3a3", dark: "#0f8a8a", ink: "#0d7373", on: "#1b2559" },
+  orange: { label: "Orange", color: "#f2994a", dark: "#e07f2b", ink: "#a25818", inkDark: "#f5a865", on: "#1b2559" },
+  blue: { label: "Blue", color: "#3b82f6", dark: "#2563eb", ink: "#1c5cea", inkDark: "#8ab4ff", on: "#fff" },
+  purple: { label: "Purple", color: "#9b51e0", dark: "#8240c4", ink: "#8240c4", inkDark: "#c9a2f2", on: "#fff" },
+  pink: { label: "Pink", color: "#e84393", dark: "#cf2d7c", ink: "#be2972", inkDark: "#f592c2", on: "#fff" },
+  green: { label: "Green", color: "#27ae60", dark: "#1e9150", ink: "#197842", inkDark: "#6fd89a", on: "#1b2559" },
+  red: { label: "Red", color: "#eb5757", dark: "#d64545", ink: "#c62c2c", inkDark: "#ff9a9a", on: "#fff" },
+  teal: { label: "Teal", color: "#14a3a3", dark: "#0f8a8a", ink: "#0d7373", inkDark: "#5fd6d6", on: "#1b2559" },
 };
 
 // Overrides the accent variables on the thread, the panel and its dialog only, so the sidebar keeps
@@ -36,7 +37,7 @@ function applyChatTheme(conversation) {
     if (theme) {
       el.style.setProperty("--orange", theme.color);
       el.style.setProperty("--orange-dark", theme.dark);
-      el.style.setProperty("--accent-ink", theme.ink);
+      el.style.setProperty("--accent-ink", Preferences.isDark() ? theme.inkDark : theme.ink);
       el.style.setProperty("--on-accent", theme.on);
     } else {
       el.style.removeProperty("--orange");
@@ -46,6 +47,10 @@ function applyChatTheme(conversation) {
     }
   });
 }
+
+// Switching the system to dark or light while a themed chat is open swaps its ink (the
+// Appearance setting does the same, KAN-63).
+systemDarkQuery.addEventListener("change", () => applyChatTheme(activeConversation));
 
 // --- Mute ---
 
@@ -85,6 +90,8 @@ function systemLineText(event, actor, conversation) {
       return `${who} removed ${targetName(event.target)} from the group`;
     case "left":
       return `${who} left the group`;
+    case "note":
+      return event.cleared ? `${who} removed the pinned note` : `${who} updated the pinned note`;
     default:
       return `${who} changed the chat settings`;
   }
@@ -109,8 +116,10 @@ function applyConversationUpdate(conversation) {
   activeConversation = conversation;
   mergePresence([conversation]);
   renderThreadHeader(conversation);
+  if (!isLoadingOlder) updatePaginationStatus(); // "This is the start of <name>" follows renames
   applyChatTheme(conversation);
   refreshThreadDecorations(); // sender names follow nicknames
+  renderPinnedNote(conversation);
   if (chatInfoOpen) renderChatInfo();
 }
 
@@ -235,7 +244,15 @@ function renderChatInfo() {
   ];
   if (group) customize.push(buildInfoAction("edit", "Change group name", openRenameDialog));
 
-  const sections = [buildInfoSection("Customize chat", customize)];
+  const note = conversation.note;
+  const sections = [
+    buildInfoSection("Pinned note", [
+      buildInfoAction("push_pin", note ? "View pinned note" : "Add a pinned note", openPinnedNoteFromInfo, {
+        detail: note ? notePreview(note.body) : "Keep addresses, plans and links handy",
+      }),
+    ]),
+    buildInfoSection("Customize chat", customize),
+  ];
   if (group) sections.push(buildInfoSection(`Chat members (${conversation.members.length})`, buildMemberRows(conversation)));
 
   const privacy = [
@@ -450,6 +467,7 @@ function openAddPeopleDialog() {
   const searchWrap = document.createElement("div");
   searchWrap.className = "new-group-search";
   searchWrap.append(search, results);
+  makeKeyboardList(results, search);
 
   const renderChips = () => {
     renderList(chips, [...picked.values()], (user) => {
@@ -486,6 +504,8 @@ function openAddPeopleDialog() {
       Avatar.render(avatar, user);
       const name = document.createElement("span");
       name.textContent = displayName(user);
+      li.dataset.key = user.id;
+      li.tabIndex = 0;
       li.append(avatar, name);
       li.addEventListener("click", () => {
         picked.set(user.id, user);

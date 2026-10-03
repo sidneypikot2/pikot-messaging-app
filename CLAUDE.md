@@ -5,6 +5,7 @@
 Keep replies short: lead with the result, include what the reader needs to act on it, and leave out long code snippets.
 
 When compacting, keep the list of modified files, the current KAN ticket and branch, and the commands that were used to check the work.
+A session cannot see its own context size, so judge by what it holds: at a natural break (checks green, PR opened, handover) in a session that has run long, has already been summarised once, or has taken in browser screenshots or large logs, suggest `/compact` — or `/clear` when the ticket is handed over.
 
 When adding a gem or library, or using a third-party API not already used in this repo, look up the official documentation first. Follow existing in-repo usage otherwise.
 Use context7 directly for a single lookup; use the DocsExplorer subagent only when several technologies need looking up at once.

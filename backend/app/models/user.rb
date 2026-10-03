@@ -15,6 +15,10 @@ class User < ApplicationRecord
   # turned off; once this passes they're back to Online.
   validates :chosen_status_until, absence: true, unless: -> { chosen_status_dnd? || chosen_status_offline? }
 
+  # Deleted accounts (KAN-63) keep their row for the messages they sent; they can't sign
+  # in, be found, or be added to a chat.
+  scope :active, -> { where(deleted_at: nil) }
+
   normalizes :email, with: ->(email) { email.strip.downcase }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },
@@ -27,13 +31,16 @@ class User < ApplicationRecord
   validates :password_confirmation, presence: true, on: :create, if: -> { !oauth_user? }
 
   # Not collected during OAuth signup, so gated the same way password is above — OAuth
-  # users end up with blank name/username until a future profile-completion flow exists.
+  # users can start with a blank name/username and fill them in from Settings (KAN-63).
   validates :first_name, presence: true, if: -> { !oauth_user? }
   validates :last_name, presence: true, if: -> { !oauth_user? }
-  validates :username, presence: true, length: { in: 3..30 },
+  # OAuth users may leave it blank, but one they choose in settings (KAN-63) follows the
+  # same rules.
+  validates :username, presence: true, if: -> { !oauth_user? }
+  validates :username, length: { in: 3..30 },
                         format: { with: /\A[a-zA-Z0-9_]+\z/, message: "only letters, numbers, and underscores" },
                         uniqueness: { case_sensitive: false },
-                        if: -> { !oauth_user? }
+                        allow_blank: true
   validate :avatar_content_type_and_size, if: -> { avatar.attached? }
 
   generates_token_for :email_verification, expires_in: 24.hours do
@@ -53,7 +60,27 @@ class User < ApplicationRecord
   # "Alice Smith", or the username/email for OAuth users who never gave a name — same
   # fallback as the frontend's displayName.
   def display_name
+    return DELETED_NAME if deleted?
+
     "#{first_name} #{last_name}".strip.presence || username.presence || email
+  end
+
+  DELETED_NAME = "PikotChat user".freeze
+
+  def deleted?
+    deleted_at.present?
+  end
+
+  PROVIDER_NAMES = { "facebook" => "Facebook", "linkedin" => "LinkedIn", "google_oauth2" => "Google", "apple" => "Apple" }.freeze
+
+  # "Google" for google_oauth2, and so on — for messages about how someone signs in.
+  def provider_name
+    PROVIDER_NAMES.fetch(provider, provider&.capitalize)
+  end
+
+  # Signed up with Google/Facebook/… and never had a password (KAN-63).
+  def password_set?
+    password_digest.present?
   end
 
   def verified?

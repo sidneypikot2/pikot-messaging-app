@@ -33,6 +33,16 @@ function insertAtCursor(textarea, text) {
   textarea.focus();
 }
 
+// Enter sends and Shift+Enter starts a new line, as in Messenger (KAN-62). Not while an
+// IME is composing (Enter there confirms the characters), and not on touch screens,
+// whose on-screen Enter key is the only way to get a new line.
+const touchOnly = window.matchMedia("(hover: none) and (pointer: coarse)");
+composerInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing || touchOnly.matches) return;
+  event.preventDefault();
+  if (composerInputEl.value.trim() && !composerSendEl.disabled) composerEl.requestSubmit();
+});
+
 composerEl.addEventListener("submit", async (event) => {
   event.preventDefault();
   const body = composerInputEl.value.trim();

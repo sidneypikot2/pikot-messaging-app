@@ -1,10 +1,13 @@
-/* messenger/motion.css — 7 of 7, loaded last so it can animate anything above.
+/* messenger/motion.css — 9 of 9, loaded last so it can animate anything above.
    All entrance animations and loading placeholders (KAN-48). Nothing here sets layout
    or colour beyond the skeleton shapes; closing is instant unless noted.
    Sections, in order:
      - Pop-in entrances for menus, pickers, modals and the reaction toast
        (.status-menu, .search-results, .message-menu, .emoji-picker, .modal, …)
        with their @keyframes
+     - The Settings dialog (KAN-63): tabs settling in, panels switching, the delete
+       form and messages appearing, closing (.account-backdrop--closing), the switch
+       knob and the gear's turn
      - Expandable sections of the conversation panel
        (@supports interpolate-size: allow-keywords)
      - Opening a conversation: .thread-active--entering, .message-list--entering,
@@ -23,11 +26,16 @@
    instant. Menus grow out of the control that opened them; the emoji picker and the
    chat list's ⋯ menu only fade and slide, because JS measures them as they open and a
    scale would skew getBoundingClientRect. */
-.status-menu,
 .search-results,
 .message-menu {
   transform-origin: top left;
   animation: pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* My status menu opens upward from the bar under the chat list (KAN-63). */
+.status-menu {
+  transform-origin: bottom left;
+  animation: pop-up 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* The message ⋮ menu is small, so it gets a deeper scale and a longer, gentler curve
@@ -64,6 +72,13 @@
   }
 }
 
+@keyframes pop-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+}
+
 @keyframes pop-in-deep {
   from {
     opacity: 0;
@@ -95,6 +110,69 @@
   from {
     opacity: 0;
     transform: translateX(16px);
+  }
+}
+
+/* The Settings dialog (KAN-63). It rises in with the shared .modal entrance, a little
+   longer for its size, and the tabs settle in one after another; each panel fades
+   across when its tab is picked (it starts rendering as [hidden] comes off). Closing
+   runs backwards — closeAccountSettings waits for it before hiding the dialog. */
+.account-modal {
+  animation: modal-in 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.account-tab {
+  animation: row-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.account-tab:nth-child(2) { animation-delay: 30ms; }
+.account-tab:nth-child(3) { animation-delay: 60ms; }
+.account-tab:nth-child(4) { animation-delay: 90ms; }
+
+.account-panel {
+  animation: panel-in 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.delete-account-form,
+.account-error,
+.account-success {
+  animation: fade-drop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.account-backdrop--closing {
+  animation: fade-out 0.2s ease-in forwards;
+}
+
+.account-backdrop--closing .account-modal {
+  animation: modal-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* The gear turns a little when pointed at. */
+.account-settings-btn .icon {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.account-settings-btn:hover .icon {
+  transform: rotate(60deg);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
   }
 }
 
@@ -149,8 +227,8 @@
    crosses the whole screen as one band instead of each block shimmering on its own. */
 .skeleton {
   display: block;
-  background-color: #e3e6ed;
-  background-image: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  background-color: var(--skeleton);
+  background-image: linear-gradient(100deg, transparent 35%, var(--skeleton-shine) 50%, transparent 65%);
   background-size: 200vw 100%;
   background-attachment: fixed;
   background-repeat: no-repeat;
@@ -225,7 +303,7 @@
 .skeleton-bubble {
   height: 2.5rem;
   min-width: 5rem;
-  border-radius: 14px;
+  border-radius: var(--radius-bubble);
   border-bottom-left-radius: 4px;
 }
 
@@ -302,8 +380,30 @@
   .emoji-picker,
   .status-durations,
   .modal,
-  .reaction-toast {
+  .reaction-toast,
+  .account-modal,
+  .account-tab,
+  .account-panel,
+  .delete-account-form,
+  .account-error,
+  .account-success {
     animation: fade-in 0.12s ease-out;
+    animation-delay: 0s;
+  }
+
+  .account-backdrop--closing,
+  .account-backdrop--closing .account-modal {
+    animation: none;
+  }
+
+  .account-settings-btn:hover .icon,
+  .account-switch::after {
+    transform: none;
+    transition: none;
+  }
+
+  .account-switch:checked::after {
+    transform: translateX(18px);
   }
 
   .chat-info-section::details-content {

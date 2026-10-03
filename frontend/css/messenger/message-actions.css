@@ -1,4 +1,4 @@
-/* messenger/message-actions.css — 4 of 7. Needs base.css and thread.css.
+/* messenger/message-actions.css — 4 of 9. Needs base.css and thread.css.
    What you can do to a message, plus the two shared overlays those actions open.
    Sections, in order:
      - Reactions: .message-bubble-wrap, the hover toolbar (KAN-30: react / reply / ⋮),
@@ -84,7 +84,7 @@
 .message-toolbar > button:hover,
 .message-menu-trigger:hover,
 .menu-open .message-menu-trigger {
-  background: rgba(31, 36, 48, 0.07);
+  background: var(--hover-tint);
   color: var(--text);
 }
 
@@ -102,8 +102,8 @@
   display: flex;
   flex-direction: column;
   padding: 0.25rem;
-  background: #fff;
-  border-radius: 8px;
+  background: var(--surface-pop);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-pop);
 }
 
@@ -115,8 +115,8 @@
   background: none;
   text-align: left;
   padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   color: var(--text);
   cursor: pointer;
 }
@@ -142,9 +142,9 @@
 .modal {
   width: 100%;
   max-width: 480px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(27, 37, 89, 0.2);
+  background: var(--surface-pop);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
 }
 
 .modal-header {
@@ -156,7 +156,7 @@
 
 .modal-header h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   color: var(--text);
 }
 
@@ -204,14 +204,14 @@
 .unsend-option strong {
   display: block;
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: var(--text-md);
 }
 
 .unsend-option-hint {
   display: block;
   margin-top: 0.2rem;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
 }
 
@@ -224,9 +224,9 @@
 
 .modal-footer button {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1.1rem;
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
 }
@@ -254,10 +254,10 @@
 
 .reaction-pill {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   border-radius: 999px;
   padding: 0.1rem 0.5rem;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   cursor: pointer;
   color: var(--text);
 }
@@ -267,7 +267,7 @@
 }
 
 .reaction-pill.mine {
-  background: rgba(242, 153, 74, 0.15);
+  background: var(--accent-soft);
   border-color: var(--orange);
   color: var(--accent-ink);
 }
@@ -279,8 +279,8 @@
 
 .emoji-picker {
   width: 300px;
-  background: #fff;
-  border-radius: 12px;
+  background: var(--surface-pop);
+  border-radius: var(--radius-lg);
   padding: 0.5rem;
   box-shadow: var(--shadow-pop);
   z-index: 20;
@@ -291,8 +291,8 @@
   width: 100%;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   margin-bottom: 0.4rem;
   box-sizing: border-box;
   font-family: inherit;
@@ -316,7 +316,7 @@
   line-height: 1;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   flex: none;
 }
 
@@ -344,7 +344,7 @@
   line-height: 1;
   cursor: pointer;
   padding: 0.3rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   aspect-ratio: 1;
 }
 
@@ -367,7 +367,7 @@
   font-size: 1rem;
   line-height: 1;
   padding: 0.2rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 

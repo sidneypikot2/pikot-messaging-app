@@ -2,7 +2,7 @@ class ConversationsController < ApplicationController
   before_action :authenticate_request!
 
   def index
-    conversations = current_user.conversations.where.not(id: cleared_conversation_ids).order(updated_at: :desc)
+    conversations = current_user.conversations.includes(:note_updated_by).where.not(id: cleared_conversation_ids).order(updated_at: :desc)
     unread_counts = unread_counts_for(conversations)
     serialized = conversations.map { |c| ConversationSerializer.call(c, current_user: current_user, unread_count: unread_counts[c.id] || 0) }
     # Most recent activity first, Messenger-style (KAN-32) — nothing touches a

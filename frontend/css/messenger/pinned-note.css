@@ -1,0 +1,196 @@
+/* messenger/pinned-note.css — 7 of 9. Needs every file above it (it restyles
+   .thread-info-btn from conversation-settings.css for the pin button).
+   Pinned note (KAN-44): a one-line strip under the thread header that expands to the
+   whole note, Messenger's pinned-message banner.
+   Sections, in order:
+     - .thread-note-btn in the thread header
+     - .pinned-note strip, expanded panel, edit mode and footer
+     - Small-screen layout */
+
+.thread-note-btn + .thread-info-btn {
+  margin-left: 0;
+}
+
+.thread-note-btn.active .icon {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.pinned-note {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.pinned-note-strip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.5rem;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pinned-note-strip:hover {
+  background: var(--bg);
+}
+
+.pinned-note .icon {
+  color: var(--accent-ink);
+  font-size: 1.1rem;
+}
+
+.pinned-note-preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pinned-note--open {
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pinned-note-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pinned-note-head strong {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--heading);
+}
+
+.pinned-note-link {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pinned-note-link:hover {
+  background: var(--bg);
+}
+
+.pinned-note-link.danger {
+  color: var(--error);
+}
+
+.pinned-note-collapse {
+  display: flex;
+  padding: 0.2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.pinned-note-collapse:hover {
+  background: var(--bg);
+}
+
+.pinned-note-collapse .icon {
+  transform: rotate(180deg);
+  color: var(--muted);
+}
+
+.pinned-note-body {
+  max-height: 30vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.pinned-note-body a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+}
+
+.pinned-note-meta {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.pinned-note-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  resize: vertical;
+  min-height: 6rem;
+  max-height: 40vh;
+}
+
+.pinned-note-input:focus {
+  outline: none;
+  border-color: var(--orange);
+}
+
+.pinned-note-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.pinned-note-counter {
+  flex: 1;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* Same look as the dialogs' footer buttons. */
+.pinned-note-actions .modal-cancel,
+.pinned-note-actions .modal-confirm {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.45rem 1rem;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pinned-note-actions .modal-cancel:hover {
+  background: var(--bg);
+}
+
+.pinned-note-stale,
+.pinned-note-error {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.pinned-note-stale {
+  color: var(--muted);
+}
+
+.pinned-note-error {
+  color: var(--error);
+}
+
+@media (max-width: 720px) {
+  .pinned-note-strip,
+  .pinned-note--open {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

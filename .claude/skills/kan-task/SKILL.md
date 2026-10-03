@@ -23,6 +23,11 @@ git worktree list
 
 The Jira project, site, cloudId and statuses are in `CLAUDE.md` (Project overview).
 
+**One session per task.** Every turn re-sends the whole conversation, so a task started on
+top of another one pays for both. If this session has already done work on a different KAN
+ticket, say so before anything else and recommend `/clear` and running `/kan-task` again;
+carry on here only if the user says to. Resuming this same ticket is fine.
+
 **Cloud session** (`CLAUDE_CODE_REMOTE=true`): the same workflow with these differences.
 Skip step 2 — there is no Discord there. In step 3, use the Atlassian tools if the session
 has them; if it doesn't, ask the user for an existing `KAN-<n>` and don't start without
@@ -138,6 +143,12 @@ when the change touches `frontend/` — the user tests in the browser themselves
 For a backend change outside login, messaging and the channels, the specs plus a `curl`
 against the endpoint are enough.
 
+When the user does ask for a browser check, don't drive Chrome in this session — every
+screenshot would be re-sent on each later turn. `/verify-app <KAN-n> <what to verify>` runs
+in a subagent and is user-invoked: ask the user to run it, or hand the check to a
+`general-purpose` subagent told to follow `.claude/skills/verify-app/SKILL.md` and return
+text and screenshot paths only.
+
 ## 6. Review, then pull request
 
 1. Review the branch's diff twice, in fresh contexts: `/code-review` for general
@@ -175,3 +186,6 @@ Skip starting a stack when nothing the user can exercise in the app changed.
 
 Stop here. After the user merges the PR, `/kan-finish <KAN-n>` closes the task out. The
 change is then on `staging`; it reaches production with the next `/release`.
+
+End the report by telling the user to `/clear` before starting another task, and that
+`/kan-finish` works from a fresh session — the ticket holds everything it needs.

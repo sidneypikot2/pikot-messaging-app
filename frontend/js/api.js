@@ -234,6 +234,11 @@ const Api = {
     return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}/mute`);
   },
 
+  // Pinned note (KAN-44): any member can set it; a blank body removes it.
+  async updateConversationNote(token, conversationId, body) {
+    return this._settingsRequest(token, "PUT", `/conversations/${conversationId}/note`, { body });
+  },
+
   // "Delete chat" — for the current user only.
   async deleteConversation(token, conversationId) {
     return this._settingsRequest(token, "DELETE", `/conversations/${conversationId}`);
@@ -249,6 +254,41 @@ const Api = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((data.errors || [])[0] || data.error || `Something went wrong (${res.status})`);
     return data;
+  },
+
+  // --- User settings (KAN-63) ---
+
+  // Only the fields given change; an avatar File uploads a new photo, removeAvatar takes
+  // it away. Sent as multipart so a photo can ride along.
+  async updateProfile(token, { firstName, lastName, username, avatarFile, removeAvatar }) {
+    const formData = new FormData();
+    formData.append("first_name", firstName);
+    formData.append("last_name", lastName);
+    formData.append("username", username);
+    if (avatarFile) formData.append("avatar", avatarFile);
+    else if (removeAvatar) formData.append("remove_avatar", "true");
+
+    // No Content-Type header — the browser sets the multipart boundary itself.
+    const res = await fetch(`${window.API_BASE_URL}/me`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.errors || []).join(". ") || `Couldn't save your profile (${res.status})`);
+    return data; // { user } — with provider and password_set, like GET /me
+  },
+
+  async changePassword(token, { currentPassword, password, passwordConfirmation }) {
+    return this._settingsRequest(token, "PATCH", "/me/password", {
+      current_password: currentPassword, password, password_confirmation: passwordConfirmation,
+    });
+  },
+
+  // password for accounts that have one; confirmation ("DELETE") for those that don't.
+  async deleteAccount(token, { password, confirmation }) {
+    return this._settingsRequest(token, "DELETE", "/me", { password, confirmation });
   },
 
   async searchUsers(token, query) {

@@ -1,5 +1,5 @@
 // Online status: the presence dots and "Active 5m ago" labels on avatars in the sidebar
-// and thread header, the status picker on my own avatar at the top of the sidebar, and
+// and thread header, my own avatar, name and status picker under the chat list, and
 // auto-idle after inactivity.
 
 // --- Presence (KAN-39) ---
@@ -7,9 +7,10 @@
 const STATUS_LABELS = { online: "Active now", idle: "Idle", dnd: "Do not disturb", offline: "Offline" };
 const STATUS_RANK = { online: 3, idle: 2, dnd: 1, offline: 0 };
 
+// Deleted accounts (KAN-63) have no presence to show.
 function otherMembers(conversation) {
-  if (!isGroup(conversation)) return conversation.other_user ? [conversation.other_user] : [];
-  return conversation.members.filter((member) => member.id !== currentUser.id);
+  if (!isGroup(conversation)) return conversation.other_user && !conversation.other_user.deleted ? [conversation.other_user] : [];
+  return conversation.members.filter((member) => member.id !== currentUser.id && !member.deleted);
 }
 
 // A group shows its most available other member (online beats idle beats do-not-disturb),
@@ -85,6 +86,16 @@ function handlePresence(data) {
 const statusBtnEl = document.getElementById("status-btn");
 const statusMenuEl = document.getElementById("status-menu");
 const myAvatarEl = document.getElementById("my-avatar");
+const myNameEl = document.getElementById("my-name");
+const myStatusTextEl = document.getElementById("my-status-text");
+const MY_STATUS_TEXT = { online: "Online", idle: "Idle", dnd: "Do Not Disturb", offline: "Appearing offline" };
+
+// My avatar and name under the chat list (KAN-63), redrawn when I edit my profile.
+function renderMyProfile() {
+  myAvatarEl.style.background = "";
+  Avatar.render(myAvatarEl, currentUser);
+  myNameEl.textContent = displayName(currentUser);
+}
 
 // "until 3:45 PM", or "until tomorrow, 3:45 PM" for a 24-hour one.
 function untilText(iso) {
@@ -101,9 +112,10 @@ function setMyStatus(status, until = null) {
   wrap.appendChild(buildStatusDot(status));
   const label = status === "dnd" ? "Do Not Disturb" : status[0].toUpperCase() + status.slice(1);
   statusBtnEl.title = `Status: ${label}${until ? ` ${untilText(until)}` : ""}`;
+  myStatusTextEl.textContent = `${MY_STATUS_TEXT[status]}${until ? ` ${untilText(until)}` : ""}`;
   statusMenuEl.querySelectorAll("li").forEach((li) => {
     const checked = li.dataset.status === status;
-    li.setAttribute("aria-checked", String(checked));
+    li.querySelector(".status-option").setAttribute("aria-pressed", String(checked));
     const untilEl = li.querySelector(".status-until");
     if (untilEl) untilEl.textContent = checked && until ? `On ${untilText(until)}` : "";
   });
@@ -116,13 +128,38 @@ function setMyStatus(status, until = null) {
 
 function collapseStatusDurations() {
   statusMenuEl.querySelectorAll(".status-durations").forEach((el) => { el.hidden = true; });
+  statusMenuEl.querySelectorAll(".status-option[aria-expanded]").forEach((el) => el.setAttribute("aria-expanded", "false"));
 }
 
+// Opening it focuses the current status, so the keyboard starts where the eye does.
 function toggleStatusMenu(open = statusMenuEl.hidden) {
   statusMenuEl.hidden = !open;
   collapseStatusDurations();
   statusBtnEl.setAttribute("aria-expanded", String(open));
+  if (open) statusMenuEl.querySelector('.status-option[aria-pressed="true"]')?.focus();
 }
+
+// Arrow keys step through the visible buttons (options and duration choices alike);
+// Escape closes the menu and hands focus back to my avatar (KAN-62).
+statusMenuEl.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.stopPropagation();
+    toggleStatusMenu(false);
+    statusBtnEl.focus();
+    return;
+  }
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  event.preventDefault();
+  const buttons = [...statusMenuEl.querySelectorAll("button")].filter((btn) => btn.offsetParent);
+  const next = buttons[buttons.indexOf(document.activeElement) + (event.key === "ArrowDown" ? 1 : -1)];
+  next?.focus();
+});
+
+// Tabbing out closes it. A null relatedTarget is left alone: Safari doesn't focus a
+// clicked button, so a mouse click inside the menu would otherwise close it first.
+statusMenuEl.addEventListener("focusout", (event) => {
+  if (!statusMenuEl.hidden && event.relatedTarget && !event.relatedTarget.closest(".status-picker")) toggleStatusMenu(false);
+});
 
 statusBtnEl.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -136,15 +173,20 @@ statusMenuEl.addEventListener("click", async (event) => {
   if (!item) return;
   const durationBtn = event.target.closest("button[data-minutes]");
   if (item.hasAttribute("data-timed") && !durationBtn) {
+    if (!event.target.closest(".status-option")) return; // a click between the duration buttons
     const durations = item.querySelector(".status-durations");
     const wasOpen = !durations.hidden;
     collapseStatusDurations();
     durations.hidden = wasOpen;
+    item.querySelector(".status-option").setAttribute("aria-expanded", String(!wasOpen));
+    if (!wasOpen) durations.querySelector("button").focus();
     return;
   }
 
   const minutes = durationBtn?.dataset.minutes ? Number(durationBtn.dataset.minutes) : null;
+  const hadFocus = statusMenuEl.contains(document.activeElement);
   toggleStatusMenu(false);
+  if (hadFocus) statusBtnEl.focus();
   const [previous, previousUntil] = [myStatus, myStatusUntil];
   setMyStatus(item.dataset.status, minutes ? new Date(Date.now() + minutes * 60000).toISOString() : null);
   try {

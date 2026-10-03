@@ -18,6 +18,13 @@ const Avatar = {
   render(el, user) {
     el.innerHTML = "";
 
+    // A deleted account (KAN-63): a plain silhouette, like Messenger's.
+    if (user.deleted) {
+      el.appendChild(Icon.create("person", { filled: true }));
+      el.style.background = "var(--muted)";
+      return;
+    }
+
     if (user.avatar_url) {
       const img = document.createElement("img");
       img.src = user.avatar_url;

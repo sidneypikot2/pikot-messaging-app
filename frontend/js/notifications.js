@@ -8,6 +8,7 @@ const notificationSound = new Audio("sounds/notification.mp3");
 
 function playNotificationSound() {
   if (myStatus === "dnd") return; // Do Not Disturb (KAN-39)
+  if (!Preferences.soundsOn()) return; // turned off in Settings (KAN-63)
   notificationSound.currentTime = 0;
   // Autoplay can be rejected before any user gesture on the page; ignore that case
   // rather than surface an unhandled rejection.
@@ -193,6 +194,12 @@ function handleNotification(data) {
   // Someone came online or went offline (KAN-39): redraw dots and "Active …" in place.
   if (data.event === "presence") {
     handlePresence(data);
+    return;
+  }
+
+  // Someone I chat with changed their name or photo, or deleted their account (KAN-63).
+  if (data.event === "user_updated") {
+    applyUserUpdate(data.user);
     return;
   }
 

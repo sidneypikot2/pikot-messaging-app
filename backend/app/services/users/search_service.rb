@@ -11,7 +11,7 @@ module Users
       return User.none if @query.blank?
 
       pattern = "%#{@query.gsub(/[%_]/) { |char| "\\#{char}" }}%"
-      User.where.not(id: @current_user.id)
+      User.active.where.not(id: @current_user.id)
         .where("username ILIKE :q OR first_name ILIKE :q OR last_name ILIKE :q", q: pattern)
         .limit(LIMIT)
     end

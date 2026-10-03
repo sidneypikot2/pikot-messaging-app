@@ -11,6 +11,7 @@
     "conversation_updated": "explicit",
     "conversation_removed": "explicit",
     "conversation_cleared": "explicit",
+    "user_updated": "explicit",
     "message_created": "message",
     "message_updated": "message",
     "message_deleted": "message"

@@ -49,6 +49,8 @@ async function selectConversation(conversation) {
   document.querySelectorAll("#conversation-list li").forEach((li) => {
     const isActive = Number(li.dataset.conversationId) === conversationId;
     li.classList.toggle("active", isActive);
+    if (isActive) li.setAttribute("aria-current", "true");
+    else li.removeAttribute("aria-current");
     // buildConversationItem's "never for the active conversation" guard only applies at
     // build time — selectConversation never rebuilds the list, just toggles classes on
     // the existing elements, so a badge built before this selection would otherwise
@@ -62,6 +64,7 @@ async function selectConversation(conversation) {
   playThreadEntrance();
   renderThreadHeader(conversation);
   applyChatTheme(conversation);
+  resetPinnedNote(conversation);
   if (chatInfoOpen) renderChatInfo();
   messageListEl.innerHTML = "";
   resetPaginationState();
@@ -86,7 +89,10 @@ function selectDraftConversation(user) {
   oldestLoadedMessageId = null;
   resetTypingState();
 
-  document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
+  document.querySelectorAll("#conversation-list li").forEach((li) => {
+    li.classList.remove("active");
+    li.removeAttribute("aria-current");
+  });
 
   threadEmptyEl.hidden = true;
   threadActiveEl.hidden = false;
@@ -94,6 +100,7 @@ function selectDraftConversation(user) {
   playThreadEntrance();
   renderThreadHeader({ kind: "direct", other_user: user });
   applyChatTheme(null);
+  resetPinnedNote(null);
   closeChatInfo(); // nothing to set up until the first message creates the conversation
   messageListEl.innerHTML = "";
   resetPaginationState();
@@ -115,8 +122,12 @@ function closeConversation() {
   closeMessageMenu();
   closeChatInfo();
   closeSettingsDialog();
+  resetPinnedNote(null);
 
-  document.querySelectorAll("#conversation-list li").forEach((li) => li.classList.remove("active"));
+  document.querySelectorAll("#conversation-list li").forEach((li) => {
+    li.classList.remove("active");
+    li.removeAttribute("aria-current");
+  });
 
   threadActiveEl.hidden = true;
   threadEmptyEl.hidden = false;
@@ -134,6 +145,11 @@ function renderThreadHeader(conversation) {
   threadTitleEl.textContent = conversationTitle(conversation);
   renderConversationAvatar(threadAvatarEl, conversation);
   renderHeaderPresence();
+  // A direct chat with a deleted account (KAN-63) stays readable, but can't be answered.
+  const closed = !isGroup(conversation) && Boolean(conversation.other_user?.deleted);
+  composerEl.hidden = closed;
+  threadUnavailableEl.hidden = !closed;
+  if (closed) cancelReply();
 }
 
 // The header's dot and "Active now"/"Active 5m ago" (KAN-39) — redrawn on its own when
@@ -155,9 +171,18 @@ function renderHeaderPresence() {
 
 // --- Messages ---
 
+// Once the oldest message is loaded, the top of the thread says whose chat this is
+// rather than "no more messages", which read like an error on every short chat (KAN-62).
 function updatePaginationStatus() {
   paginationStatusEl.hidden = hasMoreOlder;
-  paginationStatusEl.textContent = hasMoreOlder ? "" : "No more messages to display";
+  if (hasMoreOlder || !headerConversation) {
+    paginationStatusEl.textContent = "";
+    return;
+  }
+  const title = conversationTitle(headerConversation);
+  paginationStatusEl.textContent = isGroup(headerConversation)
+    ? `This is the start of ${title}`
+    : `This is the start of your chat with ${title}`;
 }
 
 // textContent above clears this spinner's markup outright once the fetch resolves, so

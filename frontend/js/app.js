@@ -1,5 +1,6 @@
-// Chat page entry point, loaded last of the chat scripts: the logout button, and init()
-// which fetches the current user, connects Action Cable and loads the conversation list.
+// Chat page entry point: the logout button (in Settings → Account since KAN-63), and
+// init() which fetches the current user, connects Action Cable and loads the
+// conversation list.
 
 // --- Logout ---
 
@@ -14,7 +15,7 @@ async function init() {
   try {
     const { user, status, status_until } = await Api.me(token);
     currentUser = user;
-    Avatar.render(myAvatarEl, user);
+    renderMyProfile();
     setMyStatus(status || "online", status_until);
   } catch {
     Session.clear();
