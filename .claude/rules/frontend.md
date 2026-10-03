@@ -16,6 +16,8 @@ Static HTML / CSS / vanilla JS — no build step, no bundler, no `package.json`,
 
 **Animations** live in `frontend/css/messenger/motion.css`, each with a line in its `prefers-reduced-motion` block. The exception is one whose size is only known at run time (a panel sliding to the height of its content): that goes in the feature's JS with the Web Animations API, as in `frontend/js/pinned-note.js`. It checks `prefers-reduced-motion` itself — the CSS block doesn't reach it — and cleans up synchronously when it is interrupted, not on the animation's `cancel` event, which arrives after the next draw and undoes it. Animate padding along with height: a border-box element can't be shorter than its padding.
 
+**Icons** come from `frontend/vendor/material-symbols/`, a subset of the font holding only the icons listed in its `README.md`. A new icon name has to be added to that list and the font re-downloaded (the README has the command) in the same change, or it renders as its name in plain text.
+
 **Reading**: don't read large files whole — `frontend/js/conversation-settings.js` in particular. Grep for the function or section comment and read only that range.
 
 **Social login**: start it by navigating to `GET /auth/:provider/start` on the backend, never with `fetch`.
