@@ -2,12 +2,12 @@
 
 [Material Symbols](https://fonts.google.com/icons) by Google, Apache License 2.0 (`LICENSE`).
 Only the icons the app uses are in `material-symbols-rounded.woff2`, so the file stays small
-(about 28 KB) and the app works offline.
+(about 37 KB) and the app works offline.
 
 Icons in the subset:
 
 ```
-arrow_back,badge,check,chevron_right,close,delete,edit,emoji_emotions,emoji_events,emoji_food_beverage,emoji_nature,emoji_symbols,expand_more,favorite,group,group_add,info,logout,mood,more_horiz,more_vert,notifications,notifications_off,palette,person_add,person_remove,push_pin,reply,schedule,send,sentiment_dissatisfied,thumb_up,undo
+arrow_back,badge,check,chevron_right,close,delete,edit,emoji_emotions,emoji_events,emoji_food_beverage,emoji_nature,emoji_symbols,expand_more,favorite,group,group_add,info,lock,logout,manage_accounts,mood,more_horiz,more_vert,notifications,notifications_off,palette,person,person_add,person_remove,photo_camera,push_pin,reply,schedule,send,sentiment_dissatisfied,settings,thumb_up,tune,undo
 ```
 
 ## Adding an icon

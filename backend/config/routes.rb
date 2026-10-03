@@ -12,6 +12,10 @@ Rails.application.routes.draw do
   post "signup", to: "registrations#create"
   post "login", to: "sessions#create"
   get "me", to: "sessions#show"
+  # User settings (KAN-63): profile (name, username, photo), password, delete account.
+  patch "me", to: "profiles#update"
+  delete "me", to: "profiles#destroy"
+  patch "me/password", to: "passwords#update"
   # Online / Idle / Do Not Disturb / Offline (KAN-39)
   resource :status, only: [ :update ]
   post "email_verification", to: "email_verifications#create"

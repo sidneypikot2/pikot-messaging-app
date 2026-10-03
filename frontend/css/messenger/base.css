@@ -1,4 +1,4 @@
-/* messenger/base.css — 1 of 8, loaded first.
+/* messenger/base.css — 1 of 9, loaded first.
    Foundation for the chat page (index.html): everything later files build on.
    Sections, in order:
      - :root design tokens: colours (--navy, --orange, --accent-ink, --on-accent, --text,
@@ -6,9 +6,10 @@
        type scale (--text-xs … --text-xl) and radii (--radius-sm … --radius-bubble).
        Conversation themes override the accent tokens at runtime (applyChatTheme).
      - Accent tints (--accent-soft, --accent-ring), re-declared on the themed elements
-     - Dark mode (KAN-62): the colour tokens again for prefers-color-scheme: dark
+     - Dark mode (KAN-62): the colour tokens again for prefers-color-scheme: dark, and
+       once more for data-theme="dark" — the Appearance setting (KAN-63)
      - ::selection and :focus-visible defaults
-     - reset (* box-sizing), [hidden], body
+     - reset (* box-sizing), [hidden], .visually-hidden, body
      - .messenger — the page's two-column grid (sidebar | thread)
    No layout media queries. Add a new token here, never in a section file, and give a
    colour token its dark value as well. */
@@ -78,7 +79,7 @@
    float. Accent fills stay as they are (navy text on orange still reads); --accent-ink
    turns light for text on dark surfaces, and applyChatTheme does the same for themes. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --accent-ink: #f5a865;
     --text: #e6e8ee;
@@ -103,6 +104,33 @@
   }
 }
 
+/* The same, chosen in Settings → Preferences → Appearance (KAN-63): data-theme on <html>
+   (preferences.js) pins Dark here, or Light by switching the block above off. Keep the
+   two lists identical. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --accent-ink: #f5a865;
+  --text: #e6e8ee;
+  --muted: #9ba3b4;
+  --heading: #eef0f7;
+  --border: #2f3442;
+  --bg: #12141b;
+  --surface: #1b1e27;
+  --surface-pop: #252935;
+  --hover-tint: rgba(255, 255, 255, 0.08);
+  --tooltip-bg: #3a4160;
+  --focus-ring: #9fb3ff;
+  --skeleton: #2a2f3b;
+  --skeleton-shine: rgba(255, 255, 255, 0.06);
+  --online-soft: #1d3a26;
+  --online-ink: #7ddc97;
+  --error: #ff8080;
+  --error-bg: #3a1d1f;
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
+  scrollbar-color: #3b4050 transparent;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--orange) 35%, transparent);
   color: var(--text);
@@ -122,6 +150,19 @@
    regardless of selector specificity/order) — this keeps hiding actually work. */
 [hidden] {
   display: none !important;
+}
+
+/* Kept for screen readers and the keyboard, but not drawn (the photo picker's file input). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 body {

@@ -12,7 +12,7 @@ module Conversations
       raise NotAuthorizedError, "not a member of this conversation" unless @conversation.member?(@user)
       raise NotAuthorizedError, "only group chats can have people added" unless @conversation.group?
 
-      new_members = User.where(id: @member_ids).where.not(id: @conversation.conversation_memberships.select(:user_id)).to_a
+      new_members = User.active.where(id: @member_ids).where.not(id: @conversation.conversation_memberships.select(:user_id)).to_a
       validate!(new_members)
 
       existing_members = @conversation.members.to_a

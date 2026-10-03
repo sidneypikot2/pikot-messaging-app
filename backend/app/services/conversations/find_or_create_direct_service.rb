@@ -10,7 +10,7 @@ module Conversations
     def call
       raise ArgumentError, "cannot start a conversation with yourself" if @other_user_id.to_i == @current_user.id
 
-      other_user = User.find(@other_user_id)
+      other_user = User.active.find(@other_user_id)
       find_existing(other_user) || create_direct(other_user)
     end
 

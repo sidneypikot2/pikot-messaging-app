@@ -63,14 +63,16 @@ const composerEl = document.getElementById("composer");
 const composerInputEl = document.getElementById("composer-input");
 const composerSendEl = document.getElementById("composer-send");
 const composerErrorEl = document.getElementById("composer-error");
+const threadUnavailableEl = document.getElementById("thread-unavailable");
 const replyBarEl = document.getElementById("reply-bar");
 const replyBarTextEl = document.getElementById("reply-bar-text");
-const logoutBtn = document.getElementById("logout-btn");
+const logoutBtn = document.getElementById("logout-btn"); // in Settings → Account (KAN-63)
 const messengerEl = document.getElementById("messenger");
 const threadBackEl = document.getElementById("thread-back");
 const threadInfoBtnEl = document.getElementById("thread-info-btn");
 
 function displayName(user) {
+  if (user.deleted) return "PikotChat user"; // a deleted account (KAN-63)
   if (user.first_name || user.last_name) return `${user.first_name || ""} ${user.last_name || ""}`.trim();
   return user.username || user.email;
 }

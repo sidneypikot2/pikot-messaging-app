@@ -17,4 +17,10 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
   it "rejects an invalid token" do
     expect { connect "/cable?token=not-a-real-token" }.to have_rejected_connection
   end
+
+  it "rejects a deleted account's still-valid token (KAN-63)" do
+    user = create(:user, deleted_at: Time.current)
+
+    expect { connect "/cable?token=#{JsonWebToken.encode(user_id: user.id)}" }.to have_rejected_connection
+  end
 end
