@@ -1,5 +1,5 @@
 // Online status: the presence dots and "Active 5m ago" labels on avatars in the sidebar
-// and thread header, the status picker on my own avatar at the top of the sidebar, and
+// and thread header, my own avatar, name and status picker under the chat list, and
 // auto-idle after inactivity.
 
 // --- Presence (KAN-39) ---
@@ -7,9 +7,10 @@
 const STATUS_LABELS = { online: "Active now", idle: "Idle", dnd: "Do not disturb", offline: "Offline" };
 const STATUS_RANK = { online: 3, idle: 2, dnd: 1, offline: 0 };
 
+// Deleted accounts (KAN-63) have no presence to show.
 function otherMembers(conversation) {
-  if (!isGroup(conversation)) return conversation.other_user ? [conversation.other_user] : [];
-  return conversation.members.filter((member) => member.id !== currentUser.id);
+  if (!isGroup(conversation)) return conversation.other_user && !conversation.other_user.deleted ? [conversation.other_user] : [];
+  return conversation.members.filter((member) => member.id !== currentUser.id && !member.deleted);
 }
 
 // A group shows its most available other member (online beats idle beats do-not-disturb),
@@ -85,6 +86,16 @@ function handlePresence(data) {
 const statusBtnEl = document.getElementById("status-btn");
 const statusMenuEl = document.getElementById("status-menu");
 const myAvatarEl = document.getElementById("my-avatar");
+const myNameEl = document.getElementById("my-name");
+const myStatusTextEl = document.getElementById("my-status-text");
+const MY_STATUS_TEXT = { online: "Online", idle: "Idle", dnd: "Do Not Disturb", offline: "Appearing offline" };
+
+// My avatar and name under the chat list (KAN-63), redrawn when I edit my profile.
+function renderMyProfile() {
+  myAvatarEl.style.background = "";
+  Avatar.render(myAvatarEl, currentUser);
+  myNameEl.textContent = displayName(currentUser);
+}
 
 // "until 3:45 PM", or "until tomorrow, 3:45 PM" for a 24-hour one.
 function untilText(iso) {
@@ -101,6 +112,7 @@ function setMyStatus(status, until = null) {
   wrap.appendChild(buildStatusDot(status));
   const label = status === "dnd" ? "Do Not Disturb" : status[0].toUpperCase() + status.slice(1);
   statusBtnEl.title = `Status: ${label}${until ? ` ${untilText(until)}` : ""}`;
+  myStatusTextEl.textContent = `${MY_STATUS_TEXT[status]}${until ? ` ${untilText(until)}` : ""}`;
   statusMenuEl.querySelectorAll("li").forEach((li) => {
     const checked = li.dataset.status === status;
     li.querySelector(".status-option").setAttribute("aria-pressed", String(checked));

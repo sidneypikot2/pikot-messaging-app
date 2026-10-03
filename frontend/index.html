@@ -12,29 +12,16 @@
   <link rel="stylesheet" href="css/messenger/composer.css" />
   <link rel="stylesheet" href="css/messenger/conversation-settings.css" />
   <link rel="stylesheet" href="css/messenger/pinned-note.css" />
+  <link rel="stylesheet" href="css/messenger/account-settings.css" />
   <link rel="stylesheet" href="css/messenger/motion.css" />
+  <!-- In <head> so the chosen appearance (KAN-63) applies before the first paint. -->
+  <script src="js/preferences.js"></script>
 </head>
 <body>
   <div id="messenger" class="messenger">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-brand">
-          <div class="status-picker">
-            <button type="button" id="status-btn" class="status-btn" aria-controls="status-menu" aria-expanded="false" title="Set your status">
-              <div class="avatar-wrap"><div id="my-avatar" class="avatar"></div></div>
-            </button>
-            <!-- Plain buttons rather than ARIA menu roles: Do Not Disturb and Offline hold a
-                 second row of buttons, which a menuitem can't contain (KAN-62). -->
-            <ul id="status-menu" class="status-menu" aria-label="Your status" hidden>
-              <li data-status="online"><button type="button" class="status-option" aria-pressed="false"><span class="presence-dot status-online"></span><span class="status-menu-text"><strong>Online</strong></span></button></li>
-              <li data-status="idle"><button type="button" class="status-option" aria-pressed="false"><span class="presence-dot status-idle"></span><span class="status-menu-text"><strong>Idle</strong></span></button></li>
-              <li data-status="dnd" data-timed><button type="button" class="status-option" aria-pressed="false" aria-expanded="false"><span class="presence-dot status-dnd"></span><span class="status-menu-text"><strong>Do Not Disturb</strong><small>You won't get notification sounds or pop-ups</small><small class="status-until"></small></span></button><div class="status-durations" hidden><span>For</span><button type="button" data-minutes="10">10 min</button><button type="button" data-minutes="30">30 min</button><button type="button" data-minutes="60">1 hour</button><button type="button" data-minutes="360">6 hours</button><button type="button" data-minutes="1440">24 hours</button><button type="button" data-minutes="">Until I turn it off</button></div></li>
-              <li data-status="offline" data-timed><button type="button" class="status-option" aria-pressed="false" aria-expanded="false"><span class="presence-dot status-offline"></span><span class="status-menu-text"><strong>Offline</strong><small>You'll appear offline, but can still chat</small><small class="status-until"></small></span></button><div class="status-durations" hidden><span>For</span><button type="button" data-minutes="10">10 min</button><button type="button" data-minutes="30">30 min</button><button type="button" data-minutes="60">1 hour</button><button type="button" data-minutes="360">6 hours</button><button type="button" data-minutes="1440">24 hours</button><button type="button" data-minutes="">Until I turn it off</button></div></li>
-            </ul>
-          </div>
-          <h1>PikotChat</h1>
-        </div>
-        <button type="button" id="logout-btn" class="logout-btn" aria-label="Log out" title="Log out"><span class="icon" aria-hidden="true">logout</span></button>
+        <h1>PikotChat</h1>
       </div>
 
       <div class="search-box">
@@ -57,6 +44,29 @@
         <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
         <li class="skeleton-row"><span class="skeleton skeleton-avatar"></span><span class="skeleton-lines"><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></span></li>
       </ul>
+
+      <!-- Me (KAN-63): my avatar and status picker, my name, and the settings gear — at the
+           bottom of the list, Messenger-style. -->
+      <footer class="sidebar-footer">
+        <div class="status-picker">
+          <button type="button" id="status-btn" class="status-btn" aria-controls="status-menu" aria-expanded="false" title="Set your status">
+            <div class="avatar-wrap"><div id="my-avatar" class="avatar"></div></div>
+          </button>
+          <!-- Plain buttons rather than ARIA menu roles: Do Not Disturb and Offline hold a
+               second row of buttons, which a menuitem can't contain (KAN-62). -->
+          <ul id="status-menu" class="status-menu" aria-label="Your status" hidden>
+            <li data-status="online"><button type="button" class="status-option" aria-pressed="false"><span class="presence-dot status-online"></span><span class="status-menu-text"><strong>Online</strong></span></button></li>
+            <li data-status="idle"><button type="button" class="status-option" aria-pressed="false"><span class="presence-dot status-idle"></span><span class="status-menu-text"><strong>Idle</strong></span></button></li>
+            <li data-status="dnd" data-timed><button type="button" class="status-option" aria-pressed="false" aria-expanded="false"><span class="presence-dot status-dnd"></span><span class="status-menu-text"><strong>Do Not Disturb</strong><small>You won't get notification sounds or pop-ups</small><small class="status-until"></small></span></button><div class="status-durations" hidden><span>For</span><button type="button" data-minutes="10">10 min</button><button type="button" data-minutes="30">30 min</button><button type="button" data-minutes="60">1 hour</button><button type="button" data-minutes="360">6 hours</button><button type="button" data-minutes="1440">24 hours</button><button type="button" data-minutes="">Until I turn it off</button></div></li>
+            <li data-status="offline" data-timed><button type="button" class="status-option" aria-pressed="false" aria-expanded="false"><span class="presence-dot status-offline"></span><span class="status-menu-text"><strong>Offline</strong><small>You'll appear offline, but can still chat</small><small class="status-until"></small></span></button><div class="status-durations" hidden><span>For</span><button type="button" data-minutes="10">10 min</button><button type="button" data-minutes="30">30 min</button><button type="button" data-minutes="60">1 hour</button><button type="button" data-minutes="360">6 hours</button><button type="button" data-minutes="1440">24 hours</button><button type="button" data-minutes="">Until I turn it off</button></div></li>
+          </ul>
+        </div>
+        <div class="me-text">
+          <span id="my-name" class="me-name"></span>
+          <span id="my-status-text" class="me-status"></span>
+        </div>
+        <button type="button" id="account-settings-btn" class="account-settings-btn" aria-label="Settings" title="Settings" aria-haspopup="dialog"><span class="icon" aria-hidden="true">settings</span></button>
+      </footer>
     </aside>
 
     <main class="thread">
@@ -93,6 +103,8 @@
           <span id="reply-bar-text" class="reply-bar-text"></span>
           <button type="button" id="reply-bar-cancel" class="reply-bar-cancel" aria-label="Cancel reply"><span class="icon" aria-hidden="true">close</span></button>
         </div>
+        <!-- A direct chat with a deleted account (KAN-63) stays readable, but closed. -->
+        <p id="thread-unavailable" class="thread-unavailable" hidden>This account was deleted, so you can't reply to this conversation.</p>
         <form id="composer" class="composer">
           <div class="composer-input-wrap">
             <textarea id="composer-input" aria-label="Message" placeholder="Type a message…" required></textarea>
@@ -175,6 +187,115 @@
     </form>
   </div>
 
+  <!-- User settings (KAN-63), opened by the gear under the chat list; account-settings.js
+       drives it. Tabs down the side on wide screens, across the top on narrow ones. -->
+  <div id="account-dialog" class="modal-backdrop account-backdrop" hidden>
+    <div class="modal account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title">
+      <header class="modal-header">
+        <h2 id="account-title">Settings</h2>
+        <button type="button" class="modal-close" data-account-close aria-label="Close"><span class="icon" aria-hidden="true">close</span></button>
+      </header>
+      <div class="account-layout">
+        <div class="account-tabs" role="tablist" aria-label="Settings">
+          <button type="button" role="tab" id="account-tab-profile" class="account-tab" data-tab="profile" aria-controls="account-panel-profile" aria-selected="true"><span class="icon" aria-hidden="true">person</span>Profile</button>
+          <button type="button" role="tab" id="account-tab-password" class="account-tab" data-tab="password" aria-controls="account-panel-password" aria-selected="false" tabindex="-1"><span class="icon" aria-hidden="true">lock</span>Password</button>
+          <button type="button" role="tab" id="account-tab-preferences" class="account-tab" data-tab="preferences" aria-controls="account-panel-preferences" aria-selected="false" tabindex="-1"><span class="icon" aria-hidden="true">tune</span>Preferences</button>
+          <button type="button" role="tab" id="account-tab-account" class="account-tab" data-tab="account" aria-controls="account-panel-account" aria-selected="false" tabindex="-1"><span class="icon" aria-hidden="true">manage_accounts</span>Account</button>
+        </div>
+
+        <div class="account-panels">
+          <section id="account-panel-profile" class="account-panel" role="tabpanel" aria-labelledby="account-tab-profile">
+            <form id="profile-form" class="account-form" novalidate>
+              <div class="profile-photo">
+                <div id="profile-avatar" class="avatar profile-avatar"></div>
+                <div class="profile-photo-actions">
+                  <div class="profile-photo-buttons">
+                    <label class="account-secondary-btn profile-photo-pick">
+                      <span class="icon" aria-hidden="true">photo_camera</span>Change photo
+                      <input type="file" id="profile-avatar-input" class="visually-hidden" accept="image/png,image/jpeg,image/webp,image/gif" />
+                    </label>
+                    <button type="button" id="profile-avatar-remove" class="account-text-btn">Remove photo</button>
+                  </div>
+                  <p class="account-hint">PNG, JPEG, WEBP or GIF, under 5 MB.</p>
+                </div>
+              </div>
+              <div class="account-field-row">
+                <label class="account-field">First name<input type="text" id="profile-first-name" maxlength="50" autocomplete="given-name" /></label>
+                <label class="account-field">Last name<input type="text" id="profile-last-name" maxlength="50" autocomplete="family-name" /></label>
+              </div>
+              <label class="account-field">Username<input type="text" id="profile-username" maxlength="30" autocomplete="username" spellcheck="false" /></label>
+              <p class="account-hint">3 to 30 letters, numbers or underscores.</p>
+              <label class="account-field">Email<input type="email" id="profile-email" readonly /></label>
+              <p id="profile-error" class="account-error" role="alert" hidden></p>
+              <p id="profile-success" class="account-success" role="status" hidden></p>
+              <div class="account-actions">
+                <button type="submit" id="profile-save" class="modal-confirm account-primary-btn">Save changes</button>
+              </div>
+            </form>
+          </section>
+
+          <section id="account-panel-password" class="account-panel" role="tabpanel" aria-labelledby="account-tab-password" hidden>
+            <p id="password-oauth-note" class="account-note" hidden></p>
+            <form id="password-form" class="account-form" novalidate>
+              <label class="account-field">Current password<input type="password" id="password-current" autocomplete="current-password" /></label>
+              <label class="account-field">New password<input type="password" id="password-new" autocomplete="new-password" minlength="8" maxlength="72" /></label>
+              <p class="account-hint">At least 8 characters.</p>
+              <label class="account-field">Confirm new password<input type="password" id="password-confirm" autocomplete="new-password" maxlength="72" /></label>
+              <p id="password-error" class="account-error" role="alert" hidden></p>
+              <p id="password-success" class="account-success" role="status" hidden></p>
+              <div class="account-actions">
+                <button type="submit" id="password-save" class="modal-confirm account-primary-btn">Change password</button>
+              </div>
+            </form>
+          </section>
+
+          <section id="account-panel-preferences" class="account-panel" role="tabpanel" aria-labelledby="account-tab-preferences" hidden>
+            <p class="account-hint account-panel-intro">These are saved on this device only.</p>
+            <label class="account-row account-switch-row">
+              <span class="account-row-text">
+                <strong>Message sounds</strong>
+                <span>Play a sound when a message or reaction arrives</span>
+              </span>
+              <input type="checkbox" id="pref-sounds" class="account-switch" role="switch" />
+            </label>
+            <fieldset class="appearance-choices">
+              <legend>Appearance</legend>
+              <label class="appearance-choice"><input type="radio" name="pref-theme" value="system" /><span class="appearance-swatch appearance-swatch--system" aria-hidden="true"></span><span>System</span></label>
+              <label class="appearance-choice"><input type="radio" name="pref-theme" value="light" /><span class="appearance-swatch appearance-swatch--light" aria-hidden="true"></span><span>Light</span></label>
+              <label class="appearance-choice"><input type="radio" name="pref-theme" value="dark" /><span class="appearance-swatch appearance-swatch--dark" aria-hidden="true"></span><span>Dark</span></label>
+            </fieldset>
+          </section>
+
+          <section id="account-panel-account" class="account-panel" role="tabpanel" aria-labelledby="account-tab-account" hidden>
+            <div class="account-row">
+              <span class="account-row-text">
+                <strong>Log out</strong>
+                <span>Sign out of PikotChat on this device</span>
+              </span>
+              <button type="button" id="logout-btn" class="account-secondary-btn"><span class="icon" aria-hidden="true">logout</span>Log out</button>
+            </div>
+            <div class="account-row account-row--danger">
+              <span class="account-row-text">
+                <strong>Delete account</strong>
+                <span>Permanently remove your profile. People you chatted with will see your messages from "PikotChat user".</span>
+              </span>
+              <button type="button" id="delete-account-start" class="account-danger-btn" aria-expanded="false" aria-controls="delete-account-form">Delete account</button>
+            </div>
+            <form id="delete-account-form" class="delete-account-form" novalidate hidden>
+              <p class="account-note">This can't be undone. You'll leave all your groups, your name and photo are removed everywhere, and nobody can message this account again.</p>
+              <label class="account-field"><span id="delete-account-label">Enter your password to confirm</span><input type="password" id="delete-account-input" autocomplete="current-password" /></label>
+              <p id="delete-account-error" class="account-error" role="alert" hidden></p>
+              <div class="account-actions">
+                <button type="button" id="delete-account-cancel" class="modal-cancel">Cancel</button>
+                <button type="submit" id="delete-account-confirm" class="modal-confirm danger">Delete my account</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/session.js"></script>
@@ -195,5 +316,6 @@
   <script src="js/app.js"></script>
   <script src="js/conversation-settings.js"></script>
   <script src="js/pinned-note.js"></script>
+  <script src="js/account-settings.js"></script>
 </body>
 </html>

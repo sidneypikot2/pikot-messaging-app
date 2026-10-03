@@ -20,6 +20,13 @@ const Session = {
     return raw ? JSON.parse(raw) : null;
   },
 
+  // The signed-in user changed their profile (KAN-63): rewrite it wherever it's kept.
+  updateUser(user) {
+    [window.localStorage, window.sessionStorage].forEach((store) => {
+      if (store.getItem(USER_KEY)) store.setItem(USER_KEY, JSON.stringify(user));
+    });
+  },
+
   clear() {
     window.localStorage.removeItem(TOKEN_KEY);
     window.localStorage.removeItem(USER_KEY);

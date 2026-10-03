@@ -145,6 +145,11 @@ function renderThreadHeader(conversation) {
   threadTitleEl.textContent = conversationTitle(conversation);
   renderConversationAvatar(threadAvatarEl, conversation);
   renderHeaderPresence();
+  // A direct chat with a deleted account (KAN-63) stays readable, but can't be answered.
+  const closed = !isGroup(conversation) && Boolean(conversation.other_user?.deleted);
+  composerEl.hidden = closed;
+  threadUnavailableEl.hidden = !closed;
+  if (closed) cancelReply();
 }
 
 // The header's dot and "Active now"/"Active 5m ago" (KAN-39) — redrawn on its own when

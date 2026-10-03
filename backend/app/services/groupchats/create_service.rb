@@ -12,7 +12,7 @@ module Groupchats
 
     def call
       conversation = Conversation.new(kind: :group, name: @name, owner: @owner)
-      members = User.where(id: @member_ids).to_a
+      members = User.active.where(id: @member_ids).to_a
       validate_members!(conversation, members)
 
       ActiveRecord::Base.transaction do

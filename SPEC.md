@@ -22,6 +22,7 @@
 | Jobs and cache | Solid Queue / Solid Cache (Postgres), not Sidekiq | Unrelated to the real-time decision — only Action Cable and presence use Redis. |
 | Conversations | One `conversations` table for direct and group chats (`kind`) | One `Message` model, one message code path and one channel pattern serve both. |
 | Deleting messages | Soft delete (`deleted_at`), plus per-user hide (`message_hides`) | A deleted message renders as a placeholder instead of a gap; "unsend for you" must not affect other members. |
+| Deleting accounts | The `users` row stays, scrubbed (names, email, password, provider) and stamped `deleted_at` (KAN-63) | The messages it sent stay in other people's chats as "PikotChat user", as on Messenger, instead of leaving holes in every conversation; the scrubbed email can sign up again. Anything that finds users goes through `User.active`. |
 | Authorization | Plain Ruby checks in services, no gem | Rules are few and local. Revisit (e.g. Pundit) only when roles and invitations (section 3) land and the checks stop being one-liners. |
 | Service results | Services return the natural value or raise; no `ServiceResult` wrapper | Controllers rescue a small set of errors centrally. Introduce a result type only if a controller needs to branch on several distinct failure reasons. |
 | Routes | Flat and unversioned; messages `update`/`destroy` are top-level, not nested under conversations | A message id is globally unique, so the conversation in the path would be redundant. Versioning is deferred — see section 2. |

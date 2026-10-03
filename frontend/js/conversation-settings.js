@@ -29,8 +29,6 @@ const CHAT_THEMES = {
   teal: { label: "Teal", color: "#14a3a3", dark: "#0f8a8a", ink: "#0d7373", inkDark: "#5fd6d6", on: "#1b2559" },
 };
 
-const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
 // Overrides the accent variables on the thread, the panel and its dialog only, so the sidebar keeps
 // the app's own colors.
 function applyChatTheme(conversation) {
@@ -39,7 +37,7 @@ function applyChatTheme(conversation) {
     if (theme) {
       el.style.setProperty("--orange", theme.color);
       el.style.setProperty("--orange-dark", theme.dark);
-      el.style.setProperty("--accent-ink", darkModeQuery.matches ? theme.inkDark : theme.ink);
+      el.style.setProperty("--accent-ink", Preferences.isDark() ? theme.inkDark : theme.ink);
       el.style.setProperty("--on-accent", theme.on);
     } else {
       el.style.removeProperty("--orange");
@@ -50,8 +48,9 @@ function applyChatTheme(conversation) {
   });
 }
 
-// Switching the system to dark or light while a themed chat is open swaps its ink.
-darkModeQuery.addEventListener("change", () => applyChatTheme(activeConversation));
+// Switching the system to dark or light while a themed chat is open swaps its ink (the
+// Appearance setting does the same, KAN-63).
+systemDarkQuery.addEventListener("change", () => applyChatTheme(activeConversation));
 
 // --- Mute ---
 

@@ -14,7 +14,7 @@ module ApplicationCable
     # authenticate the handshake with otherwise).
     def find_verified_user
       payload = JsonWebToken.decode(request.params[:token])
-      (payload && User.find_by(id: payload[:user_id])) || reject_unauthorized_connection
+      (payload && User.active.find_by(id: payload[:user_id])) || reject_unauthorized_connection
     end
   end
 end

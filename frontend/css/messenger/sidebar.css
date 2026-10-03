@@ -1,10 +1,12 @@
-/* messenger/sidebar.css — 2 of 8. Needs base.css.
-   The left column: everything from the brand row down to the conversation list.
+/* messenger/sidebar.css — 2 of 9. Needs base.css.
+   The left column: everything from the brand row down to my own bar under the list.
    Sections, in order:
-     - Sidebar shell and header (.sidebar, .sidebar-header, .sidebar-brand)
-     - My avatar + status menu (KAN-39): .status-picker, .status-btn, .status-menu and
-       its .status-option buttons, and the "for how long" choices (.status-durations)
-     - Logout button
+     - Sidebar shell and header (.sidebar, .sidebar-header)
+     - Me, under the list (KAN-63): .sidebar-footer with my name (.me-text) and the
+       settings gear (.account-settings-btn)
+     - My avatar + status menu (KAN-39): .status-picker, .status-btn, .status-menu (opens
+       upward from the footer) and its .status-option buttons, and the "for how long"
+       choices (.status-durations)
      - Search box and results dropdown (.search-box, .search-results)
      - Conversation list rows: name, preview text/time, unread badge
      - Avatars: .avatar, the group two-avatar stack (.avatar-stack, KAN-35),
@@ -38,12 +40,64 @@
   color: var(--heading);
 }
 
-/* My avatar + status menu (KAN-39) */
-.sidebar-brand {
+/* Me, under the list (KAN-63) */
+.sidebar-footer {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem 0.7rem 1.1rem;
+  border-top: 1px solid var(--border);
+  padding-bottom: max(0.7rem, env(safe-area-inset-bottom));
 }
+
+.me-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.me-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--heading);
+}
+
+.me-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.account-settings-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.account-settings-btn:hover,
+.account-settings-btn[aria-expanded="true"] {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+/* My avatar + status menu (KAN-39) */
 
 .status-picker {
   position: relative;
@@ -59,10 +113,10 @@
 }
 
 .status-btn .avatar {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  font-size: 0.75rem;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  font-size: 0.8rem;
 }
 
 .status-btn .presence-dot {
@@ -79,7 +133,7 @@
 
 .status-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 10px);
   left: 0;
   z-index: 20;
   width: 250px;
@@ -178,24 +232,6 @@
 
 .status-durations button:hover {
   border-color: var(--orange);
-  color: var(--accent-ink);
-}
-
-.logout-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: var(--bg);
-  color: var(--muted);
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.logout-btn:hover {
   color: var(--accent-ink);
 }
 
@@ -384,6 +420,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* A deleted account's silhouette (KAN-63), sized with the avatar's own initials. */
+.avatar > .icon {
+  font-size: 1.7em;
+  color: #fff;
 }
 
 /* A group's picture (KAN-35): two members' avatars overlapped in a 40px square. */

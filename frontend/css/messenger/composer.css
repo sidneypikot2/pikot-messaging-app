@@ -1,9 +1,10 @@
-/* messenger/composer.css — 5 of 8. Needs base.css, thread.css, message-actions.css.
+/* messenger/composer.css — 5 of 9. Needs base.css, thread.css, message-actions.css.
    The bottom of the thread, plus the page's main narrow-screen layout.
    Sections, in order:
      - Typing indicator (KAN-38): .typing-row, .typing-avatars, .typing-bubble,
        @keyframes typing-wave, and its prefers-reduced-motion block
-     - .composer-error, .composer, .composer-input-wrap, textarea and send button
+     - .composer-error, .thread-unavailable (a deleted account's chat, KAN-63),
+       .composer, .composer-input-wrap, textarea and send button
      - .thread-back — the back button that only exists on narrow screens (KAN-34)
      - @media (max-width: 720px): the one-pane layout, where the open chat replaces
        the list. This is the main mobile block for sidebar + thread.
@@ -99,6 +100,17 @@
   border-radius: var(--radius-md);
   padding: 0.6rem 0.9rem;
   font-size: var(--text-sm);
+}
+
+/* Stands where the composer was in a chat with a deleted account (KAN-63). */
+.thread-unavailable {
+  margin: 0;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
 }
 
 .composer {

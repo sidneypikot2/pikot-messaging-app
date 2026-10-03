@@ -9,6 +9,8 @@ module Messages
 
     def call
       raise NotAuthorizedError, "not a member of this conversation" unless member?
+      # A direct chat with a deleted account stays readable but closed (KAN-63).
+      raise NotAuthorizedError, "this person isn't on PikotChat anymore" if @conversation.direct? && @conversation.members.where.not(deleted_at: nil).exists?
 
       message = @conversation.messages.create!(sender: @sender, body: @body, reply_to_message_id: @reply_to_message_id)
       payload = { event: "message_created", message: MessageSerializer.call(message, current_user: @sender) }
