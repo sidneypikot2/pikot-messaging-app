@@ -4,7 +4,7 @@
   "description": "Lint for the static frontend. Tooling only: the frontend itself has no build step and no dependencies. Run through script/lint-frontend.",
   "type": "module",
   "dependencies": {
-    "eslint": "10.11.0",
+    "eslint": "10.13.0",
     "globals": "17.13.0"
   }
 }
