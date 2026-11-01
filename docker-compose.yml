@@ -72,7 +72,7 @@ services:
   # `docker compose up`. The image tag must match @playwright/test in
   # tools/smoke/package.json, or Playwright can't find its browsers.
   smoke:
-    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    image: mcr.microsoft.com/playwright:v1.64.1-noble
     profiles: ["smoke"]
     init: true
     ipc: host
